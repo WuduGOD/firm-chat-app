@@ -4,7 +4,7 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseKey = import.meta.env.VITE_SUPABASE_KEY
 const supabase = createClient(supabaseUrl, supabaseKey)
 
-let = ws;
+let ws;
 
 const authDiv     = document.getElementById('auth')
 const userInfoDiv = document.getElementById('userInfo')
