@@ -4,6 +4,8 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseKey = import.meta.env.VITE_SUPABASE_KEY
 const supabase = createClient(supabaseUrl, supabaseKey)
 
+const ws = new WebSocket(import.meta.env.VITE_CHAT_WS_URL);
+
 const authDiv     = document.getElementById('auth')
 const userInfoDiv = document.getElementById('userInfo')
 const chatDiv     = document.getElementById('chat')
