@@ -66,7 +66,7 @@ function showUser(user) {
 })()
 
 // Dołącz do czatu
-joinBtn.onclick = () => {
+joinBtn.onclick = async () => {
   const room = roomInput.value.trim()
   if (!room) return alert('Podaj pokój')
   const { data: { user } } = await supabase.auth.getUser()
