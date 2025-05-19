@@ -69,7 +69,7 @@ function showUser(user) {
 joinBtn.onclick = () => {
   const room = roomInput.value.trim()
   if (!room) return alert('Podaj pokój')
-  const user = supabase.auth.getUser().data.user
+  const { data: { user } } = await supabase.auth.getUser()
   if (!user) return alert('Zaloguj się')
 
   ws = new WebSocket(import.meta.env.VITE_CHAT_WS_URL)

@@ -39,8 +39,8 @@
 </html>
 
   <script>
-    const supabaseUrl = process.env.SUPABASE_KEY;
-    const supabaseKey = process.env.SUPABASE_KEY;
+    const supabaseUrl = import.meta.env.SUPABASE_KEY;
+    const supabaseKey = import.meta.env.SUPABASE_KEY;
     const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
     const emailInput = document.getElementById('email');
