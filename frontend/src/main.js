@@ -79,8 +79,15 @@ joinBtn.onclick = async () => {
     sendBtn.disabled = false
   }
   ws.onmessage = e => {
+	const data = JSON.parse(e.data)
     const div = document.createElement('div')
-    div.textContent = e.data
+    if(data.type === 'history' || data.type === 'message') {
+    div.textContent = `${data.username}: ${data.text}`
+  } else if (data.type === 'join') {
+    div.textContent = `${data.username} dołączył(a) do pokoju ${data.room}`
+  } else {
+    div.textContent = e.data // fallback
+  }
     messagesDiv.appendChild(div)
     messagesDiv.scrollTop = messagesDiv.scrollHeight
   }
