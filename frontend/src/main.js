@@ -4,6 +4,7 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseKey = import.meta.env.VITE_SUPABASE_KEY
 const supabase = createClient(supabaseUrl, supabaseKey)
 
+let = ws;
 const ws = new WebSocket(import.meta.env.VITE_CHAT_WS_URL);
 
 const authDiv     = document.getElementById('auth')
@@ -20,8 +21,6 @@ const roomInput   = document.getElementById('room')
 const messagesDiv = document.getElementById('messages')
 const inputMsg    = document.getElementById('inputMsg')
 const sendBtn     = document.getElementById('sendBtn')
-
-let ws
 
 // Rejestracja
 signupBtn.onclick = async () => {
