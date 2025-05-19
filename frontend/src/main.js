@@ -5,7 +5,6 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_KEY
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 let = ws;
-const ws = new WebSocket(import.meta.env.VITE_CHAT_WS_URL);
 
 const authDiv     = document.getElementById('auth')
 const userInfoDiv = document.getElementById('userInfo')
@@ -73,7 +72,7 @@ joinBtn.onclick = () => {
   const user = supabase.auth.getUser().data.user
   if (!user) return alert('Zaloguj się')
 
-  ws = new WebSocket('ws://localhost:3000')
+  ws = new WebSocket(import.meta.env.VITE_CHAT_WS_URL)
   ws.onopen = () => {
     ws.send(JSON.stringify({ type: 'join', name: user.email, room }))
     inputMsg.disabled = false
