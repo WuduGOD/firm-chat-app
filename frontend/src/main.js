@@ -1,100 +1,119 @@
 import { createClient } from '@supabase/supabase-js'
 
+// Zmienna środowiskowa Vite
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseKey = import.meta.env.VITE_SUPABASE_KEY
 const supabase = createClient(supabaseUrl, supabaseKey)
 
-let ws;
+let ws
 
-const authDiv     = document.getElementById('auth')
-const userInfoDiv = document.getElementById('userInfo')
-const chatDiv     = document.getElementById('chat')
-const emailInput  = document.getElementById('email')
-const passInput   = document.getElementById('password')
-const signupBtn   = document.getElementById('signupBtn')
-const loginBtn    = document.getElementById('loginBtn')
-const logoutBtn   = document.getElementById('logoutBtn')
-const userEmail   = document.getElementById('userEmail')
-const joinBtn     = document.getElementById('joinBtn')
-const roomInput   = document.getElementById('room')
-const messagesDiv = document.getElementById('messages')
-const inputMsg    = document.getElementById('inputMsg')
-const sendBtn     = document.getElementById('sendBtn')
+// Elementy HTML
+const loginForm      = document.getElementById('loginForm')
+const signupForm     = document.getElementById('signupForm')
+const showSignupBtn  = document.getElementById('showSignup')
+const showLoginBtn   = document.getElementById('showLogin')
+const authDiv        = document.getElementById('auth')
+const userInfoDiv    = document.getElementById('userInfo')
+const userEmail      = document.getElementById('userEmail')
+const chatDiv        = document.getElementById('chat')
+const messagesDiv    = document.getElementById('messages')
+const inputMsg       = document.getElementById('inputMsg')
+const sendBtn        = document.getElementById('sendBtn')
 
 // Rejestracja
+const signupEmail    = document.getElementById('signupEmail')
+const signupPassword = document.getElementById('signupPassword')
+const signupBtn      = document.getElementById('signupBtn')
+
 signupBtn.onclick = async () => {
-  const { error } = await supabase.auth.signUp({
-    email: emailInput.value,
-    password: passInput.value
-  })
+  const email = signupEmail.value.trim()
+  const password = signupPassword.value.trim()
+  if (!email || !password) return alert('Wprowadź email i hasło.')
+
+  const { error } = await supabase.auth.signUp({ email, password })
   if (error) return alert('Błąd rejestracji: ' + error.message)
-  alert('Zarejestrowano. Sprawdź email.')
+  alert('Zarejestrowano. Sprawdź email i kliknij link aktywacyjny.')
 }
 
 // Logowanie
+const emailInput  = document.getElementById('email')
+const passInput   = document.getElementById('password')
+const loginBtn    = document.getElementById('loginBtn')
+
 loginBtn.onclick = async () => {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: emailInput.value,
-    password: passInput.value
-  })
+  const email = emailInput.value.trim()
+  const password = passInput.value.trim()
+  if (!email || !password) return alert('Wprowadź email i hasło.')
+
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
   if (error) return alert('Błąd logowania: ' + error.message)
+
   showUser(data.user)
+  connectWebSocket(data.user.email)
 }
 
 // Wylogowanie
+const logoutBtn = document.getElementById('logoutBtn')
 logoutBtn.onclick = async () => {
   await supabase.auth.signOut()
-  authDiv.style.display = 'block'
   userInfoDiv.style.display = 'none'
   chatDiv.style.display = 'none'
+  authDiv.style.display = 'block'
   messagesDiv.innerHTML = ''
+  if (ws) ws.close()
 }
 
-// Pokaż UI po zalogowaniu
+// Przełączanie formularzy
+showSignupBtn.onclick = () => {
+  loginForm.style.display = 'none'
+  signupForm.style.display = 'block'
+}
+showLoginBtn.onclick = () => {
+  signupForm.style.display = 'none'
+  loginForm.style.display = 'block'
+}
+
+// Pokazanie UI po zalogowaniu
 function showUser(user) {
-  userEmail.textContent       = user.email
-  authDiv.style.display       = 'none'
-  userInfoDiv.style.display   = 'block'
-  chatDiv.style.display       = 'block'
-  messagesDiv.textContent     = ''
+  userEmail.textContent = user.email
+  authDiv.style.display = 'none'
+  userInfoDiv.style.display = 'block'
+  chatDiv.style.display = 'block'
 }
 
-// Przy starcie sprawdź sesję
-;(async () => {
-  const { data: { session } } = await supabase.auth.getSession()
-  if (session?.user) showUser(session.user)
-})()
-
-// Dołącz do czatu
-joinBtn.onclick = async () => {
-  const room = roomInput.value.trim()
-  if (!room) return alert('Podaj pokój')
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return alert('Zaloguj się')
-
+// Połączenie z WebSocket
+function connectWebSocket(email) {
   ws = new WebSocket(import.meta.env.VITE_CHAT_WS_URL)
+
   ws.onopen = () => {
-    ws.send(JSON.stringify({ type: 'join', name: user.email, room }))
+    ws.send(JSON.stringify({ type: 'join', name: email }))
     inputMsg.disabled = false
     sendBtn.disabled = false
   }
+
   ws.onmessage = e => {
-	const data = JSON.parse(e.data)
-    const div = document.createElement('div')
-    if(data.type === 'history' || data.type === 'message') {
-    div.textContent = `${data.username}: ${data.text}`
-  } else if (data.type === 'join') {
-    div.textContent = `${data.username} dołączył(a) do pokoju ${data.room}`
-  } else {
-    div.textContent = e.data // fallback
+    try {
+      const msg = JSON.parse(e.data)
+      const div = document.createElement('div')
+      div.textContent = `[${msg.username}] ${msg.text}`
+      messagesDiv.appendChild(div)
+      messagesDiv.scrollTop = messagesDiv.scrollHeight
+    } catch {
+      // fallback dla zwykłego tekstu
+      const div = document.createElement('div')
+      div.textContent = e.data
+      messagesDiv.appendChild(div)
+    }
   }
-    messagesDiv.appendChild(div)
-    messagesDiv.scrollTop = messagesDiv.scrollHeight
+
+  ws.onclose = () => {
+    alert('Połączenie z czatem zostało zamknięte.')
+    inputMsg.disabled = true
+    sendBtn.disabled = true
   }
-  ws.onclose = () => alert('Rozłączono')
 }
 
-// Wyślij wiadomość
+// Wysyłanie wiadomości
 sendBtn.onclick = () => {
   const text = inputMsg.value.trim()
   if (text && ws?.readyState === WebSocket.OPEN) {
@@ -102,3 +121,12 @@ sendBtn.onclick = () => {
     inputMsg.value = ''
   }
 }
+
+// Sprawdzenie sesji przy starcie
+;(async () => {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (session?.user) {
+    showUser(session.user)
+    connectWebSocket(session.user.email)
+  }
+})()

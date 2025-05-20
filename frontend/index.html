@@ -4,18 +4,43 @@
   <meta charset="UTF-8" />
   <title>Chat z Supabase Auth</title>
   <style>
-    /* Twoje style */
-    #messages { height: 200px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; margin-top: 10px; }
-    input { margin: 5px 0; }
+    #messages {
+      height: 200px;
+      overflow-y: scroll;
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-top: 10px;
+    }
+    input, button {
+      margin: 5px 0;
+      display: block;
+    }
+    #auth button {
+      display: inline-block;
+    }
   </style>
 </head>
 <body>
-  <h2>Rejestracja i logowanie</h2>
+  <h2>Witamy w czacie</h2>
+
   <div id="auth">
-    <input id="email" type="email" placeholder="Email" /><br/>
-    <input id="password" type="password" placeholder="Hasło" /><br/>
-    <button id="signupBtn">Zarejestruj</button>
-    <button id="loginBtn">Zaloguj</button>
+    <!-- Formularz logowania -->
+    <div id="loginForm">
+      <h3>Logowanie</h3>
+      <input id="email" type="email" placeholder="Email" />
+      <input id="password" type="password" placeholder="Hasło" />
+      <button id="loginBtn">Zaloguj się</button>
+      <p>Nie masz konta? <button id="showSignup">Zarejestruj się</button></p>
+    </div>
+
+    <!-- Formularz rejestracji -->
+    <div id="signupForm" style="display: none;">
+      <h3>Rejestracja</h3>
+      <input id="signupEmail" type="email" placeholder="Email" />
+      <input id="signupPassword" type="password" placeholder="Hasło" />
+      <button id="signupBtn">Zarejestruj się</button>
+      <p>Masz już konto? <button id="showLogin">Zaloguj się</button></p>
+    </div>
   </div>
 
   <div id="userInfo" style="display:none;">
@@ -24,16 +49,12 @@
   </div>
 
   <div id="chat" style="display:none;">
-    <div>
-      <input id="room" placeholder="Pokój" />
-      <button id="joinBtn">Dołącz</button>
-    </div>
     <div id="messages"></div>
     <input id="inputMsg" placeholder="Wpisz wiadomość..." disabled />
     <button id="sendBtn" disabled>Wyślij</button>
   </div>
 
-  <!-- Tutaj ładujemy tylko entrypoint Vite -->
+  <!-- Entry point aplikacji -->
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>
