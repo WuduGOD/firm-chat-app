@@ -4,8 +4,8 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseKey = import.meta.env.VITE_SUPABASE_KEY
 const supabase = createClient(supabaseUrl, supabaseKey)
 
-let currentUser = null
-let currentChatUser = null
+let currentUser
+let currentChatUser
 
 // Elementy interfejsu
 const authDiv = document.getElementById('auth')
@@ -136,11 +136,43 @@ async function startChatWith(email) {
   messagesDiv.innerHTML = ''
   chatDiv.style.display = 'block'
 
-  const { data, error } = await supabase
+async function startChatWith(email) {
+  currentChatUser = email
+  messagesDiv.innerHTML = ''
+  chatDiv.style.display = 'block'
+
+  // 1. Pobierz wysłane przez mnie do tego użytkownika
+  const { data: sent, error: err1 } = await supabase
     .from('messages')
     .select('*')
-    .or(`and(sender.eq.${currentUser.email},receiver.eq.${email}),and(sender.eq.${email},receiver.eq.${currentUser.email})`)
-    .order('created_at', { ascending: true })
+    .eq('sender', currentUser.email)
+    .eq('receiver', email)
+
+  // 2. Pobierz wysłane przezeń do mnie
+  const { data: received, error: err2 } = await supabase
+    .from('messages')
+    .select('*')
+    .eq('sender', email)
+    .eq('receiver', currentUser.email)
+
+  if (err1 || err2) {
+    console.error('Błąd ładowania wiadomości', err1 || err2)
+    return alert('Błąd ładowania wiadomości')
+  }
+
+  // 3. Połącz i posortuj wg daty
+  const all = [...sent, ...received]
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+
+  // 4. Wyświetl
+  all.forEach(msg => {
+    const div = document.createElement('div')
+    div.textContent = `${msg.sender === currentUser.email ? 'Ty' : msg.sender}: ${msg.text}`
+    messagesDiv.appendChild(div)
+  })
+
+  messagesDiv.scrollTop = messagesDiv.scrollHeight
+}
 
   if (error) return alert('Błąd ładowania wiadomości')
 
