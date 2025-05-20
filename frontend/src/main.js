@@ -20,7 +20,7 @@ const loginBtn = document.getElementById('loginBtn')
 const logoutBtn = document.getElementById('logoutBtn')
 const userEmail = document.getElementById('userEmail')
 
-const userList = document.getElementById('userList')
+const contactsList = document.getElementById('contactsList')
 const messagesDiv = document.getElementById('messages')
 const inputMsg = document.getElementById('inputMsg')
 const sendBtn = document.getElementById('sendBtn')
@@ -29,6 +29,7 @@ const sendBtn = document.getElementById('sendBtn')
 signupBtn.onclick = async () => {
   const email = emailInput.value.trim()
   const password = passwordInput.value.trim()
+
   if (!email || !password) {
     alert('Wpisz email i hasło')
     return
@@ -39,8 +40,14 @@ signupBtn.onclick = async () => {
   if (error) {
     alert('Błąd rejestracji: ' + error.message)
   } else {
-    // Poczekaj na aktywację i zapis profilu po zalogowaniu
-    alert('Zarejestrowano. Sprawdź email i kliknij link aktywacyjny.')
+    // ⬇️ Dodaj do tabeli `profiles`
+    const userId = data.user?.id
+    if (userId) {
+      await supabase.from('profiles').insert([
+        { id: userId, email }
+      ])
+    }
+    alert('Zarejestrowano! Sprawdź email i kliknij link aktywacyjny.')
   }
 }
 
@@ -115,12 +122,12 @@ async function loadContacts() {
 
   if (error) return alert('Błąd ładowania kontaktów')
 
-  userList.innerHTML = ''
+  contactsList.innerHTML = ''
   users.forEach(user => {
     const li = document.createElement('li')
     li.textContent = user.email
     li.onclick = () => startChatWith(user.email)
-    userList.appendChild(li)
+    contactsList.appendChild(li)
   })
 }
 
