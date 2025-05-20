@@ -12,7 +12,6 @@ const authDiv = document.getElementById('auth')
 const userInfoDiv = document.getElementById('userInfo')
 const chatDiv = document.getElementById('chat')
 const contactsDiv = document.getElementById('contacts')
-const contactsList = document.getElementById('contactsList');
 const emailInput = document.getElementById('email')
 const passwordInput = document.getElementById('password')
 const signupBtn = document.getElementById('signupBtn')
