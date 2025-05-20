@@ -28,25 +28,54 @@ const sendBtn = document.getElementById('sendBtn')
 // Rejestracja
 signupBtn.onclick = async () => {
   const email = emailInput.value.trim()
-  const password = passInput.value.trim()
-  if (!email || !password) return alert('Wpisz email i hasło')
+  const password = passwordInput.value.trim()
+  if (!email || !password) {
+    alert('Wpisz email i hasło')
+    return
+  }
 
-  const { error } = await supabase.auth.signUp({ email, password })
-  if (error) return alert('Błąd rejestracji: ' + error.message)
+  const { data, error } = await supabase.auth.signUp({ email, password })
 
-  alert('Zarejestrowano. Sprawdź email i kliknij link aktywacyjny.')
+  if (error) {
+    alert('Błąd rejestracji: ' + error.message)
+  } else {
+    // Poczekaj na aktywację i zapis profilu po zalogowaniu
+    alert('Zarejestrowano. Sprawdź email i kliknij link aktywacyjny.')
+  }
 }
 
 // Logowanie
 loginBtn.onclick = async () => {
   const email = emailInput.value.trim()
-  const password = passInput.value.trim()
-  if (!email || !password) return alert('Wpisz email i hasło')
+  const password = passwordInput.value.trim()
+  if (!email || !password) {
+    alert('Wpisz email i hasło')
+    return
+  }
 
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-  if (error) return alert('Błąd logowania: ' + error.message)
 
-  showUser(data.user)
+  if (error) {
+    alert('Błąd logowania: ' + error.message)
+  } else {
+    const user = data.user
+
+    // Upewnij się, że profil istnieje — jeśli nie, dodaj
+    const { data: existingProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+
+    if (!existingProfile && !profileError) {
+      await supabase.from('profiles').insert({
+        id: user.id,
+        email: user.email
+      })
+    }
+
+    showUser(user)
+  }
 }
 
 // Wylogowanie
