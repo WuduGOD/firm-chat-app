@@ -68,6 +68,7 @@ function showUser(user) {
   authDiv.style.display = 'none'
   userInfoDiv.style.display = 'block'
   contactsDiv.style.display = 'block'
+  chatDiv.style.display = 'block';
   loadContacts()
 }
 
