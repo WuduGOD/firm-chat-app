@@ -48,6 +48,7 @@ signupBtn.onclick = async () => {
 loginBtn.onclick = async () => {
   const email = emailInput.value.trim()
   const password = passwordInput.value.trim()
+
   if (!email || !password) {
     alert('Wpisz email i hasło')
     return
@@ -57,25 +58,30 @@ loginBtn.onclick = async () => {
 
   if (error) {
     alert('Błąd logowania: ' + error.message)
-  } else {
-    const user = data.user
-
-    // Upewnij się, że profil istnieje — jeśli nie, dodaj
-    const { data: existingProfile, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single()
-
-    if (!existingProfile && !profileError) {
-      await supabase.from('profiles').insert({
-        id: user.id,
-        email: user.email
-      })
-    }
-
-    showUser(user)
+    return
   }
+
+  const user = data.user
+
+  // Spróbuj pobrać profil
+  const { data: existingProfile, error: profileError } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  // Jeśli brak profilu – dodaj
+  if (!existingProfile) {
+    const { error: insertError } = await supabase.from('profiles').insert({
+      id: user.id,
+      email: user.email
+    })
+    if (insertError) {
+      console.error('Błąd dodawania profilu:', insertError.message)
+    }
+  }
+
+  showUser(user)
 }
 
 // Wylogowanie
