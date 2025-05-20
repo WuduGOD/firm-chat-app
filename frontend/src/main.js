@@ -141,14 +141,14 @@ async function startChatWith(email) {
   messagesDiv.innerHTML = ''
   chatDiv.style.display = 'block'
 
-  // 1. Pobierz wysłane przez mnie do tego użytkownika
+  // 1. Pobierz wiadomości ode mnie do wybranego
   const { data: sent, error: err1 } = await supabase
     .from('messages')
     .select('*')
     .eq('sender', currentUser.email)
     .eq('receiver', email)
 
-  // 2. Pobierz wysłane przezeń do mnie
+  // 2. Pobierz wiadomości od wybranego do mnie
   const { data: received, error: err2 } = await supabase
     .from('messages')
     .select('*')
@@ -156,9 +156,24 @@ async function startChatWith(email) {
     .eq('receiver', currentUser.email)
 
   if (err1 || err2) {
-    console.error('Błąd ładowania wiadomości', err1 || err2)
+    console.error('Błąd ładowania wiadomości:', err1 || err2)
     return alert('Błąd ładowania wiadomości')
   }
+
+  // 3. Połącz obie tablice i posortuj po created_at
+  const allMessages = [...sent, ...received].sort((a, b) =>
+    new Date(a.created_at) - new Date(b.created_at)
+  )
+
+  // 4. Wyświetl je w oknie czatu
+  allMessages.forEach(msg => {
+    const div = document.createElement('div')
+    div.textContent = `${msg.sender === currentUser.email ? 'Ty' : msg.sender}: ${msg.text}`
+    messagesDiv.appendChild(div)
+  })
+
+  messagesDiv.scrollTop = messagesDiv.scrollHeight
+}
 
   // 3. Połącz i posortuj wg daty
   const all = [...sent, ...received]
