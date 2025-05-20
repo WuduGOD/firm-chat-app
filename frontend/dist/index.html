@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Komunikator</title>
+  <script type="module" crossorigin src="./assets/index-SWSKZsIA.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-DqQZ96CI.css">
+</head>
+<body>
+  <h2>Komunikator</h2>
+
+  <div id="auth">
+    <input id="email" type="email" placeholder="Email" /><br/>
+    <input id="password" type="password" placeholder="Hasło" /><br/>
+    <button id="signupBtn">Zarejestruj</button>
+    <button id="loginBtn">Zaloguj</button>
+  </div>
+
+  <div id="userInfo" style="display:none;">
+    <p>Zalogowany jako: <span id="userEmail"></span></p>
+    <button id="logoutBtn">Wyloguj się</button>
+  </div>
+
+  <!-- Kontakty -->
+  <div id="contacts" style="display: none;">
+    <h3>Kontakty</h3>
+    <ul id="contactsList"></ul>
+  </div>
+
+  <!-- Okno czatu -->
+  <div id="chat" style="display: none;">
+    <h3>Czat</h3>
+    <div id="messages"></div>
+    <input id="inputMsg" placeholder="Wpisz wiadomość..." />
+    <button id="sendBtn">Wyślij</button>
+  </div>
+  
+
+</body>
+</html>
+
+  <script>
+    const supabaseUrl = import.meta.env.SUPABASE_KEY;
+    const supabaseKey = import.meta.env.SUPABASE_KEY;
+    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const signupBtn = document.getElementById('signupBtn');
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const userInfo = document.getElementById('userInfo');
+    const userEmailSpan = document.getElementById('userEmail');
+    const authDiv = document.getElementById('auth');
+    const messagesDiv = document.getElementById('messages');
+
+    signupBtn.onclick = async () => {
+      const email = emailInput.value.trim();
+      const password = passwordInput.value.trim();
+      if (!email || !password) {
+        alert('Wpisz email i hasło');
+        return;
+      }
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      if (error) {
+        alert('Błąd rejestracji: ' + error.message);
+      } else {
+        alert('Zarejestrowano. Sprawdź email i kliknij link aktywacyjny.');
+      }
+    };
+
+    loginBtn.onclick = async () => {
+      const email = emailInput.value.trim();
+      const password = passwordInput.value.trim();
+      if (!email || !password) {
+        alert('Wpisz email i hasło');
+        return;
+      }
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        alert('Błąd logowania: ' + error.message);
+      } else {
+        showUser(data.user);
+      }
+    };
+
+    logoutBtn.onclick = async () => {
+      await supabase.auth.signOut();
+      authDiv.style.display = 'block';
+      userInfo.style.display = 'none';
+      messagesDiv.textContent = '';
+    };
+
+    function showUser(user) {
+      userEmailSpan.textContent = user.email;
+      authDiv.style.display = 'none';
+      userInfo.style.display = 'block';
+      messagesDiv.textContent = 'Jesteś zalogowany. Możesz teraz dołączyć do czatu.';
+    }
+
+    // Sprawdź sesję przy załadowaniu strony
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session && session.user) {
+        showUser(session.user);
+      }
+    });
+
+  </script>
