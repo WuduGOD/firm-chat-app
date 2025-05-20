@@ -1,132 +1,140 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Zmienna środowiskowa Vite
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseKey = import.meta.env.VITE_SUPABASE_KEY
 const supabase = createClient(supabaseUrl, supabaseKey)
 
-let ws
+let currentUser = null
+let currentChatUser = null
 
-// Elementy HTML
-const loginForm      = document.getElementById('loginForm')
-const signupForm     = document.getElementById('signupForm')
-const showSignupBtn  = document.getElementById('showSignup')
-const showLoginBtn   = document.getElementById('showLogin')
-const authDiv        = document.getElementById('auth')
-const userInfoDiv    = document.getElementById('userInfo')
-const userEmail      = document.getElementById('userEmail')
-const chatDiv        = document.getElementById('chat')
-const messagesDiv    = document.getElementById('messages')
-const inputMsg       = document.getElementById('inputMsg')
-const sendBtn        = document.getElementById('sendBtn')
+// Elementy interfejsu
+const authDiv = document.getElementById('auth')
+const userInfoDiv = document.getElementById('userInfo')
+const chatDiv = document.getElementById('chat')
+const contactsDiv = document.getElementById('contacts')
+
+const emailInput = document.getElementById('email')
+const passInput = document.getElementById('password')
+const signupBtn = document.getElementById('signupBtn')
+const loginBtn = document.getElementById('loginBtn')
+const logoutBtn = document.getElementById('logoutBtn')
+const userEmail = document.getElementById('userEmail')
+
+const userList = document.getElementById('userList')
+const messagesDiv = document.getElementById('messages')
+const inputMsg = document.getElementById('inputMsg')
+const sendBtn = document.getElementById('sendBtn')
 
 // Rejestracja
-const signupEmail    = document.getElementById('signupEmail')
-const signupPassword = document.getElementById('signupPassword')
-const signupBtn      = document.getElementById('signupBtn')
-
 signupBtn.onclick = async () => {
-  const email = signupEmail.value.trim()
-  const password = signupPassword.value.trim()
-  if (!email || !password) return alert('Wprowadź email i hasło.')
+  const email = emailInput.value.trim()
+  const password = passInput.value.trim()
+  if (!email || !password) return alert('Wpisz email i hasło')
 
   const { error } = await supabase.auth.signUp({ email, password })
   if (error) return alert('Błąd rejestracji: ' + error.message)
+
   alert('Zarejestrowano. Sprawdź email i kliknij link aktywacyjny.')
 }
 
 // Logowanie
-const emailInput  = document.getElementById('email')
-const passInput   = document.getElementById('password')
-const loginBtn    = document.getElementById('loginBtn')
-
 loginBtn.onclick = async () => {
   const email = emailInput.value.trim()
   const password = passInput.value.trim()
-  if (!email || !password) return alert('Wprowadź email i hasło.')
+  if (!email || !password) return alert('Wpisz email i hasło')
 
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
   if (error) return alert('Błąd logowania: ' + error.message)
 
   showUser(data.user)
-  connectWebSocket(data.user.email)
 }
 
 // Wylogowanie
-const logoutBtn = document.getElementById('logoutBtn')
 logoutBtn.onclick = async () => {
   await supabase.auth.signOut()
-  userInfoDiv.style.display = 'none'
-  chatDiv.style.display = 'none'
+  currentUser = null
+  currentChatUser = null
   authDiv.style.display = 'block'
+  userInfoDiv.style.display = 'none'
+  contactsDiv.style.display = 'none'
+  chatDiv.style.display = 'none'
   messagesDiv.innerHTML = ''
-  if (ws) ws.close()
 }
 
-// Przełączanie formularzy
-showSignupBtn.onclick = () => {
-  loginForm.style.display = 'none'
-  signupForm.style.display = 'block'
-}
-showLoginBtn.onclick = () => {
-  signupForm.style.display = 'none'
-  loginForm.style.display = 'block'
-}
-
-// Pokazanie UI po zalogowaniu
+// Pokazuje zalogowanego użytkownika
 function showUser(user) {
+  currentUser = user
   userEmail.textContent = user.email
   authDiv.style.display = 'none'
   userInfoDiv.style.display = 'block'
-  chatDiv.style.display = 'block'
+  contactsDiv.style.display = 'block'
+  loadContacts()
 }
 
-// Połączenie z WebSocket
-function connectWebSocket(email) {
-  ws = new WebSocket(import.meta.env.VITE_CHAT_WS_URL)
+// Załaduj innych użytkowników
+async function loadContacts() {
+  const { data: users, error } = await supabase.rpc('get_other_users', { current_email: currentUser.email })
+  // Fallback jeśli nie masz funkcji RPC:
+  // const { data: users, error } = await supabase.from('profiles').select('email')
 
-  ws.onopen = () => {
-    ws.send(JSON.stringify({ type: 'join', name: email }))
-    inputMsg.disabled = false
-    sendBtn.disabled = false
-  }
+  if (error) return alert('Błąd ładowania kontaktów')
 
-  ws.onmessage = e => {
-    try {
-      const msg = JSON.parse(e.data)
-      const div = document.createElement('div')
-      div.textContent = `[${msg.username}] ${msg.text}`
-      messagesDiv.appendChild(div)
-      messagesDiv.scrollTop = messagesDiv.scrollHeight
-    } catch {
-      // fallback dla zwykłego tekstu
-      const div = document.createElement('div')
-      div.textContent = e.data
-      messagesDiv.appendChild(div)
-    }
-  }
+  userList.innerHTML = ''
+  users.forEach(user => {
+    const li = document.createElement('li')
+    li.textContent = user.email
+    li.onclick = () => startChatWith(user.email)
+    userList.appendChild(li)
+  })
+}
 
-  ws.onclose = () => {
-    alert('Połączenie z czatem zostało zamknięte.')
-    inputMsg.disabled = true
-    sendBtn.disabled = true
-  }
+// Rozpocznij rozmowę
+async function startChatWith(email) {
+  currentChatUser = email
+  messagesDiv.innerHTML = ''
+  chatDiv.style.display = 'block'
+
+  const { data, error } = await supabase
+    .from('messages')
+    .select('*')
+    .or(`and(sender.eq.${currentUser.email},receiver.eq.${email}),and(sender.eq.${email},receiver.eq.${currentUser.email})`)
+    .order('created_at', { ascending: true })
+
+  if (error) return alert('Błąd ładowania wiadomości')
+
+  data.forEach(msg => {
+    const div = document.createElement('div')
+    div.textContent = `${msg.sender === currentUser.email ? 'Ty' : msg.sender}: ${msg.text}`
+    messagesDiv.appendChild(div)
+  })
+
+  messagesDiv.scrollTop = messagesDiv.scrollHeight
 }
 
 // Wysyłanie wiadomości
-sendBtn.onclick = () => {
+sendBtn.onclick = async () => {
   const text = inputMsg.value.trim()
-  if (text && ws?.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ type: 'message', text }))
-    inputMsg.value = ''
-  }
+  if (!text || !currentChatUser) return
+
+  const { error } = await supabase.from('messages').insert({
+    sender: currentUser.email,
+    receiver: currentChatUser,
+    text
+  })
+
+  if (error) return alert('Błąd wysyłania')
+
+  const div = document.createElement('div')
+  div.textContent = `Ty: ${text}`
+  messagesDiv.appendChild(div)
+  inputMsg.value = ''
+  messagesDiv.scrollTop = messagesDiv.scrollHeight
 }
 
-// Sprawdzenie sesji przy starcie
+// Sprawdź sesję przy starcie
 ;(async () => {
   const { data: { session } } = await supabase.auth.getSession()
   if (session?.user) {
     showUser(session.user)
-    connectWebSocket(session.user.email)
   }
 })()

@@ -1,44 +1,55 @@
 body {
   font-family: Arial, sans-serif;
   max-width: 600px;
-  margin: 40px auto;
-  padding: 20px;
-  background: #f9f9f9;
+  margin: 2em auto;
+  padding: 0 1em;
+  background-color: #f9f9f9;
+}
+
+h2 {
+  text-align: center;
   color: #333;
 }
 
-input, button {
-  padding: 8px;
-  width: 100%;
-  box-sizing: border-box;
-  margin: 5px 0;
+#messages {
+  height: 300px;
+  overflow-y: auto;
+  border: 1px solid #ccc;
+  background: white;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 5px;
 }
 
-button {
-  cursor: pointer;
-  background-color: #007bff;
-  color: white;
-  border: none;
+input {
+  width: 100%;
+  padding: 8px;
+  margin: 6px 0;
+  box-sizing: border-box;
+  border: 1px solid #aaa;
   border-radius: 4px;
 }
 
-button:hover {
-  background-color: #0056b3;
+button {
+  padding: 10px 15px;
+  margin-right: 10px;
+  border: none;
+  background-color: #0077ff;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
 }
 
-#messages {
-  height: 200px;
-  overflow-y: auto;
-  border: 1px solid #ccc;
-  padding: 10px;
-  background: #fff;
-  margin-top: 10px;
+button:disabled {
+  background-color: #aaa;
+  cursor: not-allowed;
 }
 
 #auth, #userInfo, #chat {
-  margin-bottom: 20px;
-}
-
-.hidden {
-  display: none;
+  background: white;
+  padding: 15px;
+  margin-top: 15px;
+  border-radius: 5px;
+  box-shadow: 0 0 5px #ccc;
 }
