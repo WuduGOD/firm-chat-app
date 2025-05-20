@@ -2,14 +2,15 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8" />
-  <title>Chat z Supabase Auth</title>
+  <title>Komunikator</title>
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
-  <h2>Rejestracja i logowanie</h2>
+  <h2>Komunikator</h2>
+
   <div id="auth">
-    <input id="email" type="email" placeholder="Email" autocomplete="username" /><br/>
-    <input id="password" type="password" placeholder="Hasło" autocomplete="current-password" /><br/>
+    <input id="email" type="email" placeholder="Email" /><br/>
+    <input id="password" type="password" placeholder="Hasło" /><br/>
     <button id="signupBtn">Zarejestruj</button>
     <button id="loginBtn">Zaloguj</button>
   </div>
@@ -19,7 +20,15 @@
     <button id="logoutBtn">Wyloguj się</button>
   </div>
 
-  <div id="chat" style="display:none;">
+  <!-- Kontakty -->
+  <div id="contacts" style="display: none;">
+    <h3>Kontakty</h3>
+    <ul id="contactsList"></ul>
+  </div>
+
+  <!-- Okno czatu -->
+  <div id="chat" style="display: none;">
+    <h3>Czat</h3>
     <div id="messages"></div>
     <input id="inputMsg" placeholder="Wpisz wiadomość..." />
     <button id="sendBtn">Wyślij</button>
@@ -28,7 +37,6 @@
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>
-
 
   <script>
     const supabaseUrl = import.meta.env.SUPABASE_KEY;
