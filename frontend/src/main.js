@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 
+// Cache profili: Map<id, email>
+const profilesCache = new Map()
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseKey = import.meta.env.VITE_SUPABASE_KEY
 const supabase = createClient(supabaseUrl, supabaseKey)
@@ -23,6 +25,19 @@ const contactsList = document.getElementById('contactsList')
 const messagesDiv = document.getElementById('messages')
 const inputMsg = document.getElementById('inputMsg')
 const sendBtn = document.getElementById('sendBtn')
+
+async function loadAllProfiles() {
+  const { data: profiles, error } = await supabase.from('profiles').select('id,email')
+  if (error) {
+    console.error('Błąd ładowania profili:', error)
+    return
+  }
+  profiles.forEach(({ id, email }) => profilesCache.set(id, email))
+}
+
+function getEmailById(id) {
+  return profilesCache.get(id) || id
+}
 
 // Rejestracja
 signupBtn.onclick = async () => {
@@ -189,18 +204,7 @@ sendBtn.onclick = async () => {
 }
 
 async function addMessageToChat(msg) {
-  let label = 'Ty'
-
-  if (msg.sender !== currentUser.id) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('email')
-      .eq('id', msg.sender)
-      .maybeSingle()
-
-    label = profile?.email || msg.sender
-  }
-
+  const label = (msg.sender === currentUser.id) ? 'Ty' : getEmailById(msg.sender)
   const div = document.createElement('div')
   div.textContent = `${label}: ${msg.text}`
   messagesDiv.appendChild(div)
@@ -254,7 +258,12 @@ function subscribeToMessages(user) {
 ;(async () => {
   const { data: { session } } = await supabase.auth.getSession()
   if (session?.user) {
+    await loadAllProfiles()        // <- Ładujemy cache profili przed showUser
     showUser(session.user)
-	subscribeToMessages(session.user)
+    subscribeToMessages(session.user)
+
+    // Odświeżaj cache co 10 minut
+    setInterval(loadAllProfiles, 10 * 60 * 1000)
   }
 })()
+
