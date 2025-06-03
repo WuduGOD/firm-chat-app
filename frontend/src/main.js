@@ -142,6 +142,13 @@ async function startChatWith(user) {
     .select('*')
     .eq('sender', currentUser.id)
     .eq('receiver', user.id);
+	
+  function getUserNameById(id) {
+    if (id === currentUser.id) return 'Ty'
+    if (currentChatUser && id === currentChatUser.id) return currentChatUser.email
+    return id  // fallback, gdy nieznany
+}
+
 
   const { data: received, error: err2 } = await supabase
     .from('messages')
@@ -160,7 +167,7 @@ async function startChatWith(user) {
 
   allMessages.forEach(msg => {
     const div = document.createElement('div');
-    div.textContent = `${msg.sender === currentUser.id ? 'Ty' : msg.sender}: ${msg.text}`;
+    div.textContent = `${getUserNameById(msg.sender)}: ${msg.text}`;
     messagesDiv.appendChild(div);
   });
 
