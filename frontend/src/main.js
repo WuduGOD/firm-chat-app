@@ -165,11 +165,9 @@ async function startChatWith(user) {
     new Date(a.created_at) - new Date(b.created_at)
   );
 
-  allMessages.forEach(msg => {
-    const div = document.createElement('div');
-    div.textContent = `${getUserNameById(msg.sender)}: ${msg.text}`;
-    messagesDiv.appendChild(div);
-  });
+for (const msg of allMessages) {
+  await addMessageToChat(msg);
+}
 
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
@@ -190,12 +188,10 @@ sendBtn.onclick = async () => {
   inputMsg.value = ''
 }
 
-function addMessageToChat(text) {
-  const div = document.createElement('div')
+async function addMessageToChat(msg) {
   let label = 'Ty'
 
   if (msg.sender !== currentUser.id) {
-    // Pobierz email nadawcy
     const { data: profile } = await supabase
       .from('profiles')
       .select('email')
@@ -203,21 +199,24 @@ function addMessageToChat(text) {
       .maybeSingle()
 
     label = profile?.email || msg.sender
-}
+  }
 
   const div = document.createElement('div')
   div.textContent = `${label}: ${msg.text}`
   messagesDiv.appendChild(div)
   messagesDiv.scrollTop = messagesDiv.scrollHeight
-
-  messagesDiv.scrollTop = messagesDiv.scrollHeight
 }
 
+let channel = null
+
 function subscribeToMessages(user) {
-  const channel = supabase.channel(`messages_channel_${user.id}`)
+  if (channel) {
+    channel.unsubscribe()
+  }
+
+  channel = supabase.channel(`messages_channel_${user.id}`)
 
   channel
-    // Wiadomości, które TY otrzymujesz
     .on('postgres_changes', {
       event: 'INSERT',
       schema: 'public',
@@ -225,33 +224,29 @@ function subscribeToMessages(user) {
       filter: `receiver=eq.${user.id}`
     }, async (payload) => {
       const msg = payload.new
-
-      // Czy rozmowa dotyczy aktualnie otwartego chatu
-      if (msg.sender === currentChatUser?.id) {
-        const { data: senderProfile } = await supabase
-          .from('profiles')
-          .select('email')
-          .eq('id', msg.sender)
-          .single()
-
-        const senderEmail = senderProfile?.email || msg.sender
-        addMessageToChat(`${senderEmail}: ${msg.text}`)
+      if (
+        currentChatUser &&
+        ((msg.sender === currentChatUser.id && msg.receiver === currentUser.id) ||
+        (msg.sender === currentUser.id && msg.receiver === currentChatUser.id))
+      ) {
+        await addMessageToChat(msg)
       }
     })
-
-    // Wiadomości, które TY wysyłasz (żeby pojawiały się u Ciebie od razu)
     .on('postgres_changes', {
       event: 'INSERT',
       schema: 'public',
       table: 'messages',
       filter: `sender=eq.${user.id}`
-    }, (payload) => {
+    }, async (payload) => {
       const msg = payload.new
-      if (msg.receiver === currentChatUser?.id) {
-        addMessageToChat(`Ty: ${msg.text}`)
+      if (
+        currentChatUser &&
+        ((msg.sender === currentUser.id && msg.receiver === currentChatUser.id) ||
+        (msg.sender === currentChatUser.id && msg.receiver === currentUser.id))
+      ) {
+        await addMessageToChat(msg)
       }
     })
-
     .subscribe()
 }
 
