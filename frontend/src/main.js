@@ -126,13 +126,13 @@ async function loadContacts() {
     const li = document.createElement('li')
 	li.dataset.id = user.id
     li.textContent = user.email
-    li.onclick = () => startChatWith(user.id, user.email)
+    li.onclick = () => startChatWith(user)
     contactsList.appendChild(li)
   })
 }
 
 // Rozpocznij rozmowę
-async function startChatWith(userId, userEmail) {
+async function startChatWith(user) {
   currentChatUser = { id: userId, email: userEmail };
   messagesDiv.innerHTML = ''
   chatDiv.style.display = 'block'
@@ -148,8 +148,8 @@ async function startChatWith(userId, userEmail) {
   const { data: received, error: err2 } = await supabase
     .from('messages')
     .select('*')
-    .eq('sender', email)
-    .eq('receiver', currentUser.email)
+    .eq('sender', user.id)
+    .eq('receiver', currentUser.id)
 
   if (err1 || err2) {
     console.error('Błąd ładowania wiadomości:', err1 || err2)
