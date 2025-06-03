@@ -125,19 +125,14 @@ async function loadContacts() {
   users.forEach(user => {
     const li = document.createElement('li')
     li.textContent = user.email
-    li.onclick = () => startChatWith(user.email)
+    li.onclick = () => startChatWith(user)
     contactsList.appendChild(li)
   })
 }
 
 // Rozpocznij rozmowę
 async function startChatWith(email) {
-  currentChatUser = email
-  messagesDiv.innerHTML = ''
-  chatDiv.style.display = 'block'
-
-async function startChatWith(email) {
-  currentChatUser = email
+  currentChatUser = user
   messagesDiv.innerHTML = ''
   chatDiv.style.display = 'block'
 
@@ -145,8 +140,8 @@ async function startChatWith(email) {
   const { data: sent, error: err1 } = await supabase
     .from('messages')
     .select('*')
-    .eq('sender', currentUser.email)
-    .eq('receiver', email)
+    .eq('sender', currentUser.id)
+    .eq('receiver', user.id)
 
   // 2. Pobierz wiadomości od wybranego do mnie
   const { data: received, error: err2 } = await supabase
@@ -206,8 +201,8 @@ sendBtn.onclick = async () => {
   if (!text || !currentChatUser) return
 
   const { error } = await supabase.from('messages').insert({
-    sender: currentUser.email,
-    receiver: currentChatUser,
+    sender: currentUser.id,
+    receiver: currentChatUser.id,
     text
   })
 
