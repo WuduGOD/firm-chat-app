@@ -133,67 +133,38 @@ async function loadContacts() {
 
 // Rozpocznij rozmowę
 async function startChatWith(user) {
-  currentChatUser = { id: userId, email: userEmail };
-  messagesDiv.innerHTML = ''
-  chatDiv.style.display = 'block'
+  currentChatUser = { id: user.id, email: user.email };
+  messagesDiv.innerHTML = '';
+  chatDiv.style.display = 'block';
 
-  // 1. Pobierz wiadomości ode mnie do wybranego
   const { data: sent, error: err1 } = await supabase
     .from('messages')
     .select('*')
     .eq('sender', currentUser.id)
-    .eq('receiver', user.id)
+    .eq('receiver', user.id);
 
-  // 2. Pobierz wiadomości od wybranego do mnie
   const { data: received, error: err2 } = await supabase
     .from('messages')
     .select('*')
     .eq('sender', user.id)
-    .eq('receiver', currentUser.id)
+    .eq('receiver', currentUser.id);
 
   if (err1 || err2) {
-    console.error('Błąd ładowania wiadomości:', err1 || err2)
-    return alert('Błąd ładowania wiadomości')
+    console.error('Błąd ładowania wiadomości:', err1 || err2);
+    return alert('Błąd ładowania wiadomości');
   }
 
-  // 3. Połącz obie tablice i posortuj po created_at
   const allMessages = [...sent, ...received].sort((a, b) =>
     new Date(a.created_at) - new Date(b.created_at)
-  )
+  );
 
-  // 4. Wyświetl je w oknie czatu
   allMessages.forEach(msg => {
-    const div = document.createElement('div')
-    div.textContent = `${msg.sender === currentUser.email ? 'Ty' : msg.sender}: ${msg.text}`
-    messagesDiv.appendChild(div)
-  })
+    const div = document.createElement('div');
+    div.textContent = `${msg.sender === currentUser.id ? 'Ty' : msg.sender}: ${msg.text}`;
+    messagesDiv.appendChild(div);
+  });
 
-  messagesDiv.scrollTop = messagesDiv.scrollHeight
-}
-
-  // 3. Połącz i posortuj wg daty
-  const all = [...sent, ...received]
-    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-
-  // 4. Wyświetl
-  all.forEach(msg => {
-    const div = document.createElement('div')
-    div.textContent = `${msg.sender === currentUser.email ? 'Ty' : msg.sender}: ${msg.text}`
-    messagesDiv.appendChild(div)
-  })
-
-  messagesDiv.scrollTop = messagesDiv.scrollHeight
-}
-
-  if (error) return alert('Błąd ładowania wiadomości')
-
-  data.forEach(msg => {
-    const div = document.createElement('div')
-    div.textContent = `${msg.sender === currentUser.email ? 'Ty' : msg.sender}: ${msg.text}`
-    messagesDiv.appendChild(div)
-  })
-
-  messagesDiv.scrollTop = messagesDiv.scrollHeight
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
 // Wysyłanie wiadomości
