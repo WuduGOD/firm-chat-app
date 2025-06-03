@@ -187,17 +187,29 @@ sendBtn.onclick = async () => {
 
   if (error) return alert('Błąd wysyłania')
 
-  const div = document.createElement('div')
-  div.textContent = `Ty: ${text}`
-  messagesDiv.appendChild(div)
   inputMsg.value = ''
-  messagesDiv.scrollTop = messagesDiv.scrollHeight
 }
 
 function addMessageToChat(text) {
   const div = document.createElement('div')
-  div.textContent = text
+  let label = 'Ty'
+
+  if (msg.sender !== currentUser.id) {
+    // Pobierz email nadawcy
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('email')
+      .eq('id', msg.sender)
+      .maybeSingle()
+
+    label = profile?.email || msg.sender
+}
+
+  const div = document.createElement('div')
+  div.textContent = `${label}: ${msg.text}`
   messagesDiv.appendChild(div)
+  messagesDiv.scrollTop = messagesDiv.scrollHeight
+
   messagesDiv.scrollTop = messagesDiv.scrollHeight
 }
 
