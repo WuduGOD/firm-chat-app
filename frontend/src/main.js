@@ -136,35 +136,6 @@ async function startChatWith(user) {
   currentChatUser = { id: user.id, email: user.email };
   messagesDiv.innerHTML = '';
   chatDiv.style.display = 'block';
-  
-// Subskrypcja realtime
-supabase
-  .channel('messages_channel_' + currentUser.id)
-  .on(
-    'postgres_changes',
-    {
-      event: 'INSERT',
-      schema: 'public',
-      table: 'messages',
-      filter: `receiver=eq.${currentUser.id}`
-    },
-    async (payload) => {
-      const msg = payload.new;
-
-      // Sprawdź, czy wiadomość jest od aktualnie otwartego rozmówcy
-      if (msg.sender === currentChatUser?.id) {
-        const div = document.createElement('div');
-        div.textContent = `${msg.sender}: ${msg.text}`;
-        messagesDiv.appendChild(div);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-      } else {
-        // opcjonalnie: notyfikacja, że ktoś inny napisał
-        console.log('Nowa wiadomość od:', msg.sender);
-      }
-    }
-  )
-  .subscribe();
-
 
   const { data: sent, error: err1 } = await supabase
     .from('messages')
@@ -223,10 +194,60 @@ sendBtn.onclick = async () => {
   messagesDiv.scrollTop = messagesDiv.scrollHeight
 }
 
+function addMessageToChat(text) {
+  const div = document.createElement('div')
+  div.textContent = text
+  messagesDiv.appendChild(div)
+  messagesDiv.scrollTop = messagesDiv.scrollHeight
+}
+
+function subscribeToMessages(user) {
+  const channel = supabase.channel(`messages_channel_${user.id}`)
+
+  channel
+    // Wiadomości, które TY otrzymujesz
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'messages',
+      filter: `receiver=eq.${user.id}`
+    }, async (payload) => {
+      const msg = payload.new
+
+      // Czy rozmowa dotyczy aktualnie otwartego chatu
+      if (msg.sender === currentChatUser?.id) {
+        const { data: senderProfile } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('id', msg.sender)
+          .single()
+
+        const senderEmail = senderProfile?.email || msg.sender
+        addMessageToChat(`${senderEmail}: ${msg.text}`)
+      }
+    })
+
+    // Wiadomości, które TY wysyłasz (żeby pojawiały się u Ciebie od razu)
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'messages',
+      filter: `sender=eq.${user.id}`
+    }, (payload) => {
+      const msg = payload.new
+      if (msg.receiver === currentChatUser?.id) {
+        addMessageToChat(`Ty: ${msg.text}`)
+      }
+    })
+
+    .subscribe()
+}
+
 // Sprawdź sesję przy starcie
 ;(async () => {
   const { data: { session } } = await supabase.auth.getSession()
   if (session?.user) {
     showUser(session.user)
+	subscribeToMessages(session.user)
   }
 })()
