@@ -27,25 +27,31 @@ const inputMsg = document.getElementById('inputMsg')
 const sendBtn = document.getElementById('sendBtn')
 
 async function loadAllProfiles() {
-  const { data: profiles, error } = await supabase.from('profiles').select('id,email')
+  const { data: profiles, error } = await supabase.from('profiles').select('id,email,username')
   if (error) {
     console.error('Błąd ładowania profili:', error)
     return
   }
-  profiles.forEach(({ id, email }) => profilesCache.set(id, email))
+  profilesCache.clear()
+  profiles.forEach(({ id, email, username }) => {
+    profilesCache.set(id, { email, username })
+  })
 }
 
-function getEmailById(id) {
-  return profilesCache.get(id) || id
+function getUserLabelById(id) {
+  const profile = profilesCache.get(id)
+  if (!profile) return id
+  return profile.username || profile.email || id
 }
 
 // Rejestracja
 signupBtn.onclick = async () => {
   const email = emailInput.value.trim()
   const password = passwordInput.value.trim()
+  const username = document.getElementById('username').value.trim()
 
-  if (!email || !password) {
-    alert('Wpisz email i hasło')
+  if (!email || !password || !username) {
+    alert('Wpisz email, hasło i nick')
     return
   }
 
@@ -54,11 +60,10 @@ signupBtn.onclick = async () => {
   if (error) {
     alert('Błąd rejestracji: ' + error.message)
   } else {
-    // ⬇️ Dodaj do tabeli `profiles`
     const userId = data.user?.id
     if (userId) {
       await supabase.from('profiles').insert([
-        { id: userId, email }
+        { id: userId, email, username }
       ])
     }
     alert('Zarejestrowano! Sprawdź email i kliknij link aktywacyjny.')
@@ -140,7 +145,7 @@ async function loadContacts() {
   users.forEach(user => {
     const li = document.createElement('li')
 	li.dataset.id = user.id
-    li.textContent = user.email
+    li.textContent = getUserLabelByID(user.id)
     li.onclick = () => startChatWith(user)
     contactsList.appendChild(li)
   })
@@ -148,7 +153,7 @@ async function loadContacts() {
 
 // Rozpocznij rozmowę
 async function startChatWith(user) {
-  currentChatUser = { id: user.id, email: user.email };
+  currentChatUser = { id: user.id, username: getUserLabelById(user.id) };
   messagesDiv.innerHTML = '';
   chatDiv.style.display = 'block';
 
@@ -204,7 +209,7 @@ sendBtn.onclick = async () => {
 }
 
 async function addMessageToChat(msg) {
-  const label = (msg.sender === currentUser.id) ? 'Ty' : getEmailById(msg.sender)
+  const label = (msg.sender === currentUser.id) ? 'Ty' : getUserLabelById(msg.sender)
   const div = document.createElement('div')
   div.textContent = `${label}: ${msg.text}`
   messagesDiv.appendChild(div)
