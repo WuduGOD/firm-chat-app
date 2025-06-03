@@ -145,7 +145,7 @@ async function loadContacts() {
   users.forEach(user => {
     const li = document.createElement('li')
 	li.dataset.id = user.id
-    li.textContent = getUserLabelByID(user.id)
+    li.textContent = getUserLabelById(user.id)
     li.onclick = () => startChatWith(user)
     contactsList.appendChild(li)
   })
