@@ -124,15 +124,16 @@ async function loadContacts() {
   contactsList.innerHTML = ''
   users.forEach(user => {
     const li = document.createElement('li')
+	li.dataset.id = user.id
     li.textContent = user.email
-    li.onclick = () => startChatWith(user)
+    li.onclick = () => startChatWith(user.id, user.email)
     contactsList.appendChild(li)
   })
 }
 
 // Rozpocznij rozmowę
-async function startChatWith(email) {
-  currentChatUser = user
+async function startChatWith(userId, userEmail) {
+  currentChatUser = { id: userId, email: userEmail };
   messagesDiv.innerHTML = ''
   chatDiv.style.display = 'block'
 
