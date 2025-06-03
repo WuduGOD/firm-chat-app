@@ -136,6 +136,35 @@ async function startChatWith(user) {
   currentChatUser = { id: user.id, email: user.email };
   messagesDiv.innerHTML = '';
   chatDiv.style.display = 'block';
+  
+// Subskrypcja realtime
+supabase
+  .channel('messages_channel_' + currentUser.id)
+  .on(
+    'postgres_changes',
+    {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'messages',
+      filter: `receiver=eq.${currentUser.id}`
+    },
+    async (payload) => {
+      const msg = payload.new;
+
+      // Sprawdź, czy wiadomość jest od aktualnie otwartego rozmówcy
+      if (msg.sender === currentChatUser?.id) {
+        const div = document.createElement('div');
+        div.textContent = `${msg.sender}: ${msg.text}`;
+        messagesDiv.appendChild(div);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      } else {
+        // opcjonalnie: notyfikacja, że ktoś inny napisał
+        console.log('Nowa wiadomość od:', msg.sender);
+      }
+    }
+  )
+  .subscribe();
+
 
   const { data: sent, error: err1 } = await supabase
     .from('messages')
