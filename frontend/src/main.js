@@ -123,13 +123,15 @@ logoutBtn.onclick = async () => {
 }
 
 // Pokazuje zalogowanego użytkownika
-function showUser(user) {
+async function showUser(user) {
   currentUser = user
   userEmail.textContent = user.email
   authDiv.style.display = 'none'
   userInfoDiv.style.display = 'block'
   contactsDiv.style.display = 'block'
-  chatDiv.style.display = 'block';
+  chatDiv.style.display = 'block'
+
+  await loadAllProfiles() // <- poczekaj na załadowanie profili
   loadContacts()
 }
 
