@@ -10,11 +10,11 @@ let inputMsg;
 let sendBtn;
 
 export async function initChatApp() {
-	
   contactsList = document.getElementById('contactsList');
   messagesDiv  = document.getElementById('messageContainer');
   inputMsg     = document.getElementById('messageInput');
   sendBtn      = document.getElementById('sendButton');
+
   // 1) Sprawdź sesję Supabase
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) {
@@ -81,10 +81,15 @@ async function startChatWith(user) {
   }
 
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+  // --- DODANE ---
+  document.getElementById('chatUserName').textContent = currentChatUser.username;
+  inputMsg.disabled = false;
+  sendBtn.disabled = false;
+  inputMsg.focus();
 }
 
 function setupSendMessage() {
-  // Teraz sendBtn istnieje, bo w HTML mamy id="sendButton"
   sendBtn.onclick = async () => {
     const text = inputMsg.value.trim();
     if (!text || !currentChatUser) return;
@@ -100,6 +105,7 @@ function setupSendMessage() {
     if (error) return alert('Błąd wysyłania');
 
     inputMsg.value = '';
+    inputMsg.focus();
   };
 }
 
