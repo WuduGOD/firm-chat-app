@@ -4,18 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Zaloguj się</title>
-  <script type="module" crossorigin src="./assets/index-C4UZJO0E.js"></script>
+  <script type="module" crossorigin src="./assets/index-BnqC5Wzd.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/index-9sBxIpUg.js">
-  <link rel="modulepreload" crossorigin href="./assets/supabaseClient-DEpFmieI.js">
   <link rel="stylesheet" crossorigin href="./assets/index-Br3xOm_R.css">
 </head>
 <body class="auth-body">
   <div class="auth-container">
     <h2>Zaloguj</h2>
-    <form class="auth-form">
-      <input type="text" placeholder="Email lub login" required />
+    <form class="auth-form" id="loginForm">
+      <input type="text" id="email" placeholder="Email lub login" required />
       <div class="password-wrapper">
-        <input type="password" placeholder="Hasło" required />
+        <input type="password" id="password" placeholder="Hasło" required />
         <span class="eye">👁️</span>
       </div>
       <button type="submit" class="login-btn">Zaloguj</button>

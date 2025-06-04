@@ -1,66 +1,84 @@
-import { supabase } from './supabaseClient.js'
+// src/auth.js
+import { createClient } from '@supabase/supabase-js';
 
-export function setupRegister() {
-  const emailInput = document.getElementById('email')
-  const passwordInput = document.getElementById('password')
-  const usernameInput = document.getElementById('username')
-  const signupBtn = document.getElementById('signupBtn')
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_KEY
+);
 
-  signupBtn.onclick = async () => {
-    const email = emailInput.value.trim()
-    const password = passwordInput.value.trim()
-    const username = usernameInput.value.trim()
-    if (!email || !password || !username) {
-      alert('Wpisz email, hasło i nick')
-      return
+// Funkcja inicjalizująca logowanie
+export function setupLogin() {
+  document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('loginForm');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+
+    if (!form) {
+      console.error('❌ Nie znaleziono <form id="loginForm"> w login.html');
+      return;
     }
-    const { data, error } = await supabase.auth.signUp({ email, password })
-    if (error) {
-      alert('Błąd rejestracji: ' + error.message)
-    } else {
-      const userId = data.user?.id
-      if (userId) {
-        await supabase.from('profiles').insert([{ id: userId, email, username }])
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const email = emailInput.value.trim();
+      const password = passwordInput.value.trim();
+
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        alert('Błąd logowania: ' + error.message);
+      } else {
+        window.location.href = '/chat.html';
       }
-      alert('Zarejestrowano! Sprawdź email i kliknij link aktywacyjny.')
-      window.location.href = 'login.html'
-    }
-  }
+    });
+
+    // Jeśli użytkownik jest już zalogowany, od razu przekieruj do czatu
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        window.location.href = '/chat.html';
+      }
+    });
+  });
 }
 
-async function setupLogin() {
-  const emailInput = document.getElementById('email');
-  const passwordInput = document.getElementById('password');
-  const loginBtn = document.getElementById('loginBtn');
+// Funkcja inicjalizująca rejestrację
+export function setupRegister() {
+  document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('registerForm');
+    const emailInput = document.getElementById('email');
+    const nicknameInput = document.getElementById('nickname');
+    const passwordInput = document.getElementById('password');
 
-  loginBtn.onclick = async () => {
-    const email = emailInput.value.trim();
-    const password = passwordInput.value.trim();
-    if (!email || !password) {
-      alert('Wpisz email i hasło');
+    if (!form) {
+      console.error('❌ Nie znaleziono <form id="registerForm"> w register.html');
       return;
     }
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      alert('Błąd logowania: ' + error.message);
-      return;
-    }
-    // Po zalogowaniu – przekieruj do chat.html
-    window.location.href = '/chat.html';
-  };
 
-  // Jeśli ktoś już ma sesję (np. odświeżenie strony), od razu przejdź do czatu:
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session?.user) {
-    window.location.href = '/chat.html';
-  }
-}
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
 
-export { setupLogin };
+      const email = emailInput.value.trim();
+      const nickname = nicknameInput.value.trim();
+      const password = passwordInput.value.trim();
 
-export async function logout(logoutBtn, callbacks) {
-  logoutBtn.onclick = async () => {
-    await supabase.auth.signOut()
-    callbacks.onLogout()
-  }
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { username: nickname }
+        }
+      });
+
+      if (error) {
+        alert('Błąd rejestracji: ' + error.message);
+      } else {
+        // Po udanej rejestracji kieruj na stronę logowania
+        window.location.href = '/';
+      }
+    });
+  });
 }
