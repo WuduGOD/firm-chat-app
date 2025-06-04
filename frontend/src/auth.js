@@ -6,7 +6,6 @@ const supabase = createClient(
   import.meta.env.VITE_SUPABASE_KEY
 );
 
-// Funkcja inicjalizująca logowanie
 export function setupLogin() {
   document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('loginForm');
@@ -14,29 +13,23 @@ export function setupLogin() {
     const passwordInput = document.getElementById('password');
 
     if (!form) {
-      console.error('❌ Nie znaleziono <form id="loginForm"> w login.html');
+      console.error('Nie znaleziono <form id="loginForm"> w login.html');
       return;
     }
-
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-
       const email = emailInput.value.trim();
       const password = passwordInput.value.trim();
-
       const { error } = await supabase.auth.signInWithPassword({
         email,
-        password
+        password,
       });
-
       if (error) {
         alert('Błąd logowania: ' + error.message);
       } else {
         window.location.href = '/chat.html';
       }
     });
-
-    // Jeśli użytkownik jest już zalogowany, od razu przekieruj do czatu
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         window.location.href = '/chat.html';
@@ -45,7 +38,6 @@ export function setupLogin() {
   });
 }
 
-// Funkcja inicjalizująca rejestrację
 export function setupRegister() {
   document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('registerForm');
@@ -54,29 +46,24 @@ export function setupRegister() {
     const passwordInput = document.getElementById('password');
 
     if (!form) {
-      console.error('❌ Nie znaleziono <form id="registerForm"> w register.html');
+      console.error('Nie znaleziono <form id="registerForm"> w register.html');
       return;
     }
-
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-
       const email = emailInput.value.trim();
       const nickname = nicknameInput.value.trim();
       const password = passwordInput.value.trim();
-
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { username: nickname }
-        }
+          data: { username: nickname },
+        },
       });
-
       if (error) {
         alert('Błąd rejestracji: ' + error.message);
       } else {
-        // Po udanej rejestracji kieruj na stronę logowania
         window.location.href = '/';
       }
     });

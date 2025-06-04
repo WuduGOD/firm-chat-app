@@ -6,6 +6,8 @@ const supabase = createClient(
   import.meta.env.VITE_SUPABASE_KEY
 );
 
+console.log('► login-entry.js załadowany');
+
 document.addEventListener('DOMContentLoaded', () => {
   // Pobierz elementy formularza logowania
   const form = document.getElementById('loginForm');
