@@ -1,143 +1,157 @@
-import { supabase } from './supabaseClient.js'
-import { loadAllProfiles, getUserLabelById } from './profiles.js'
+// src/chat.js
+import { supabase } from './supabaseClient.js';
+import { loadAllProfiles, getUserLabelById } from './profiles.js';
 
-let currentUser = null
-let currentChatUser = null
+let currentUser       = null;
+let currentChatUser   = null;
 
-const contactsList = document.getElementById('contactsList')
-const messagesDiv = document.getElementById('messages')
-const inputMsg = document.getElementById('inputMsg')
-const sendBtn = document.getElementById('sendBtn')
+// Tu zmieniamy zgodnie z chat.html:
+const contactsList = document.getElementById('contactsList');
+const messagesDiv  = document.getElementById('messageContainer'); // zamiast 'messages'
+const inputMsg     = document.getElementById('messageInput');     // zamiast 'inputMsg'
+const sendBtn      = document.getElementById('sendButton');       // zamiast 'sendBtn'
 
 export async function initChatApp() {
-  // Pobierz sesję
-  const { data: { session } } = await supabase.auth.getSession()
+  // 1) Sprawdź sesję Supabase
+  const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) {
-    window.location.href = 'login.html'
-    return
+    window.location.href = 'login.html';
+    return;
   }
-  currentUser = session.user
+  currentUser = session.user;
 
-  await loadAllProfiles()
-  loadContacts()
-  setupSendMessage()
-
-  subscribeToMessages(currentUser)
-
-  // Odświeżanie profili
-  setInterval(loadAllProfiles, 10 * 60 * 1000)
+  // 2) Załaduj wszystkie profile do cache’u
+  await loadAllProfiles();
+  // 3) Narysuj listę kontaktów
+  loadContacts();
+  // 4) Ustaw obsługę przycisku „Wyślij”
+  setupSendMessage();
+  // 5) Subskrybuj realtime
+  subscribeToMessages(currentUser);
+  // 6) Odświeżaj cache profili co 10 minut
+  setInterval(loadAllProfiles, 10 * 60 * 1000);
 }
 
 async function loadContacts() {
-  const { data: users, error } = await supabase.rpc('get_other_users', { current_email: currentUser.email })
-  if (error) return alert('Błąd ładowania kontaktów')
+  const { data: users, error } = await supabase
+    .rpc('get_other_users', { current_email: currentUser.email });
+  if (error) {
+    return alert('Błąd ładowania kontaktów');
+  }
 
-  contactsList.innerHTML = ''
+  contactsList.innerHTML = '';
   users.forEach(user => {
-    const li = document.createElement('li')
-    li.dataset.id = user.id
-    li.textContent = getUserLabelById(user.id)
-    li.onclick = () => startChatWith(user)
-    contactsList.appendChild(li)
-  })
+    const li = document.createElement('li');
+    li.dataset.id = user.id;
+    li.textContent = getUserLabelById(user.id);
+    li.onclick = () => startChatWith(user);
+    contactsList.appendChild(li);
+  });
 }
 
 async function startChatWith(user) {
-  currentChatUser = { id: user.id, username: getUserLabelById(user.id) }
-  messagesDiv.innerHTML = ''
+  currentChatUser = { id: user.id, username: getUserLabelById(user.id) };
+  messagesDiv.innerHTML = '';
 
   const { data: sent, error: err1 } = await supabase
     .from('messages')
     .select('*')
-    .eq('sender', currentUser.id)
-    .eq('receiver', user.id)
+    .eq('sender',   currentUser.id)
+    .eq('receiver', user.id);
 
   const { data: received, error: err2 } = await supabase
     .from('messages')
     .select('*')
-    .eq('sender', user.id)
-    .eq('receiver', currentUser.id)
+    .eq('sender',   user.id)
+    .eq('receiver', currentUser.id);
 
   if (err1 || err2) {
-    console.error('Błąd ładowania wiadomości:', err1 || err2)
-    return alert('Błąd ładowania wiadomości')
+    console.error('Błąd ładowania wiadomości:', err1 || err2);
+    return alert('Błąd ładowania wiadomości');
   }
 
-  const allMessages = [...sent, ...received].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+  const allMessages = [...sent, ...received]
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
   for (const msg of allMessages) {
-    await addMessageToChat(msg)
+    await addMessageToChat(msg);
   }
 
-  messagesDiv.scrollTop = messagesDiv.scrollHeight
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
 function setupSendMessage() {
+  // Teraz sendBtn istnieje, bo w HTML mamy id="sendButton"
   sendBtn.onclick = async () => {
-    const text = inputMsg.value.trim()
-    if (!text || !currentChatUser) return
+    const text = inputMsg.value.trim();
+    if (!text || !currentChatUser) return;
 
-    const { error } = await supabase.from('messages').insert({
-      sender: currentUser.id,
-      receiver: currentChatUser.id,
-      text
-    })
+    const { error } = await supabase
+      .from('messages')
+      .insert({
+        sender:   currentUser.id,
+        receiver: currentChatUser.id,
+        text
+      });
 
-    if (error) return alert('Błąd wysyłania')
+    if (error) return alert('Błąd wysyłania');
 
-    inputMsg.value = ''
-  }
+    inputMsg.value = '';
+  };
 }
 
 async function addMessageToChat(msg) {
-  const label = msg.sender === currentUser.id ? 'Ty' : getUserLabelById(msg.sender)
-  const div = document.createElement('div')
-  div.textContent = `${label}: ${msg.text}`
-  messagesDiv.appendChild(div)
-  messagesDiv.scrollTop = messagesDiv.scrollHeight
+  const label = (msg.sender === currentUser.id)
+    ? 'Ty'
+    : getUserLabelById(msg.sender);
+
+  const div = document.createElement('div');
+  div.textContent = `${label}: ${msg.text}`;
+  messagesDiv.appendChild(div);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
-let channel = null
+let channel = null;
 
 function subscribeToMessages(user) {
   if (channel) {
-    channel.unsubscribe()
+    channel.unsubscribe();
   }
 
-  channel = supabase.channel(`messages_channel_${user.id}`)
+  channel = supabase.channel(`messages_channel_${user.id}`);
 
   channel
     .on('postgres_changes', {
-      event: 'INSERT',
+      event:  'INSERT',
       schema: 'public',
-      table: 'messages',
+      table:  'messages',
       filter: `receiver=eq.${user.id}`
     }, async (payload) => {
-      const msg = payload.new
+      const msg = payload.new;
       if (
         currentChatUser &&
         ((msg.sender === currentChatUser.id && msg.receiver === currentUser.id) ||
-          (msg.sender === currentUser.id && msg.receiver === currentChatUser.id))
+         (msg.sender === currentUser.id       && msg.receiver === currentChatUser.id))
       ) {
-        await addMessageToChat(msg)
+        await addMessageToChat(msg);
       }
     })
     .on('postgres_changes', {
-      event: 'INSERT',
+      event:  'INSERT',
       schema: 'public',
-      table: 'messages',
+      table:  'messages',
       filter: `sender=eq.${user.id}`
     }, async (payload) => {
-      const msg = payload.new
+      const msg = payload.new;
       if (
         currentChatUser &&
         ((msg.sender === currentUser.id && msg.receiver === currentChatUser.id) ||
-          (msg.sender === currentChatUser.id && msg.receiver === currentUser.id))
+         (msg.sender === currentChatUser.id && msg.receiver === currentUser.id))
       ) {
-        await addMessageToChat(msg)
+        await addMessageToChat(msg);
       }
     })
-    .subscribe()
+    .subscribe();
 }
 
-export { startChatWith }
+export { startChatWith };
