@@ -1,19 +1,26 @@
 <!DOCTYPE html>
 <html lang="pl">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Zaloguj się</title>
-  </head>
-  <body>
-    <div class="auth-container">
-      <h2>Zaloguj</h2>
-      <form id="loginForm">
-        <input type="text" id="email" placeholder="Email" required />
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zaloguj się</title>
+</head>
+<body class="auth-body">
+  <div class="auth-container">
+    <h2>Zaloguj</h2>
+    <form class="auth-form" id="loginForm">
+      <input type="text" id="email" placeholder="Email lub login" required />
+      <div class="password-wrapper">
         <input type="password" id="password" placeholder="Hasło" required />
-        <button type="submit">Zaloguj</button>
-      </form>
-    </div>
-    <script type="module" src="/src/login-entry.js"></script>
-  </body>
+        <span class="eye">👁️</span>
+      </div>
+      <button type="submit" id="loginButton" class="login-btn">Zaloguj</button>
+    </form>
+    <p class="switch-link">Nie masz konta? <a href="register.html">Zarejestruj się</a></p>
+  </div>
+  
+  <script type="module" src="./src/login-entry.js"></script>
+
+
+</body>
 </html>
