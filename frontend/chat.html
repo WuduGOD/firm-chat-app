@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Komunikator</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <aside id="sidebar">
+      <h2>Kontakty</h2>
+      <ul id="contactsList"></ul>
+    </aside>
+
+    <main>
+      <button id="backButton" class="back-button">← Wróć</button>
+
+      <!-- Ekran powitalny -->
+      <section id="logoScreen" class="logo-screen">
+        <h1>Komunikator</h1>
+        <p>Osoby online:</p>
+        <ul id="onlineList">
+          <li>Janek 🟢</li>
+          <li>Grupa: Zespół Projektowy 🟢</li>
+        </ul>
+      </section>
+
+      <!-- Chat -->
+      <section id="chatArea" class="chat-area">
+        <header class="chat-header">
+          <span id="chatUserName">Użytkownik</span>
+          <span id="userStatus" class="status offline"></span>
+        </header>
+
+        <div id="typingStatus" class="typing-status"></div>
+        <div id="messageContainer" class="messages"></div>
+
+        <div class="message-input">
+          <button id="emojiToggle">😀</button>
+          <input id="messageInput" type="text" placeholder="Wpisz wiadomość..." disabled />
+          <button id="sendButton" disabled>Wyślij</button>
+          <div id="emojiPicker" style="display: none;"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/emoji-picker-element"></script>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
