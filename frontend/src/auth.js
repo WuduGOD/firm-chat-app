@@ -28,23 +28,35 @@ export function setupRegister() {
   }
 }
 
-export function setupLogin() {
-  const emailInput = document.getElementById('email')
-  const passwordInput = document.getElementById('password')
-  const loginBtn = document.getElementById('loginBtn')
+async function setupLogin() {
+  const emailInput = document.getElementById('email');
+  const passwordInput = document.getElementById('password');
+  const loginBtn = document.getElementById('loginBtn');
 
   loginBtn.onclick = async () => {
-    const email = emailInput.value.trim()
-    const password = passwordInput.value.trim()
+    const email = emailInput.value.trim();
+    const password = passwordInput.value.trim();
     if (!email || !password) {
-      alert('Wpisz email i hasło')
-      return
+      alert('Wpisz email i hasło');
+      return;
     }
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) return alert('Błąd logowania: ' + error.message)
-    window.location.href = 'chat.html'
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      alert('Błąd logowania: ' + error.message);
+      return;
+    }
+    // Po zalogowaniu – przekieruj do chat.html
+    window.location.href = '/chat.html';
+  };
+
+  // Jeśli ktoś już ma sesję (np. odświeżenie strony), od razu przejdź do czatu:
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.user) {
+    window.location.href = '/chat.html';
   }
 }
+
+export { setupLogin };
 
 export async function logout(logoutBtn, callbacks) {
   logoutBtn.onclick = async () => {

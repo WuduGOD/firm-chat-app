@@ -7,7 +7,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        login: resolve(__dirname, 'login.html'),
+		index: resolve(__dirname, 'index.html'),
         register: resolve(__dirname, 'register.html'),
         chat: resolve(__dirname, 'chat.html')
       }

@@ -1,0 +1,1 @@
+import{c as s}from"./index-9sBxIpUg.js";const I=new Map,a="https://tatiuvcmkzgcclwnehyr.supabase.co",c="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhdGl1dmNta3pnY2Nsd25laHlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc1ODI2ODMsImV4cCI6MjA2MzE1ODY4M30.7KaomZ0tL96SldQQZc7eMPQZATYnPuiRhlVeqJsKXaE",i=s(a,c);export{I as p,i as s};
