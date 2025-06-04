@@ -5,13 +5,12 @@ import { loadAllProfiles, getUserLabelById } from './profiles.js';
 let currentUser       = null;
 let currentChatUser   = null;
 
-// Tu zmieniamy zgodnie z chat.html:
-const contactsList = document.getElementById('contactsList');
-const messagesDiv  = document.getElementById('messageContainer'); // zamiast 'messages'
-const inputMsg     = document.getElementById('messageInput');     // zamiast 'inputMsg'
-const sendBtn      = document.getElementById('sendButton');       // zamiast 'sendBtn'
-
 export async function initChatApp() {
+	
+	const contactsList = document.getElementById('contactsList');
+	const messagesDiv  = document.getElementById('messageContainer'); // zamiast 'messages'
+	const inputMsg     = document.getElementById('messageInput');     // zamiast 'inputMsg'
+	const sendBtn      = document.getElementById('sendButton');       // zamiast 'sendBtn'
   // 1) Sprawdź sesję Supabase
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) {
