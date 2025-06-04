@@ -1,6 +1,7 @@
 import { setupLogin } from './auth.js'
 import { setupRegister } from './auth.js'
 import { initChatApp } from './chat.js'
+import './style.css'
 
 const path = window.location.pathname
 
