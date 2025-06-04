@@ -1,7 +1,9 @@
+// vite.config.js
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
 
 export default defineConfig({
+  base: './', // <-- to jest BARDZO WAŻNE dla poprawnych ścieżek!
   build: {
     rollupOptions: {
       input: {
