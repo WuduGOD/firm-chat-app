@@ -1,16 +1,14 @@
-// vite.config.js
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vite';
+import { resolve } from 'path';
 
 export default defineConfig({
-  base: '/',
   build: {
     rollupOptions: {
       input: {
-        login: 'login.html',
-        register: 'register.html',
-        chat: 'chat.html'
+        login: resolve(__dirname, 'login.html'),
+        register: resolve(__dirname, 'register.html'),
+        chat: resolve(__dirname, 'chat.html')
       }
     }
   }
-})
-
+});
