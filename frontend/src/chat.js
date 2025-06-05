@@ -1,31 +1,34 @@
 // src/chat.js
-import { supabase } from './supabaseClient.js';
 import { loadAllProfiles, getUserLabelById } from './profiles.js';
 
-// Dodaliśmy nowe zmienne dla elementów ekranu powitalnego, panelu czatu i przycisku "Wróć"
 let currentUser       = null;
 let currentChatUser   = null;
+let currentRoom       = null;
+
 let contactsList;
 let messagesDiv;
 let inputMsg;
 let sendBtn;
 
-let logoScreen;   // referencja do ekranu powitalnego
-let chatArea;     // referencja do panelu czatu
-let backButton;   // referencja do przycisku "Wróć"
+let logoScreen;
+let chatArea;
+let backButton;
+
+let socket = null;
 
 export async function initChatApp() {
-  // 1) Pobieramy elementy DOM
   contactsList = document.getElementById('contactsList');
   messagesDiv  = document.getElementById('messageContainer');
   inputMsg     = document.getElementById('messageInput');
   sendBtn      = document.getElementById('sendButton');
 
-  logoScreen   = document.getElementById('logoScreen');    // nowa linia
-  chatArea     = document.getElementById('chatArea');      // nowa linia
-  backButton   = document.getElementById('backButton');    // nowa linia
+  logoScreen   = document.getElementById('logoScreen');
+  chatArea     = document.getElementById('chatArea');
+  backButton   = document.getElementById('backButton');
 
-  // 2) Sprawdź sesję Supabase
+  // Pobierz usera z Supabase lub innego systemu autoryzacji (tu przykład Supabase)
+  // Jeśli korzystasz z innej metody, zastąp poniższą część odpowiednią logiką
+  const supabase = window.supabase; // zakładam, że masz supabase globalnie
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) {
     window.location.href = 'login.html';
@@ -33,44 +36,37 @@ export async function initChatApp() {
   }
   currentUser = session.user;
 
-  // 3) Załaduj wszystkie profile do cache’u
   await loadAllProfiles();
 
-  // 4) Narysuj listę kontaktów
   loadContacts();
 
-  // 5) Ustaw obsługę przycisku „Wyślij”
   setupSendMessage();
 
-  // 6) Subskrybuj realtime
-  subscribeToMessages(currentUser);
+  initWebSocket();
 
-  // 7) Odświeżaj cache profili co 10 minut
   setInterval(loadAllProfiles, 10 * 60 * 1000);
 
-  // 8) Na start: ekran powitalny widoczny, panel czatu ukryty, przycisk "Wróć" ukryty
-  logoScreen.classList.remove('hidden');   // usuwamy klasę hidden (wcześniej nie było)
-  chatArea.classList.remove('active');     // usuwamy klasę active (panel czatu niewidoczny)
-  backButton.classList.remove('show');     // usuwamy klasę show (przycisk "Wróć" ukryty)
+  logoScreen.classList.remove('hidden');
+  chatArea.classList.remove('active');
+  backButton.classList.remove('show');
 
-  // 9) Zablokuj na początek input i przycisk
   inputMsg.disabled = true;
   sendBtn.disabled  = true;
 
-  // 10) Obsługa przycisku "Wróć"
   backButton.addEventListener('click', () => {
-    chatArea.classList.remove('active');     // ukrywamy panel czatu
-    logoScreen.classList.remove('hidden');   // pokazujemy ekran powitalny
-    backButton.classList.remove('show');     // chowamy przycisk "Wróć"
-    messagesDiv.innerHTML = '';              // czyścimy historię wiadomości
-    inputMsg.disabled = true;                // blokujemy input
-    sendBtn.disabled  = true;                // blokujemy przycisk Wyślij
+    chatArea.classList.remove('active');
+    logoScreen.classList.remove('hidden');
+    backButton.classList.remove('show');
+    messagesDiv.innerHTML = '';
+    inputMsg.disabled = true;
+    sendBtn.disabled = true;
   });
 }
 
 async function loadContacts() {
-  const { data: users, error } = await supabase
-    .rpc('get_other_users', { current_email: currentUser.email });
+  // Wczytaj kontakty (użyj własnej metody - tutaj supabase rpc)
+  const supabase = window.supabase;
+  const { data: users, error } = await supabase.rpc('get_other_users', { current_email: currentUser.email });
   if (error) {
     return alert('Błąd ładowania kontaktów');
   }
@@ -78,7 +74,7 @@ async function loadContacts() {
   contactsList.innerHTML = '';
   users.forEach(user => {
     const li = document.createElement('li');
-    li.classList.add('contact');                // dodajemy klasę .contact (żeby działał efekt hover i cursor:pointer)
+    li.classList.add('contact');
     li.dataset.id = user.id;
     li.textContent = getUserLabelById(user.id);
     li.onclick = () => startChatWith(user);
@@ -86,8 +82,12 @@ async function loadContacts() {
   });
 }
 
+function getRoomName(user1, user2) {
+  // Pokój to alfabetyczne połączenie dwóch identyfikatorów (email lub id)
+  return [user1, user2].sort().join('_');
+}
+
 async function startChatWith(user) {
-  // A) Przełączamy widok: ukrywamy logoScreen, pokazujemy chatArea, pokazujemy przycisk "Wróć"
   logoScreen.classList.add('hidden');
   chatArea.classList.add('active');
   backButton.classList.add('show');
@@ -95,33 +95,17 @@ async function startChatWith(user) {
   currentChatUser = { id: user.id, username: getUserLabelById(user.id) };
   messagesDiv.innerHTML = '';
 
-  const { data: sent, error: err1 } = await supabase
-    .from('messages')
-    .select('*')
-    .eq('sender',   currentUser.id)
-    .eq('receiver', user.id);
+  currentRoom = getRoomName(currentUser.email, currentChatUser.username);
 
-  const { data: received, error: err2 } = await supabase
-    .from('messages')
-    .select('*')
-    .eq('sender',   user.id)
-    .eq('receiver', currentUser.id);
-
-  if (err1 || err2) {
-    console.error('Błąd ładowania wiadomości:', err1 || err2);
-    return alert('Błąd ładowania wiadomości');
+  // Wyślij join na WebSocket z nazwą pokoju i swoim nazwiskiem
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({
+      type: 'join',
+      name: currentUser.email,
+      room: currentRoom
+    }));
   }
 
-  const allMessages = [...sent, ...received]
-    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-
-  for (const msg of allMessages) {
-    await addMessageToChat(msg);
-  }
-
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
-
-  // Ustawiamy nagłówek czatu, odblokowujemy input i przycisk Wyślij
   document.getElementById('chatUserName').textContent = currentChatUser.username;
   inputMsg.disabled = false;
   sendBtn.disabled = false;
@@ -129,83 +113,81 @@ async function startChatWith(user) {
 }
 
 function setupSendMessage() {
-  sendBtn.onclick = async () => {
+  sendBtn.onclick = () => {
     const text = inputMsg.value.trim();
-    if (!text || !currentChatUser) return;
+    if (!text || !currentChatUser || !socket || socket.readyState !== WebSocket.OPEN) return;
 
-    const { error } = await supabase
-      .from('messages')
-      .insert({
-        sender:   currentUser.id,
-        receiver: currentChatUser.id,
-        text
-      });
+    const msgData = {
+      type: 'message',
+      text,
+      room: currentRoom
+    };
 
-    if (error) return alert('Błąd wysyłania');
-
+    socket.send(JSON.stringify(msgData));
     inputMsg.value = '';
     inputMsg.focus();
+
+    // Pokaż wiadomość od razu lokalnie
+    addMessageToChat({
+      sender: currentUser.email,
+      text
+    });
   };
 }
 
-async function addMessageToChat(msg) {
-  const label = (msg.sender === currentUser.id)
-    ? 'Ty'
-    : getUserLabelById(msg.sender);
+function addMessageToChat(msg) {
+  const label = (msg.sender === currentUser.email) 
+    ? 'Ty' 
+    : getUserLabelById(msg.sender) || msg.sender;
 
   const div = document.createElement('div');
-  // Nadajemy odpowiednie klasy .message i .sent/.received, aby zadziałał styl bąbelków
-  if (msg.sender === currentUser.id) {
-    div.classList.add('message', 'sent');
-  } else {
-    div.classList.add('message', 'received');
-  }
+  div.classList.add('message', msg.sender === currentUser.email ? 'sent' : 'received');
   div.textContent = `${label}: ${msg.text}`;
 
   messagesDiv.appendChild(div);
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
-let channel = null;
-function subscribeToMessages(user) {
-  if (channel) {
-    channel.unsubscribe();
-  }
+function initWebSocket() {
+  const wsUrl = import.meta.env.VITE_CHAT_WS_URL;
+  socket = new WebSocket(wsUrl);
 
-  channel = supabase.channel(`messages_channel_${user.id}`);
+  socket.onopen = () => {
+    console.log('WebSocket połączony');
+    // Join wysyłamy po wyborze kontaktu w startChatWith
+  };
 
-  channel
-    .on('postgres_changes', {
-      event:  'INSERT',
-      schema: 'public',
-      table:  'messages',
-      filter: `receiver=eq.${user.id}`
-    }, async (payload) => {
-      const msg = payload.new;
-      if (
-        currentChatUser &&
-        ((msg.sender === currentChatUser.id && msg.receiver === currentUser.id) ||
-         (msg.sender === currentUser.id       && msg.receiver === currentChatUser.id))
-      ) {
-        await addMessageToChat(msg);
-      }
-    })
-    .on('postgres_changes', {
-      event:  'INSERT',
-      schema: 'public',
-      table:  'messages',
-      filter: `sender=eq.${user.id}`
-    }, async (payload) => {
-      const msg = payload.new;
-      if (
-        currentChatUser &&
-        ((msg.sender === currentUser.id && msg.receiver === currentChatUser.id) ||
-         (msg.sender === currentChatUser.id && msg.receiver === currentUser.id))
-      ) {
-        await addMessageToChat(msg);
-      }
-    })
-    .subscribe();
+  socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    console.log('Odebrano przez WS:', data);
+
+    if (data.type === 'message') {
+      addMessageToChat({
+        sender: data.username,
+        text: data.text
+      });
+    }
+
+    if (data.type === 'history' && Array.isArray(data.messages)) {
+      data.messages.forEach(msg => addMessageToChat(msg));
+    }
+
+    if (data.type === 'info') {
+      const div = document.createElement('div');
+      div.classList.add('info');
+      div.textContent = data.text;
+      messagesDiv.appendChild(div);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+  };
+
+  socket.onclose = () => {
+    console.log('WebSocket rozłączony');
+  };
+
+  socket.onerror = (error) => {
+    console.error('Błąd WebSocket:', error);
+  };
 }
 
 export { startChatWith };
