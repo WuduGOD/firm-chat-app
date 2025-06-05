@@ -279,3 +279,17 @@ main {
   color: #ef4444;
   text-decoration: none;
 }
+
+.contact::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 8px;
+  background-color: gray;
+}
+
+.contact.online::before {
+  background-color: #4caf50;
+}

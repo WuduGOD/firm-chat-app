@@ -141,6 +141,13 @@ function addMessageToChat(msg) {
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
+function updateUserStatusIndicator(userId, isOnline) {
+  const contactEl = document.querySelector(`.contact[data-id="${userId}"]`);
+  if (!contactEl) return;
+
+  contactEl.classList.toggle('online', isOnline);
+}
+
 function initWebSocket() {
   const wsUrl = import.meta.env.VITE_CHAT_WS_URL;
   socket = new WebSocket(wsUrl);
@@ -164,14 +171,11 @@ function initWebSocket() {
     if (data.type === 'history' && Array.isArray(data.messages)) {
       data.messages.forEach(msg => addMessageToChat(msg));
     }
-
-    if (data.type === 'info') {
-      const div = document.createElement('div');
-      div.classList.add('info');
-      div.textContent = data.text;
-      messagesDiv.appendChild(div);
-      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+	
+	if (data.type === 'status') {
+    updateUserStatusIndicator(data.user, data.online);
     }
+
   };
 
   socket.onclose = () => {
