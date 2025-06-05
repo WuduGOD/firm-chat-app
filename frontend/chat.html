@@ -4,8 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Komunikator</title>
-  <!-- Jeśli masz jakieś style, dołącz je tutaj:
-       <link rel="stylesheet" href="./style.css" /> -->
+  <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
   <div class="container">
@@ -31,7 +30,7 @@
       </section>
 
       <!-- SEKCJA ZAPLECZA CZATU (po wybraniu kontaktu) -->
-      <section id="chatArea" class="chat-area">
+      <section id="chatArea" class="chat-area" style="display: none;">
         <header class="chat-header">
           <!-- TUTAJ będzie wyświetlana nazwa aktualnego rozmówcy -->
           <span id="chatUserName">Wybierz rozmówcę</span>
@@ -66,7 +65,8 @@
   </div>
 
   <!-- Skrypt do emoji-picker-element (jeśli go używasz) -->
-  <script src="https://cdn.jsdelivr.net/npm/emoji-picker-element"></script>
+  <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element"></script>
+
   <!-- TU ŁADUJESZ SWÓJ GŁÓWNY PLIK: chat-entry.js -->
   <script type="module" src="./src/chat-entry.js"></script>
 </body>

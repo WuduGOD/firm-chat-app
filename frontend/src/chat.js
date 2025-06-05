@@ -2,6 +2,7 @@
 import { supabase } from './supabaseClient.js';
 import { loadAllProfiles, getUserLabelById } from './profiles.js';
 
+// Dodaliśmy nowe zmienne dla elementów ekranu powitalnego, panelu czatu i przycisku "Wróć"
 let currentUser       = null;
 let currentChatUser   = null;
 let contactsList;
@@ -9,13 +10,22 @@ let messagesDiv;
 let inputMsg;
 let sendBtn;
 
+let logoScreen;   // referencja do ekranu powitalnego
+let chatArea;     // referencja do panelu czatu
+let backButton;   // referencja do przycisku "Wróć"
+
 export async function initChatApp() {
+  // 1) Pobieramy elementy DOM
   contactsList = document.getElementById('contactsList');
   messagesDiv  = document.getElementById('messageContainer');
   inputMsg     = document.getElementById('messageInput');
   sendBtn      = document.getElementById('sendButton');
 
-  // 1) Sprawdź sesję Supabase
+  logoScreen   = document.getElementById('logoScreen');    // nowa linia
+  chatArea     = document.getElementById('chatArea');      // nowa linia
+  backButton   = document.getElementById('backButton');    // nowa linia
+
+  // 2) Sprawdź sesję Supabase
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) {
     window.location.href = 'login.html';
@@ -23,16 +33,39 @@ export async function initChatApp() {
   }
   currentUser = session.user;
 
-  // 2) Załaduj wszystkie profile do cache’u
+  // 3) Załaduj wszystkie profile do cache’u
   await loadAllProfiles();
-  // 3) Narysuj listę kontaktów
+
+  // 4) Narysuj listę kontaktów
   loadContacts();
-  // 4) Ustaw obsługę przycisku „Wyślij”
+
+  // 5) Ustaw obsługę przycisku „Wyślij”
   setupSendMessage();
-  // 5) Subskrybuj realtime
+
+  // 6) Subskrybuj realtime
   subscribeToMessages(currentUser);
-  // 6) Odświeżaj cache profili co 10 minut
+
+  // 7) Odświeżaj cache profili co 10 minut
   setInterval(loadAllProfiles, 10 * 60 * 1000);
+
+  // 8) Na start: ekran powitalny widoczny, panel czatu ukryty, przycisk "Wróć" ukryty
+  logoScreen.classList.remove('hidden');   // usuwamy klasę hidden (wcześniej nie było)
+  chatArea.classList.remove('active');     // usuwamy klasę active (panel czatu niewidoczny)
+  backButton.classList.remove('show');     // usuwamy klasę show (przycisk "Wróć" ukryty)
+
+  // 9) Zablokuj na początek input i przycisk
+  inputMsg.disabled = true;
+  sendBtn.disabled  = true;
+
+  // 10) Obsługa przycisku "Wróć"
+  backButton.addEventListener('click', () => {
+    chatArea.classList.remove('active');     // ukrywamy panel czatu
+    logoScreen.classList.remove('hidden');   // pokazujemy ekran powitalny
+    backButton.classList.remove('show');     // chowamy przycisk "Wróć"
+    messagesDiv.innerHTML = '';              // czyścimy historię wiadomości
+    inputMsg.disabled = true;                // blokujemy input
+    sendBtn.disabled  = true;                // blokujemy przycisk Wyślij
+  });
 }
 
 async function loadContacts() {
@@ -45,6 +78,7 @@ async function loadContacts() {
   contactsList.innerHTML = '';
   users.forEach(user => {
     const li = document.createElement('li');
+    li.classList.add('contact');                // dodajemy klasę .contact (żeby działał efekt hover i cursor:pointer)
     li.dataset.id = user.id;
     li.textContent = getUserLabelById(user.id);
     li.onclick = () => startChatWith(user);
@@ -53,6 +87,11 @@ async function loadContacts() {
 }
 
 async function startChatWith(user) {
+  // A) Przełączamy widok: ukrywamy logoScreen, pokazujemy chatArea, pokazujemy przycisk "Wróć"
+  logoScreen.classList.add('hidden');
+  chatArea.classList.add('active');
+  backButton.classList.add('show');
+
   currentChatUser = { id: user.id, username: getUserLabelById(user.id) };
   messagesDiv.innerHTML = '';
 
@@ -82,7 +121,7 @@ async function startChatWith(user) {
 
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
-  // --- DODANE ---
+  // Ustawiamy nagłówek czatu, odblokowujemy input i przycisk Wyślij
   document.getElementById('chatUserName').textContent = currentChatUser.username;
   inputMsg.disabled = false;
   sendBtn.disabled = false;
@@ -115,13 +154,19 @@ async function addMessageToChat(msg) {
     : getUserLabelById(msg.sender);
 
   const div = document.createElement('div');
+  // Nadajemy odpowiednie klasy .message i .sent/.received, aby zadziałał styl bąbelków
+  if (msg.sender === currentUser.id) {
+    div.classList.add('message', 'sent');
+  } else {
+    div.classList.add('message', 'received');
+  }
   div.textContent = `${label}: ${msg.text}`;
+
   messagesDiv.appendChild(div);
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
 let channel = null;
-
 function subscribeToMessages(user) {
   if (channel) {
     channel.unsubscribe();
