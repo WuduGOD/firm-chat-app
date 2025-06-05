@@ -91,19 +91,24 @@ main {
 }
 
 .back-button {
-  position: absolute;
-  top: 1rem;
-  left: 1rem;
-  display: none;
   padding: 0.5rem 1rem;
   background: #ddd;
   border: none;
   border-radius: 5px;
   cursor: pointer;
+  display: none;
 }
 
 .back-button.show {
   display: inline-block;
+}
+
+#chatUserName {
+  font-weight: bold;
+  font-size: 1.1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .chat-area {
