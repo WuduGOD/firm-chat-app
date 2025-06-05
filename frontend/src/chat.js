@@ -2,9 +2,9 @@
 import { loadAllProfiles, getUserLabelById } from './profiles.js';
 import { supabase } from './supabaseClient.js';
 
-let currentUser       = null;
-let currentChatUser   = null;
-let currentRoom       = null;
+let currentUser     = null;
+let currentChatUser = null;
+let currentRoom     = null;
 
 let contactsList;
 let messagesDiv;
@@ -27,8 +27,7 @@ export async function initChatApp() {
   chatArea     = document.getElementById('chatArea');
   backButton   = document.getElementById('backButton');
 
-  // Pobierz usera z Supabase lub innego systemu autoryzacji (tu przykład Supabase)
-  // Jeśli korzystasz z innej metody, zastąp poniższą część odpowiednią logiką
+  // Pobierz aktualnego usera (Supabase auth)
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) {
     window.location.href = 'login.html';
@@ -38,7 +37,7 @@ export async function initChatApp() {
 
   await loadAllProfiles();
 
-  loadContacts();
+  await loadContacts();
 
   setupSendMessage();
 
@@ -64,10 +63,11 @@ export async function initChatApp() {
 }
 
 async function loadContacts() {
-  // Wczytaj kontakty (użyj własnej metody - tutaj supabase rpc)
+  // Pobierz kontakty — zakładam, że masz supabase rpc get_other_users
   const { data: users, error } = await supabase.rpc('get_other_users', { current_email: currentUser.email });
   if (error) {
-    return alert('Błąd ładowania kontaktów');
+    alert('Błąd ładowania kontaktów');
+    return;
   }
 
   contactsList.innerHTML = '';
@@ -82,7 +82,7 @@ async function loadContacts() {
 }
 
 function getRoomName(user1, user2) {
-  // Pokój to alfabetyczne połączenie dwóch identyfikatorów (email lub id)
+  // Nazwa pokoju to alfabetyczne połączenie dwóch emaili
   return [user1, user2].sort().join('_');
 }
 
@@ -91,12 +91,12 @@ async function startChatWith(user) {
   chatArea.classList.add('active');
   backButton.classList.add('show');
 
-  currentChatUser = { id: user.id, username: getUserLabelById(user.id) };
+  currentChatUser = { id: user.id, username: getUserLabelById(user.id), email: user.email };
   messagesDiv.innerHTML = '';
 
-  currentRoom = getRoomName(currentUser.email, user.email);
+  currentRoom = getRoomName(currentUser.email, currentChatUser.email);
 
-  // Wyślij join na WebSocket z nazwą pokoju i swoim nazwiskiem
+  // Wyślij join do WebSocket
   if (socket && socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify({
       type: 'join',
@@ -125,8 +125,20 @@ function setupSendMessage() {
     socket.send(JSON.stringify(msgData));
     inputMsg.value = '';
     inputMsg.focus();
-
   };
+}
+
+function addMessageToChat(msg) {
+  const label = (msg.sender === currentUser.email) 
+    ? 'Ty' 
+    : getUserLabelById(msg.sender) || msg.sender;
+
+  const div = document.createElement('div');
+  div.classList.add('message', msg.sender === currentUser.email ? 'sent' : 'received');
+  div.textContent = `${label}: ${msg.text}`;
+
+  messagesDiv.appendChild(div);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
 function initWebSocket() {
@@ -135,7 +147,7 @@ function initWebSocket() {
 
   socket.onopen = () => {
     console.log('WebSocket połączony');
-    // Join wysyłamy po wyborze kontaktu w startChatWith
+    // Join wysyłany jest w startChatWith
   };
 
   socket.onmessage = (event) => {
@@ -144,7 +156,7 @@ function initWebSocket() {
 
     if (data.type === 'message') {
       addMessageToChat({
-        sender: data.sender,
+        sender: data.username || data.sender,
         text: data.text
       });
     }
