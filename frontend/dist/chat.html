@@ -4,51 +4,72 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Komunikator</title>
+  <!-- Jeśli masz jakieś style, dołącz je tutaj:
+       <link rel="stylesheet" href="./style.css" /> -->
   <script type="module" crossorigin src="./assets/chat-C9sSC6IX.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/index-9sBxIpUg.js">
   <link rel="stylesheet" crossorigin href="./assets/index-Br3xOm_R.css">
 </head>
 <body>
   <div class="container">
+    <!-- LEWY PANEL: lista kontaktów -->
     <aside id="sidebar">
       <h2>Kontakty</h2>
       <ul id="contactsList"></ul>
     </aside>
 
+    <!-- GŁÓWNY OBSZAR CZATU -->
     <main>
+      <!-- (opcjonalny) przycisk „Wróć” -->
       <button id="backButton" class="back-button">← Wróć</button>
 
-      <!-- Ekran powitalny -->
+      <!-- Ekran powitalny (pokazywany zanim wybierzesz rozmówcę) -->
       <section id="logoScreen" class="logo-screen">
         <h1>Komunikator</h1>
         <p>Osoby online:</p>
         <ul id="onlineList">
           <li>Janek 🟢</li>
-          <li>Grupa: Zespół Projektowy 🟢</li>
+          <li>Zespół Projektowy 🟢</li>
         </ul>
       </section>
 
-      <!-- Chat -->
+      <!-- SEKCJA ZAPLECZA CZATU (po wybraniu kontaktu) -->
       <section id="chatArea" class="chat-area">
         <header class="chat-header">
-          <span id="chatUserName">Użytkownik</span>
+          <!-- TUTAJ będzie wyświetlana nazwa aktualnego rozmówcy -->
+          <span id="chatUserName">Wybierz rozmówcę</span>
+          <!-- Tu możesz wyświetlać status (online/offline) jeśli potrzebujesz -->
           <span id="userStatus" class="status offline"></span>
         </header>
 
+        <!-- Tu możesz wyświetlać informację „X pisze…” -->
         <div id="typingStatus" class="typing-status"></div>
+
+        <!-- TO JEST ELEMENT, DO KTÓREGO CHAT.JS DOKLEJA WIADOMOŚCI -->
         <div id="messageContainer" class="messages"></div>
 
+        <!-- INPUT + PRZYCISK „Wyślij” -->
         <div class="message-input">
+          <!-- (opcjonalnie) przycisk emoji -->
           <button id="emojiToggle">😀</button>
-          <input id="messageInput" type="text" placeholder="Wpisz wiadomość..." disabled />
+          <!-- Pole tekstowe musi mieć dokładnie ten ID -->
+          <input
+            id="messageInput"
+            type="text"
+            placeholder="Wpisz wiadomość..."
+            disabled
+          />
+          <!-- Przycisk „Wyślij” ZAWSZE MUSI MIEĆ TEN ID -->
           <button id="sendButton" disabled>Wyślij</button>
+          <!-- (opcjonalnie) tu wczytujesz picker emoji -->
           <div id="emojiPicker" style="display: none;"></div>
         </div>
       </section>
     </main>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/emoji-picker-element"></script>
-
+  <!-- Skrypt do emoji-picker-element (jeśli go używasz) -->
+  <script src="https://cdn.jsdelivr.net/npm/emoji-picker-element"></script>
+  <!-- TU ŁADUJESZ SWÓJ GŁÓWNY PLIK: chat-entry.js -->
 </body>
 </html>
