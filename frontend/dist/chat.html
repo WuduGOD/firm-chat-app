@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Komunikator</title>
   <link rel="stylesheet" href="./style.css" />
-  <script type="module" crossorigin src="./assets/chat-Cti9uLUg.js"></script>
-  <link rel="modulepreload" crossorigin href="./assets/index-9sBxIpUg.js">
-  <link rel="stylesheet" crossorigin href="./assets/index-Br3xOm_R.css">
+  <script type="module" crossorigin src="./assets/chat-BP7ZsqGV.js"></script>
+  <link rel="modulepreload" crossorigin href="./assets/index-CLr0GVE1.js">
+  <link rel="stylesheet" crossorigin href="./assets/index-DR0lU0Sp.css">
 </head>
 <body>
   <div class="container">
@@ -19,9 +19,6 @@
 
     <!-- GŁÓWNY OBSZAR CZATU -->
     <main>
-      <!-- (opcjonalny) przycisk „Wróć” -->
-      <button id="backButton" class="back-button">← Wróć</button>
-
       <!-- Ekran powitalny (pokazywany zanim wybierzesz rozmówcę) -->
       <section id="logoScreen" class="logo-screen">
         <h1>Komunikator</h1>
@@ -35,10 +32,11 @@
       <!-- SEKCJA ZAPLECZA CZATU (po wybraniu kontaktu) -->
       <section id="chatArea" class="chat-area">
         <header class="chat-header">
-          <!-- TUTAJ będzie wyświetlana nazwa aktualnego rozmówcy -->
-          <span id="chatUserName">Wybierz rozmówcę</span>
-          <!-- Tu możesz wyświetlać status (online/offline) jeśli potrzebujesz -->
-          <span id="userStatus" class="status offline"></span>
+		  <button id="backButton" class="back-button">← Wróć</button>
+		  <div class="user-info">
+            <span id="chatUserName">Wybierz rozmówcę</span>
+            <span id="userStatus" class="status offline"></span>
+		  </div>
         </header>
 
         <!-- Tu możesz wyświetlać informację „X pisze…” -->

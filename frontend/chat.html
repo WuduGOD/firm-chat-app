@@ -16,9 +16,6 @@
 
     <!-- GŁÓWNY OBSZAR CZATU -->
     <main>
-      <!-- (opcjonalny) przycisk „Wróć” -->
-      <button id="backButton" class="back-button">← Wróć</button>
-
       <!-- Ekran powitalny (pokazywany zanim wybierzesz rozmówcę) -->
       <section id="logoScreen" class="logo-screen">
         <h1>Komunikator</h1>
@@ -32,10 +29,11 @@
       <!-- SEKCJA ZAPLECZA CZATU (po wybraniu kontaktu) -->
       <section id="chatArea" class="chat-area">
         <header class="chat-header">
-          <!-- TUTAJ będzie wyświetlana nazwa aktualnego rozmówcy -->
-          <span id="chatUserName">Wybierz rozmówcę</span>
-          <!-- Tu możesz wyświetlać status (online/offline) jeśli potrzebujesz -->
-          <span id="userStatus" class="status offline"></span>
+		  <button id="backButton" class="back-button">← Wróć</button>
+		  <div class="user-info">
+            <span id="chatUserName">Wybierz rozmówcę</span>
+            <span id="userStatus" class="status offline"></span>
+		  </div>
         </header>
 
         <!-- Tu możesz wyświetlać informację „X pisze…” -->
