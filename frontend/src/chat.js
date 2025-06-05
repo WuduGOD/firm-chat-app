@@ -94,7 +94,7 @@ async function startChatWith(user) {
   currentChatUser = { id: user.id, username: getUserLabelById(user.id) };
   messagesDiv.innerHTML = '';
 
-  currentRoom = getRoomName(currentUser.email, currentChatUser.username);
+  currentRoom = getRoomName(currentUser.email, user.email);
 
   // Wyślij join na WebSocket z nazwą pokoju i swoim nazwiskiem
   if (socket && socket.readyState === WebSocket.OPEN) {
@@ -126,25 +126,7 @@ function setupSendMessage() {
     inputMsg.value = '';
     inputMsg.focus();
 
-    // Pokaż wiadomość od razu lokalnie
-    addMessageToChat({
-      sender: currentUser.email,
-      text
-    });
   };
-}
-
-function addMessageToChat(msg) {
-  const label = (msg.sender === currentUser.email) 
-    ? 'Ty' 
-    : getUserLabelById(msg.sender) || msg.sender;
-
-  const div = document.createElement('div');
-  div.classList.add('message', msg.sender === currentUser.email ? 'sent' : 'received');
-  div.textContent = `${label}: ${msg.text}`;
-
-  messagesDiv.appendChild(div);
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
 function initWebSocket() {
@@ -162,7 +144,7 @@ function initWebSocket() {
 
     if (data.type === 'message') {
       addMessageToChat({
-        sender: data.username,
+        sender: data.sender,
         text: data.text
       });
     }
