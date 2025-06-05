@@ -65,7 +65,6 @@ export async function initChatApp() {
 
 async function loadContacts() {
   // Wczytaj kontakty (użyj własnej metody - tutaj supabase rpc)
-  const supabase = window.supabase;
   const { data: users, error } = await supabase.rpc('get_other_users', { current_email: currentUser.email });
   if (error) {
     return alert('Błąd ładowania kontaktów');
