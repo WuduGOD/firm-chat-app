@@ -1,5 +1,6 @@
 // src/chat.js
 import { loadAllProfiles, getUserLabelById } from './profiles.js';
+import { supabase } from './supabaseClient.js';
 
 let currentUser       = null;
 let currentChatUser   = null;
@@ -28,7 +29,6 @@ export async function initChatApp() {
 
   // Pobierz usera z Supabase lub innego systemu autoryzacji (tu przykład Supabase)
   // Jeśli korzystasz z innej metody, zastąp poniższą część odpowiednią logiką
-  const supabase = window.supabase; // zakładam, że masz supabase globalnie
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) {
     window.location.href = 'login.html';
