@@ -193,17 +193,20 @@ function initWebSocket() {
     }
   };
 
-  socket.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-    console.log('Odebrano przez WS:', data);
+socket.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  console.log("Odebrana wiadomość przez WebSocket:", data); // ✅ Sprawdź, czy `inserted_at` istnieje
 
-    if (data.type === 'message') {
-      addMessageToChat({
-        username: data.username,
-        text: data.text,
-        inserted_at: data.inserted_at,
-      });
-    }
+  if (data.type === 'message') {
+    console.log("Dodawanie wiadomości do interfejsu:", data);
+    addMessageToChat({
+      username: data.username,
+      text: data.text,
+      inserted_at: data.inserted_at, // ✅ Sprawdź, czy ma wartość
+    });
+  }
+};
+
 
     if (data.type === 'history' && Array.isArray(data.messages)) {
 		console.log("Ładowanie historii wiadomości:", data.messages); // Dodaj log
@@ -226,6 +229,5 @@ function initWebSocket() {
   socket.onerror = (error) => {
     console.error('Błąd WebSocket:', error);
   };
-}
 
 export { startChatWith };
