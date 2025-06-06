@@ -144,6 +144,8 @@ function setupSendMessage() {
  * formatujemy czas (HH:MM). Rozdziela wiadomości wysłane przez bieżącego użytkownika i te odebrane.
  */
 function addMessageToChat(msg) {
+  console.log("Dodawanie wiadomości do interfejsu:", msg); // ✅ Dodaj logowanie
+
   const label = (msg.username === currentUser.email)
     ? 'Ty'
     : getUserLabelById(msg.username) || msg.username;
@@ -151,7 +153,6 @@ function addMessageToChat(msg) {
   const div = document.createElement('div');
   div.classList.add('message', msg.username === currentUser.email ? 'sent' : 'received');
 
-  // Jeśli mamy pole inserted_at, formatujemy datę/godzinę
   let timePart = '';
   if (msg.inserted_at) {
     const dateObj = new Date(msg.inserted_at);
