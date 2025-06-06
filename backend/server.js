@@ -20,7 +20,7 @@ const pool = new Pool({
 });
 
 
-const wss = new WebSocketServer({ noServer: true });
+export const wss = new WebSocketServer({ noServer: true });
 
 const clients = new Map(); // Map(ws, { username, room })
 const userStatus = new Map(); // Map(username, online: true/false)
