@@ -195,30 +195,30 @@ function initWebSocket() {
 
 socket.onmessage = (event) => {
   const data = JSON.parse(event.data);
-  console.log("Odebrana wiadomość przez WebSocket:", data); // ✅ Sprawdź, czy `inserted_at` istnieje
+  console.log('Odebrano przez WS:', data);
 
   if (data.type === 'message') {
-    console.log("Dodawanie wiadomości do interfejsu:", data);
     addMessageToChat({
       username: data.username,
       text: data.text,
-      inserted_at: data.inserted_at, // ✅ Sprawdź, czy ma wartość
+      inserted_at: data.inserted_at,
     });
+  } else if (data.type === 'history') {
+    // Jeśli przesłano tablicę wiadomości
+    if (Array.isArray(data.messages)) {
+      console.log("Ładowanie historii wiadomości (tablica):", data.messages);
+      data.messages.forEach((msg) => addMessageToChat(msg));
+    } else {
+      // Jeśli przesłano pojedynczy komunikat historii
+      console.log("Ładowanie historii wiadomości (pojedyncza):", data);
+      addMessageToChat(data);
+    }
+  } else if (data.type === 'status') {
+    // Aktualizujemy status użytkowników (przekazując identyfikator lub email)
+    updateUserStatusIndicator(data.user, data.online);
   }
 };
 
-
-    if (data.type === 'history' && Array.isArray(data.messages)) {
-		console.log("Ładowanie historii wiadomości:", data.messages); // Dodaj log
-      // Wczytaj historię wiadomości – każde z nich powinno zawierać inserted_at
-      data.messages.forEach((msg) => addMessageToChat(msg));
-    }
-
-    if (data.type === 'status') {
-      // Aktualizujemy status użytkowników, przekazując identyfikator lub email
-      updateUserStatusIndicator(data.user, data.online);
-    }
-  };
 
   socket.onclose = () => {
     console.log('WebSocket rozłączony. Próba ponownego połączenia...');
@@ -229,5 +229,6 @@ socket.onmessage = (event) => {
   socket.onerror = (error) => {
     console.error('Błąd WebSocket:', error);
   };
+}
 
 export { startChatWith };
