@@ -98,7 +98,7 @@ async function startChatWith(user) {
   messagesDiv.innerHTML = '';
   currentRoom = getRoomName(currentUser.email, currentChatUser.email);
 
-  // Jeżeli WebSocket jest już połączony, wysyłamy event join
+  // Jeśli WebSocket jest już połączony, wysyłamy event join
   if (socket && socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify({
       type: 'join',
@@ -120,13 +120,12 @@ function setupSendMessage() {
 
     const msgData = {
       type: 'message',
-	  username: currentUser.email,
+      username: currentUser.email,
       text,
       room: currentRoom,
     };
-	
-	console.log("Wysyłanie wiadomości:", msgData); // Dodaj logowanie
 
+    console.log("Wysyłanie wiadomości:", msgData);
     socket.send(JSON.stringify(msgData));
     inputMsg.value = '';
     inputMsg.focus();
@@ -144,7 +143,7 @@ function setupSendMessage() {
  * formatujemy czas (HH:MM). Rozdziela wiadomości wysłane przez bieżącego użytkownika i te odebrane.
  */
 function addMessageToChat(msg) {
-  console.log("Dodawanie wiadomości do interfejsu:", msg); // ✅ Dodaj logowanie
+  console.log("Dodawanie wiadomości do interfejsu:", msg);
 
   const label = (msg.username === currentUser.email)
     ? 'Ty'
@@ -183,12 +182,11 @@ function initWebSocket() {
     console.log('WebSocket połączony');
     reconnectAttempts = 0;
 
-    // Jeśli aktualnie prowadzisz rozmowę, dołącz do pokoju
     if (currentRoom && currentUser) {
       socket.send(JSON.stringify({
         type: 'join',
         name: currentUser.email,
-        room: currentRoom
+        room: currentRoom,
       }));
     }
   };
@@ -206,20 +204,17 @@ function initWebSocket() {
     }
 
     if (data.type === 'history' && Array.isArray(data.messages)) {
-		console.log("Ładowanie historii wiadomości:", data.messages); // Dodaj log
-      // Wczytaj historię wiadomości – każde z nich powinno zawierać inserted_at
+      console.log("Ładowanie historii wiadomości:", data.messages);
       data.messages.forEach((msg) => addMessageToChat(msg));
     }
 
     if (data.type === 'status') {
-      // Aktualizujemy status użytkowników, przekazując identyfikator lub email
       updateUserStatusIndicator(data.user, data.online);
     }
   };
 
   socket.onclose = () => {
     console.log('WebSocket rozłączony. Próba ponownego połączenia...');
-    // Auto reconnect z progresywnym timeoutem (maks 10 sekund)
     setTimeout(initWebSocket, Math.min(1000 * ++reconnectAttempts, 10000));
   };
 
