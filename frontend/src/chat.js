@@ -123,6 +123,8 @@ function setupSendMessage() {
       text,
       room: currentRoom,
     };
+	
+	console.log("Wysyłanie wiadomości:", msgData); // Dodaj logowanie
 
     socket.send(JSON.stringify(msgData));
     inputMsg.value = '';
@@ -203,6 +205,7 @@ function initWebSocket() {
     }
 
     if (data.type === 'history' && Array.isArray(data.messages)) {
+		console.log("Ładowanie historii wiadomości:", data.messages); // Dodaj log
       // Wczytaj historię wiadomości – każde z nich powinno zawierać inserted_at
       data.messages.forEach((msg) => addMessageToChat(msg));
     }
