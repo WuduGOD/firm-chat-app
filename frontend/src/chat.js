@@ -91,7 +91,7 @@ async function startChatWith(user) {
 
   currentChatUser = {
     id: user.id,
-    username: getUserLabelById(user.id),
+    username: getUserLabelById(user.id) || user.email,
     email: user.email,
   };
 
@@ -120,6 +120,7 @@ function setupSendMessage() {
 
     const msgData = {
       type: 'message',
+	  username: currentUser.email,
       text,
       room: currentRoom,
     };
@@ -143,12 +144,12 @@ function setupSendMessage() {
  * formatujemy czas (HH:MM). Rozdziela wiadomości wysłane przez bieżącego użytkownika i te odebrane.
  */
 function addMessageToChat(msg) {
-  const label = (msg.sender === currentUser.email)
+  const label = (msg.username === currentUser.email)
     ? 'Ty'
-    : getUserLabelById(msg.sender) || msg.sender;
+    : getUserLabelById(msg.username) || msg.username;
 
   const div = document.createElement('div');
-  div.classList.add('message', msg.sender === currentUser.email ? 'sent' : 'received');
+  div.classList.add('message', msg.username === currentUser.email ? 'sent' : 'received');
 
   // Jeśli mamy pole inserted_at, formatujemy datę/godzinę
   let timePart = '';
@@ -197,7 +198,7 @@ function initWebSocket() {
 
     if (data.type === 'message') {
       addMessageToChat({
-        sender: data.username || data.sender,
+        username: data.username,
         text: data.text,
         inserted_at: data.inserted_at,
       });
