@@ -1,4 +1,4 @@
-// src/chat.js
+chat.js
 import { loadAllProfiles, getUserLabelById } from './profiles.js';
 import { supabase } from './supabaseClient.js';
 
