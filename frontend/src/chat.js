@@ -131,7 +131,6 @@ function setupSendMessage() {
     inputMsg.focus();
   };
 
-  // Obsługa wysyłania wiadomości po naciśnięciu Enter
   inputMsg.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       sendBtn.click();
