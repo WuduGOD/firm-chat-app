@@ -17,6 +17,31 @@ let backButton;
 let socket = null;
 let reconnectAttempts = 0;
 
+let themeToggle;
+const body = document.body;
+
+
+function initDarkMode() {
+    themeToggle = document.getElementById('themeToggle');
+
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+        body.classList.add('dark-mode');
+    }
+
+    if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+            body.classList.toggle('dark-mode');
+
+            if (body.classList.contains('dark-mode')) {
+                localStorage.setItem('theme', 'dark');
+            } else {
+                localStorage.setItem('theme', 'light');
+            }
+        });
+    }
+}
+
 export async function initChatApp() {
   contactsList = document.getElementById('contactsList');
   messagesDiv = document.getElementById('messageContainer');
@@ -26,6 +51,8 @@ export async function initChatApp() {
   logoScreen = document.getElementById('logoScreen');
   chatArea = document.getElementById('chatArea');
   backButton = document.getElementById('backButton');
+  
+  initDarkMode();
 
   // Pobierz aktualnego usera (Supabase auth)
   const { data: { session } } = await supabase.auth.getSession();
