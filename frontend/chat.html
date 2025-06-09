@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Komunikator</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="./src/style.css" />
 </head>
 <body>
 
@@ -26,15 +26,14 @@
       </aside>
 
     <main class="chat-layout">
-      <button id="backButton" class="back-button">← Wróć</button>
-
       <section id="logoScreen" class="logo-screen">
         <h2>Witaj w Komunikatorze</h2>
         <p>Wybierz kontakt z listy po lewej, aby rozpocząć rozmowę.</p>
-        </section>
+      </section>
 
       <section id="chatArea" class="chat-area">
         <header class="chat-header">
+          <button id="backButton" class="back-button">← Wróć</button>
           <div class="user-info">
             <span id="chatUserName"></span>
             <span id="userStatus" class="status offline"></span>
@@ -48,7 +47,7 @@
           <input id="messageInput" type="text" placeholder="Wpisz wiadomość..." disabled />
           <button id="sendButton" disabled>Wyślij</button>
         </div>
-      </section>
+        </section>
     </main>
   </div>
 
