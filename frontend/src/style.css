@@ -1,47 +1,107 @@
+/* Reset */
 * {
-  box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-family: Arial, sans-serif;
+  box-sizing: border-box;
 }
-
 body {
-  background: #f1f1f1;
+  font-family: 'Segoe UI', sans-serif;
+  background: #f8f9fa;
   color: #333;
-}
-
-.container {
-  display: flex;
   height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
-aside {
+/* Główna nawigacja */
+.main-header {
+  background: white;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #ddd;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.app-title {
+  font-size: 1.4rem;
+  color: #ef4444;
+}
+
+.user-menu {
+  display: flex;
+  gap: 0.5rem;
+  position: relative;
+}
+
+.user-menu button {
+  background: none;
+  border: none;
+  font-size: 1.3rem;
+  cursor: pointer;
+}
+
+/* Dropdown */
+.dropdown {
+  position: absolute;
+  right: 0;
+  top: 120%;
+  background: white;
+  border: 1px solid #ccc;
+  padding: 0.5rem;
+  border-radius: 6px;
+  box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+}
+.dropdown.hidden {
+  display: none;
+}
+
+.dropdown button {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  width: 100%;
+}
+.dropdown button:hover {
+  background: #dc2626;
+}
+
+/* Układ główny */
+.container {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* Sidebar */
+#sidebar {
   width: 250px;
   background: #fff;
-  border-right: 1px solid #ccc;
   padding: 1rem;
+  border-right: 1px solid #ddd;
   overflow-y: auto;
 }
 
-aside h2 {
+#sidebar h2 {
   margin-bottom: 1rem;
-}
-
-#contactsList {
-  list-style: none;
+  font-size: 1.1rem;
 }
 
 .contact {
+  padding: 0.6rem;
   display: flex;
   align-items: center;
-  padding: 0.5rem;
   cursor: pointer;
+  border-radius: 6px;
   transition: background 0.2s;
 }
-
-.contact.active,
-.contact:hover {
-  background: #e9e9e9;
+.contact:hover,
+.contact.active {
+  background: #f3f4f6;
 }
 
 .contact img.avatar {
@@ -52,18 +112,21 @@ aside h2 {
 }
 
 .status {
-  margin-left: auto;
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: red;
+  margin-left: auto;
 }
 
 .status.online {
   background: green;
 }
+.status.offline {
+  background: gray;
+}
 
-main {
+/* Czat */
+.chat-layout {
   flex: 1;
   position: relative;
   display: flex;
@@ -71,140 +134,202 @@ main {
 }
 
 .logo-screen {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
-  flex: 1;
-  padding: 2rem;
+  align-items: center;
   text-align: center;
+  color: #888;
+  padding: 2rem;
 }
-
 .logo-screen.hidden {
   display: none;
 }
 
-#onlineList {
-  margin-top: 1rem;
-  list-style: none;
-  font-size: 1.1rem;
-}
-
-.back-button {
-  padding: 0.5rem 1rem;
-  background: #ddd;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  display: none;
-}
-
-.back-button.show {
-  display: inline-block;
-}
-
-#chatUserName {
-  font-weight: bold;
-  font-size: 1.1rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .chat-area {
+  flex: 1;
   display: none;
   flex-direction: column;
   height: 100%;
 }
-
 .chat-area.active {
   display: flex;
 }
 
 .chat-header {
-  background: #fff;
   padding: 1rem;
+  background: #fff;
   border-bottom: 1px solid #ccc;
   display: flex;
-  align-items: center;
-  gap: 1rem; /* odstęp między przyciskiem a nickiem */
+  flex-direction: column;
 }
 
 .user-info {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 10px;
   font-weight: bold;
 }
 
 .typing-status {
-  font-style: italic;
-  color: #777;
-  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  color: #666;
+  margin-top: 5px;
 }
 
 .messages {
   flex: 1;
-  overflow-y: auto;
   padding: 1rem;
-  background: #f9f9f9;
+  overflow-y: auto;
+  background: #f1f5f9;
 }
 
 .message {
-  margin-bottom: 1rem;
   max-width: 70%;
-  padding: 0.5rem;
-  border-radius: 10px;
-  background: #d1e7dd;
+  padding: 0.6rem;
+  margin-bottom: 0.5rem;
+  border-radius: 8px;
+  background: #e2e8f0;
   position: relative;
 }
-
 .message.sent {
   margin-left: auto;
-  background: #bee3f8;
+  background: #60a5fa;
+  color: white;
 }
-
 .timestamp {
-  font-size: 0.75rem;
-  position: absolute;
-  bottom: -1.2rem;
-  right: 0.5rem;
-  color: #888;
+  font-size: 0.7rem;
+  opacity: 0.7;
+  margin-top: 3px;
+  display: block;
 }
 
-.message-input {
+/* Dolna belka */
+.chat-footer {
   display: flex;
+  gap: 0.5rem;
   padding: 1rem;
   background: #fff;
-  border-top: 1px solid #ccc;
-  gap: 0.5rem;
+  border-top: 1px solid #ddd;
 }
 
-.message-input input {
+.chat-footer input {
   flex: 1;
-  padding: 0.5rem;
+  padding: 0.6rem;
+  border-radius: 6px;
   border: 1px solid #ccc;
-  border-radius: 5px;
 }
 
-.message-input button {
-  padding: 0.5rem 1rem;
+.chat-footer button {
+  padding: 0.6rem 1rem;
   border: none;
-  background: #4caf50;
+  background: #3b82f6;
   color: white;
-  border-radius: 5px;
+  border-radius: 6px;
   cursor: pointer;
 }
 
-.message-input button:disabled {
-  background: #ccc;
-  cursor: not-allowed;
+.chat-footer button:disabled {
+  background: #a1a1aa;
 }
 
+/* Back */
+.back-button {
+  display: none;
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  padding: 0.4rem 0.8rem;
+  background: #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.back-button.show {
+  display: block;
+}
+
+/* Dark mode */
 .dark-mode {
-  background: #121212;
+  background-color: #1e1e1e;
+  color: #f1f1f1;
+}
+
+/* Główne sekcje */
+.dark-mode .main-header,
+.dark-mode #sidebar,
+.dark-mode .chat-header,
+.dark-mode .chat-footer,
+.dark-mode .dropdown {
+  background-color: #2c2c2c;
+  border-color: #444;
+  color: #f1f1f1;
+}
+
+/* Lista kontaktów */
+.dark-mode .contact {
+  background-color: transparent;
+  color: #f1f1f1;
+}
+.dark-mode .contact:hover,
+.dark-mode .contact.active {
+  background-color: #3a3a3a;
+}
+
+/* Czat */
+.dark-mode .chat-area,
+.dark-mode .messages,
+.dark-mode .logo-screen {
+  background-color: #1e1e1e;
+  color: #f1f1f1;
+}
+
+/* Wiadomości */
+.dark-mode .message {
+  background-color: #333;
   color: #eee;
 }
+.dark-mode .message.sent {
+  background-color: #2563eb;
+  color: #fff;
+}
+
+/* Pole wpisywania wiadomości */
+.dark-mode .chat-footer input {
+  background-color: #2c2c2c;
+  border: 1px solid #555;
+  color: #fff;
+}
+.dark-mode .chat-footer input::placeholder {
+  color: #aaa;
+}
+
+/* Przycisk Wyślij / Emoji */
+.dark-mode .chat-footer button {
+  background-color: #3b82f6;
+  color: #fff;
+}
+.dark-mode .chat-footer button:disabled {
+  background-color: #555;
+  color: #ccc;
+}
+
+/* Dropdown */
+.dark-mode .dropdown button {
+  background-color: #ef4444;
+  color: #fff;
+}
+.dark-mode .dropdown button:hover {
+  background-color: #dc2626;
+}
+
+/* Przycisk Wróć */
+.dark-mode .back-button {
+  background-color: #444;
+  color: #fff;
+  border: 1px solid #666;
+}
+
 .auth-body {
   background: #f9f9f9;
   display: flex;

@@ -4,61 +4,55 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Komunikator</title>
-  <link rel="stylesheet" href="./src/style.css" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+
+  <header class="main-header">
+    <h1 class="app-title">💬 Komunikator</h1>
+    <div class="user-menu">
+      <button id="themeToggle" title="Tryb dzień/noc">🌙</button>
+      <button id="menuButton">☰</button>
+      <div id="dropdownMenu" class="dropdown hidden">
+        <button id="logoutButton">Wyloguj się</button>
+      </div>
+    </div>
+  </header>
+
   <div class="container">
-    <!-- LEWY PANEL: lista kontaktów -->
     <aside id="sidebar">
       <h2>Kontakty</h2>
       <ul id="contactsList"></ul>
-    </aside>
+      </aside>
 
-    <!-- GŁÓWNY OBSZAR CZATU -->
-    <main>
-      <!-- Ekran powitalny (pokazywany zanim wybierzesz rozmówcę) -->
+    <main class="chat-layout">
+      <button id="backButton" class="back-button">← Wróć</button>
+
       <section id="logoScreen" class="logo-screen">
-        <h1>Komunikator</h1>
-        <p>Osoby online:</p>
-        <ul id="onlineList">
-          <li>Janek 🟢</li>
-          <li>Zespół Projektowy 🟢</li>
-        </ul>
-      </section>
+        <h2>Witaj w Komunikatorze</h2>
+        <p>Wybierz kontakt z listy po lewej, aby rozpocząć rozmowę.</p>
+        </section>
 
-      <!-- SEKCJA ZAPLECZA CZATU (po wybraniu kontaktu) -->
       <section id="chatArea" class="chat-area">
         <header class="chat-header">
-		  <button id="backButton" class="back-button">← Wróć</button>
-            <span id="chatUserName">Wybierz rozmówcę</span>
+          <div class="user-info">
+            <span id="chatUserName"></span>
             <span id="userStatus" class="status offline"></span>
+          </div>
+          <div id="typingStatus" class="typing-status"></div>
         </header>
 
-        <!-- Tu możesz wyświetlać informację „X pisze…” -->
-        <div id="typingStatus" class="typing-status"></div>
-
-        <!-- TO JEST ELEMENT, DO KTÓREGO CHAT.JS DOKLEJA WIADOMOŚCI -->
         <div id="messageContainer" class="messages"></div>
 
-        <!-- INPUT + PRZYCISK „Wyślij” -->
-        <div class="message-input">
-          <!-- (opcjonalnie) przycisk emoji -->
-          <button id="emojiToggle">😀</button>
-          <!-- Pole tekstowe musi mieć dokładnie ten ID -->
-          <input
-            id="messageInput"
-            type="text"
-            placeholder="Wpisz wiadomość..."
-            disabled
-          />
-          <!-- Przycisk „Wyślij” ZAWSZE MUSI MIEĆ TEN ID -->
+        <div class="chat-footer">
+          <input id="messageInput" type="text" placeholder="Wpisz wiadomość..." disabled />
           <button id="sendButton" disabled>Wyślij</button>
         </div>
       </section>
     </main>
   </div>
 
-  <!-- TU ŁADUJESZ SWÓJ GŁÓWNY PLIK: chat-entry.js -->
   <script type="module" src="./src/chat-entry.js"></script>
+
 </body>
 </html>
