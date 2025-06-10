@@ -1,6 +1,4 @@
-// Deklarujemy i eksportujemy funkcje na najwyższym poziomie,
-// aby były dostępne dla importu w innych modułach.
-// Ich implementacje zostaną przypisane w `DOMContentLoaded`.
+// Deklarujemy i eksportujemy funkcje na najwyższym poziomie
 export let openChatPanel;
 export let closeChatPanel;
 export let resetUI;
@@ -8,8 +6,7 @@ export let resetUI;
 document.addEventListener('DOMContentLoaded', () => {
     // === Selektory DOM ===
     const appContainer = document.querySelector('.app-container');
-    const contentArea = document.querySelector('.content-area'); // Lista konwersacji
-    const activeChatPanel = document.querySelector('.active-chat-panel');
+    const conversationList = document.querySelector('.conversation-list');
     const backToListBtn = document.querySelector('.back-to-list-btn');
 
     const searchInput = document.querySelector('.search-input');
@@ -23,97 +20,116 @@ document.addEventListener('DOMContentLoaded', () => {
     const accountPanel = document.querySelector('.account-panel');
     const closeAccountBtn = document.querySelector('.account-panel .close-account-btn');
 
-    const whisperModeBtn = document.querySelector('.whisper-mode-btn');
+    const whisperModeBtn = document.querySelector('.whisper-mode-btn'); // Nowy selektor dla przycisku szeptu
     const chatContentView = document.querySelector('.chat-content-view');
     const chatInputArea = document.querySelector('.chat-input-area');
 
-    const navIconsAndTooltips = document.querySelectorAll('.nav-icon, .account-icon, .flow-bar, .whisper-mode-btn');
+    // Selektory dla elementów nagłówka czatu, które będą dynamicznie aktualizowane
+    const activeChatPanel = document.querySelector('.active-chat-panel');
+    const chatHeaderAvatar = activeChatPanel?.querySelector('.chat-header-avatar');
+    const chatHeaderName = activeChatPanel?.querySelector('.chat-header-name');
+    const chatStatus = activeChatPanel?.querySelector('.chat-status');
 
-    // === Obsługa otwierania/zamykania panelu czatu ===
-    // Przypisujemy implementację do eksportowanych funkcji
+    // Selektor dla aktywnej ikony nawigacji (np. "Czat")
+    const chatNavIcon = document.querySelector('.nav-icon[data-tooltip="Czat"]');
+    const navIcons = document.querySelectorAll('.main-nav .nav-icon');
+
+
+    // === Funkcje sterujące stanami widoku ===
+
+    /**
+     * Otwiera panel czatu w widoku podzielonym (lista konwersacji + czat).
+     * @param {HTMLElement} [convoItem=null] - Element konwersacji, który został kliknięty (opcjonalnie).
+     */
     openChatPanel = (convoItem = null) => {
-        if (appContainer && activeChatPanel) {
-            // Jeśli wywołujemy z convoItem (kliknięcie na konwersację), aktualizuj nagłówek czatu
+        if (appContainer) {
+            // Dodaj klasę, która aktywuje styl dla widoku podzielonego
+            appContainer.classList.add('chat-active');
+
+            // Aktualizuj nagłówek czatu, jeśli convoItem jest podany
             if (convoItem) {
-                const chatHeaderAvatar = activeChatPanel.querySelector('.chat-header-avatar');
-                const chatHeaderName = activeChatPanel.querySelector('.chat-header-name');
-                const chatStatus = activeChatPanel.querySelector('.chat-status'); // Dodaj selektor dla statusu
                 const convoAvatarSrc = convoItem.querySelector('.convo-avatar')?.src;
                 const convoName = convoItem.querySelector('.convo-name')?.textContent;
-                const convoStatus = convoItem.dataset.status || 'offline'; // Przykład: status z data-status
+                // Zakładam, że status jest w `data-status` atrybucie `convo-item`
+                const convoStatus = convoItem.dataset.status || 'offline';
 
-                if (chatHeaderAvatar) chatHeaderAvatar.src = convoAvatarSrc || 'path/to/default-avatar.png'; // Zapewnij domyślny avatar
+                if (chatHeaderAvatar) chatHeaderAvatar.src = convoAvatarSrc || 'https://via.placeholder.com/48'; // Domyślny avatar
                 if (chatHeaderName) chatHeaderName.textContent = convoName || 'Nieznany użytkownik';
                 if (chatStatus) {
                     chatStatus.textContent = convoStatus === 'online' ? 'Online' : 'Offline';
-                    chatStatus.classList.remove('online', 'offline'); // Usuń poprzednie klasy
-                    chatStatus.classList.add(convoStatus); // Dodaj nową klasę statusu (dla stylów CSS)
+                    chatStatus.classList.remove('online', 'offline');
+                    chatStatus.classList.add(convoStatus);
                 }
 
-                // Dodaj klasę 'active' do klikniętej konwersacji
+                // Ustawia aktywną konwersację na liście
                 document.querySelectorAll('.convo-item').forEach(item => item.classList.remove('active'));
                 convoItem.classList.add('active');
             }
 
-            // Dodaj klasę 'chat-open' do appContainer, która steruje wszystkimi animacjami w CSS
-            appContainer.classList.add('chat-open');
-
-            // Upewnij się, że kapsuła kontekstu i panel konta są zamknięte
-            if (contextCapsule && contextCapsule.classList.contains('active')) {
-                contextCapsule.classList.remove('active');
-            }
-            if (accountPanel && accountPanel.classList.contains('active')) {
-                accountPanel.classList.remove('active');
-            }
-            // Ważne: Jeśli masz ukrywanie poprzez 'hidden' z 'display:none',
-            // usuń je tylko po to, by działały animacje.
-            // Pamiętaj, że główna logika widoczności i animacji jest w CSS
-            // kontrolowana przez klasę 'chat-open' na appContainer.
-            // console.log('Czat otwarty, appContainer ma klasę chat-open');
+            // Upewnij się, że inne panele (konto, kapsuła) są zamknięte
+            if (contextCapsule) contextCapsule.classList.remove('active');
+            if (accountPanel) accountPanel.classList.remove('active');
         }
     };
 
+    /**
+     * Zamyka panel czatu i powraca do stanu początkowego (pełnej listy konwersacji).
+     */
     closeChatPanel = () => {
         if (appContainer) {
-            appContainer.classList.remove('chat-open'); // Usuwamy klasę, która steruje szerokością paneli
-            // Opcjonalnie: Usuń klasę 'active' z aktualnie wybranej konwersacji,
-            // aby żaden element na liście nie był podświetlony
-            document.querySelector('.convo-item.active')?.classList.remove('active');
-            // console.log('Czat zamknięty, appContainer nie ma klasy chat-open');
+            // Usuń klasę, aby przywrócić widok początkowy
+            appContainer.classList.remove('chat-active');
+
+            // Usuń aktywną konwersację z listy
+            document.querySelectorAll('.convo-item').forEach(item => item.classList.remove('active'));
+
+            // Reset nagłówka czatu
+            if (chatHeaderName) chatHeaderName.textContent = 'Wybierz konwersację';
+            if (chatHeaderAvatar) chatHeaderAvatar.src = ''; // Ustaw pusty lub domyślny avatar
+            if (chatStatus) {
+                chatStatus.textContent = '';
+                chatStatus.classList.remove('online', 'offline');
+            }
         }
     };
 
-    // Obsługa kliknięcia na element konwersacji (delegacja lub forEach)
-    // UWAGA: Jeśli masz wiele .convo-item, forEach jest ok.
-    // Jeśli elementy są dodawane dynamicznie, rozważ delegację zdarzeń na .conversation-list
-    document.querySelectorAll('.convo-item').forEach(item => {
-        item.addEventListener('click', () => {
-            // openChatPanel już obsługuje dodawanie 'active' i aktualizację nagłówka
-            openChatPanel(item);
-        });
-    });
+    // === Event Listenery ===
 
-    // Obsługa przycisku "Wróć do listy" w panelu czatu
+    // 1. Kliknięcie na element konwersacji (przełącza na WIDOK PODZIELONY)
+    if (conversationList) {
+        conversationList.addEventListener('click', (event) => {
+            const convoItem = event.target.closest('.convo-item');
+            if (convoItem) {
+                openChatPanel(convoItem);
+            }
+        });
+    }
+
+    // 2. Kliknięcie na przycisk "Wróć do listy" (przełącza na WIDOK POCZĄTKOWY)
     if (backToListBtn) {
         backToListBtn.addEventListener('click', closeChatPanel);
+    }
+
+    // 3. Aktywacja ikony "Czat" w sidebarze (upewnij się, że ten sam widok listy jest aktywny)
+    // Jeśli kliknięcie na "Czat" ma też zamykać inne panele, to jest dobre miejsce
+    if (chatNavIcon) {
+        chatNavIcon.addEventListener('click', () => {
+            navIcons.forEach(icon => icon.classList.remove('active'));
+            chatNavIcon.classList.add('active');
+            closeChatPanel(); // Upewnij się, że jest widoczna pełna lista konwersacji
+        });
     }
 
     // === Obsługa otwierania/zamykania Kapsuły Kontekstu ===
     if (flowBar && contextCapsule && closeCapsuleBtn) {
         flowBar.addEventListener('click', () => {
-            // Używamy tylko 'active' do kontroli widoczności/animacji
             contextCapsule.classList.toggle('active');
-            // Zamknij panel konta, jeśli otwarty
-            if (accountPanel && accountPanel.classList.contains('active')) {
-                accountPanel.classList.remove('active');
-            }
-            // Ważne: Jeśli czat jest otwarty, zamknij go, jeśli chcesz
-            // aby otwarcie kapsuły kontekstu zamykało czat.
-            if (appContainer.classList.contains('chat-open')) {
+            if (accountPanel) accountPanel.classList.remove('active');
+            // Jeśli otwieramy kapsułę, zamykamy czat (wracamy do listy)
+            if (appContainer.classList.contains('chat-active')) {
                 closeChatPanel();
             }
         });
-
         closeCapsuleBtn.addEventListener('click', () => {
             contextCapsule.classList.remove('active');
         });
@@ -122,56 +138,47 @@ document.addEventListener('DOMContentLoaded', () => {
     // === Obsługa otwierania/zamykania Panelu Konta ===
     if (accountIcon && accountPanel && closeAccountBtn) {
         accountIcon.addEventListener('click', () => {
-            // Używamy tylko 'active' do kontroli widoczności/animacji
             accountPanel.classList.toggle('active');
-            // Zamknij kapsułę kontekstu, jeśli otwarta
-            if (contextCapsule && contextCapsule.classList.contains('active')) {
-                contextCapsule.classList.remove('active');
-            }
-            // Ważne: Jeśli czat jest otwarty, zamknij go, jeśli chcesz
-            // aby otwarcie panelu konta zamykało czat.
-            if (appContainer.classList.contains('chat-open')) {
+            if (contextCapsule) contextCapsule.classList.remove('active');
+            // Jeśli otwieramy panel konta, zamykamy czat (wracamy do listy)
+            if (appContainer.classList.contains('chat-active')) {
                 closeChatPanel();
             }
         });
-
         closeAccountBtn.addEventListener('click', () => {
             accountPanel.classList.remove('active');
         });
     }
 
     // === Obsługa animacji wyszukiwania ===
-    // W CSS masz już zdefiniowane przejścia, więc manipulowanie klasą .active
-    // lub bezpośrednio stylami jest ok. Zostawiłbym to tak, jak jest.
     if (searchInput && filterBtn) {
         searchInput.addEventListener('focus', () => {
             searchInput.style.width = '200px';
-            filterBtn.classList.add('active'); // Użyj klasy 'active' z CSS
-            filterBtn.classList.remove('hidden'); // Upewnij się, że nie ma display:none
+            filterBtn.classList.add('active');
+            filterBtn.classList.remove('hidden');
         });
 
         searchInput.addEventListener('blur', () => {
             if (!searchInput.value) {
                 searchInput.style.width = '120px';
-                filterBtn.classList.remove('active'); // Usuń klasę 'active'
-                // Poczekaj na zakończenie animacji zanikania przed dodaniem 'hidden'
+                filterBtn.classList.remove('active');
                 setTimeout(() => {
-                    filterBtn.classList.add('hidden'); // Jeśli 'hidden' ma display:none
+                    filterBtn.classList.add('hidden');
                 }, 300);
             }
         });
-
-        // Obsługa stanu początkowego (jeśli po załadowaniu strony input ma wartość)
+        // Utrzymaj stan po przeładowaniu, jeśli pole ma wartość
         if (searchInput.value.trim() !== '') {
-            filterBtn.classList.add('active'); // Użyj klasy 'active'
-            filterBtn.classList.remove('hidden'); // Upewnij się, że nie ma display:none
+            filterBtn.classList.add('active');
+            filterBtn.classList.remove('hidden');
             searchInput.style.width = '200px';
         } else {
-            filterBtn.classList.add('hidden'); // Domyślnie ukryj, jeśli puste
+            filterBtn.classList.add('hidden');
         }
     }
 
-    // === Cichy Tryb Skupienia ===
+    // === Cichy Tryb Skupienia (Blurring) ===
+    // Upewnij się, że przycisk whisperModeBtn istnieje w HTML
     if (whisperModeBtn && chatContentView && chatInputArea) {
         whisperModeBtn.addEventListener('click', () => {
             chatContentView.classList.toggle('blurred-focus');
@@ -179,89 +186,59 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // === Tooltipy (podpowiedzi) dla ikon nawigacji ===
-    // Ten kod jest dobry.
+    // === Tooltipy ===
     navIconsAndTooltips.forEach(element => {
         element.addEventListener('mouseenter', function() {
             const tooltipText = this.dataset.tooltip;
             if (tooltipText) {
                 let tooltip = document.querySelector('.tooltip');
-                if (!tooltip) {
-                    tooltip = document.createElement('div');
-                    tooltip.className = 'tooltip';
-                    document.body.appendChild(tooltip);
-                }
+                if (!tooltip) { tooltip = document.createElement('div'); tooltip.className = 'tooltip'; document.body.appendChild(tooltip); }
                 tooltip.textContent = tooltipText;
-
                 const rect = this.getBoundingClientRect();
                 tooltip.style.left = `${rect.right + 10}px`;
                 tooltip.style.top = `${rect.top + rect.height / 2 - tooltip.offsetHeight / 2}px`;
                 tooltip.style.opacity = '1';
             }
         });
-
         element.addEventListener('mouseleave', () => {
             const tooltip = document.querySelector('.tooltip');
-            if (tooltip) {
-                tooltip.style.opacity = '0';
-                setTimeout(() => tooltip.remove(), 200);
-            }
+            if (tooltip) { tooltip.style.opacity = '0'; setTimeout(() => tooltip.remove(), 200); }
         });
     });
-
-    // === Drag & Drop dla "Fal Konwersacji" (przykładowa implementacja) ===
-    document.querySelectorAll('.message-wave').forEach(wave => {
-        wave.addEventListener('dragstart', (e) => {
-            e.dataTransfer.setData('text/plain', e.target.textContent);
-            e.dataTransfer.effectAllowed = 'copy';
-            console.log('Dragging wave:', e.target.textContent);
-        });
-    });
-
 
     // === Globalna funkcja do resetowania UI ===
     resetUI = () => {
         closeChatPanel(); // Zamyka panel czatu i przywraca widok listy konwersacji
 
-        // Zamknij kapsułę kontekstu
-        if (contextCapsule && contextCapsule.classList.contains('active')) {
-            contextCapsule.classList.remove('active');
-        }
-        // Zamknij panel konta
-        if (accountPanel && accountPanel.classList.contains('active')) {
-            accountPanel.classList.remove('active');
-        }
+        if (contextCapsule) contextCapsule.classList.remove('active');
+        if (accountPanel) accountPanel.classList.remove('active');
 
-        // Reset pola wyszukiwania
         if (searchInput) {
             searchInput.value = '';
             searchInput.style.width = '120px';
         }
         if (filterBtn) {
-            filterBtn.classList.remove('active'); // Usuń klasę 'active'
-            filterBtn.classList.add('hidden'); // Domyślnie ukryj, jeśli puste
+            filterBtn.classList.remove('active');
+            filterBtn.classList.add('hidden');
         }
 
-        // Usuń klasy trybu skupienia
         chatContentView?.classList.remove('blurred-focus');
         chatInputArea?.classList.remove('blurred-focus-input');
 
-        // Reset nagłówka czatu
-        const chatHeaderName = document.querySelector('.chat-header-name');
-        const chatHeaderAvatar = document.querySelector('.chat-header-avatar');
-        const chatStatusSpan = document.querySelector('.chat-status');
-        if (chatHeaderName) chatHeaderName.textContent = 'Wybierz konwersację';
-        if (chatHeaderAvatar) chatHeaderAvatar.src = '';
-        if (chatStatusSpan) {
-            chatStatusSpan.textContent = '';
-            chatStatusSpan.classList.remove('online', 'offline');
-        }
-
-        // Reset aktywnej konwersacji na liście
         document.querySelectorAll('.convo-item').forEach(item => item.classList.remove('active'));
 
-        // conversationList.innerHTML = ''; // Ta linia usunęłaby wszystkie konwersacje!
-                                        // Zostaw ją, jeśli to jest zamierzone zachowanie resetu.
-                                        // Jeśli nie, usuń ją lub przenieś do innej funkcji.
+        // Reset aktywnej ikony nawigacji na "Czat"
+        navIcons.forEach(icon => icon.classList.remove('active'));
+        if (chatNavIcon) {
+            chatNavIcon.classList.add('active');
+        }
     };
+
+    // === Początkowa inicjalizacja (po załadowaniu strony) ===
+    // Upewnij się, że przycisk "Czat" jest aktywny domyślnie
+    if (chatNavIcon) {
+        chatNavIcon.classList.add('active');
+    }
+    // Upewnij się, że panel czatu jest początkowo ukryty (usuń klasę chat-active, jeśli jest)
+    appContainer.classList.remove('chat-active');
 });
