@@ -7,43 +7,68 @@ export let resetUI;
 
 document.addEventListener('DOMContentLoaded', () => {
     // === Selektory DOM, które są lokalne dla tego skryptu UI ===
-    const activeChatPanel = document.querySelector('.active-chat-panel');
+    const appContainer = document.querySelector('.app-container');
     const contentArea = document.querySelector('.content-area'); // Lista konwersacji
-    const appContainer = document.querySelector('.app-container'); // Nowy selektor
+    const activeChatPanel = document.querySelector('.active-chat-panel');
     const backToListBtn = document.querySelector('.back-to-list-btn');
+
+    const searchInput = document.querySelector('.search-input');
+    const filterBtn = document.querySelector('.filter-btn');
+
     const flowBar = document.querySelector('.flow-bar');
     const contextCapsule = document.querySelector('.context-capsule');
     const closeCapsuleBtn = document.querySelector('.close-capsule-btn');
+
     const accountIcon = document.querySelector('.sidebar-account .account-icon');
     const accountPanel = document.querySelector('.account-panel');
     const closeAccountBtn = document.querySelector('.account-panel .close-account-btn');
 
-    const searchInput = document.querySelector('.search-input');
-    const filterBtn = document.querySelector('.filter-btn');
-    const navIcons = document.querySelectorAll('.sidebar .nav-icon, .sidebar-account .account-icon');
-    const tooltip = document.querySelector('.tooltip');
+    const whisperModeBtn = document.querySelector('.whisper-mode-btn');
+    const chatContentView = document.querySelector('.chat-content-view');
+    const chatInputArea = document.querySelector('.chat-input-area');
+
+    // Zakładamy, że tooltip będzie dynamicznie tworzony,
+    // więc nie pobieramy go tutaj jako selektor DOM globalnie,
+    // tak jak to było w Twoim oryginalnym kodzie HTML.
+
+    const navIconsAndTooltips = document.querySelectorAll('.nav-icon, .account-icon, .flow-bar, .whisper-mode-btn');
+
 
     // === Obsługa przełączania paneli (chat, kontekst, konto) ===
     // Przypisujemy implementację do eksportowanych funkcji
-    openChatPanel = () => {
-        if (activeChatPanel && contentArea && appContainer) { // Dodaj appContainer do warunku
-            activeChatPanel.classList.add('active');
-            contentArea.classList.add('hidden-on-mobile');
-            appContainer.classList.add('chat-panel-open'); // Dodaj tę klasę!
+    openChatPanel = (convoItem = null) => {
+        if (appContainer) {
+            // Jeśli wywołujemy z convoItem (kliknięcie na konwersację)
+            if (convoItem) {
+                const chatHeaderAvatar = activeChatPanel.querySelector('.chat-header-avatar');
+                const chatHeaderName = activeChatPanel.querySelector('.chat-header-name');
+                const convoAvatarSrc = convoItem.querySelector('.convo-avatar')?.src;
+                const convoName = convoItem.querySelector('.convo-name')?.textContent;
+
+                if (chatHeaderAvatar) chatHeaderAvatar.src = convoAvatarSrc || '';
+                if (chatHeaderName) chatHeaderName.textContent = convoName || '';
+            }
+
+            appContainer.classList.add('chat-open'); // Ta klasa zmienia szerokości flex-itemów
+
             // Upewnij się, że kapsuła kontekstu i panel konta są zamknięte
-            // Używamy document.querySelector bezpośrednio dla pewności, że odwołujemy się do aktualnych elementów
-            document.querySelector('.context-capsule')?.classList.remove('open');
-            document.querySelector('.account-panel')?.classList.remove('open');
+            contextCapsule?.classList.add('hidden');
+            contextCapsule?.classList.remove('active');
+            accountPanel?.classList.add('hidden');
+            accountPanel?.classList.remove('active');
         }
     };
 
     closeChatPanel = () => {
-        if (activeChatPanel && contentArea && appContainer) { // Dodaj appContainer do warunku
-            activeChatPanel.classList.remove('active');
-            contentArea.classList.remove('hidden-on-mobile'); // Pokaż listę konwersacji
-            appContainer.classList.remove('chat-panel-open'); // Usuń tę klasę!
+        if (appContainer) {
+            appContainer.classList.remove('chat-open'); // Usuwamy klasę
         }
     };
+
+    // Obsługa kliknięcia na element konwersacji
+    document.querySelectorAll('.convo-item').forEach(item => {
+        item.addEventListener('click', () => openChatPanel(item));
+    });
 
     // Obsługa przycisku "Wróć do listy" w panelu czatu
     if (backToListBtn) {
@@ -51,105 +76,164 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Obsługa otwierania/zamykania kapsuły kontekstu
-    if (flowBar) {
+    if (flowBar && contextCapsule && closeCapsuleBtn) {
         flowBar.addEventListener('click', () => {
-            contextCapsule?.classList.add('open');
+            contextCapsule.classList.toggle('hidden');
+            if (!contextCapsule.classList.contains('hidden')) {
+                contextCapsule.classList.add('active'); // Dla animacji
+            } else {
+                contextCapsule.classList.remove('active');
+            }
         });
-    }
-    if (closeCapsuleBtn) {
+
         closeCapsuleBtn.addEventListener('click', () => {
-            contextCapsule?.classList.remove('open');
+            contextCapsule.classList.add('hidden');
+            contextCapsule.classList.remove('active');
         });
     }
 
     // Obsługa otwierania/zamykania panelu konta
-    if (accountIcon) {
+    if (accountIcon && accountPanel && closeAccountBtn) {
         accountIcon.addEventListener('click', () => {
-            accountPanel?.classList.add('open');
+            accountPanel.classList.toggle('hidden');
+            if (!accountPanel.classList.contains('hidden')) {
+                accountPanel.classList.add('active');
+            } else {
+                accountPanel.classList.remove('active');
+            }
         });
-    }
-    if (closeAccountBtn) {
+
         closeAccountBtn.addEventListener('click', () => {
-            accountPanel?.classList.remove('open');
+            accountPanel.classList.add('hidden');
+            accountPanel.classList.remove('active');
         });
     }
 
     // === Obsługa animacji wyszukiwania ===
     if (searchInput && filterBtn) {
         searchInput.addEventListener('focus', () => {
-            filterBtn.classList.add('visible'); // Zmieniamy na 'visible'
-            // Nie usuwamy już 'hidden', bo zakładamy, że zarządzamy klasą 'visible'
+            searchInput.style.width = '200px'; // Rozszerz pole
+            filterBtn.classList.remove('hidden'); // Pokaż przycisk filtru
+            filterBtn.style.opacity = '1';
         });
 
         searchInput.addEventListener('blur', () => {
-            // Ukryj przycisk filtra tylko jeśli pole wyszukiwania jest puste
-            if (searchInput.value.trim() === '') {
-                filterBtn.classList.remove('visible'); // Usuwamy 'visible'
+            if (!searchInput.value) { // Zwiń tylko jeśli puste
+                searchInput.style.width = '120px';
+                filterBtn.style.opacity = '0';
+                filterBtn.classList.add('hidden');
             }
         });
 
-        // Pokaż przycisk filtra, jeśli po załadowaniu strony input ma wartość
+        // Obsługa stanu początkowego (jeśli pole ma już wartość)
         if (searchInput.value.trim() !== '') {
-            filterBtn.classList.add('visible'); // Zmieniamy na 'visible'
+            filterBtn.classList.remove('hidden');
+            filterBtn.style.opacity = '1';
+            searchInput.style.width = '200px'; // Upewnij się, że jest rozszerzone
         }
     }
 
-    // === Obsługa tooltipów (podpowiedzi) dla ikon bocznego paska ===
-    if (tooltip) {
-        navIcons.forEach(icon => {
-            const tooltipText = icon.getAttribute('data-tooltip');
-            if (tooltipText) {
-                icon.addEventListener('mouseenter', (e) => {
-                    tooltip.textContent = tooltipText;
-                    tooltip.style.left = `${e.clientX + 15}px`; // Lekkie przesunięcie w prawo
-                    tooltip.style.top = `${e.clientY + 15}px`; // Lekkie przesunięcie w dół
-                    tooltip.classList.add('visible');
-                });
-
-                icon.addEventListener('mousemove', (e) => {
-                    tooltip.style.left = `${e.clientX + 15}px`;
-                    tooltip.style.top = `${e.clientY + 15}px`;
-                });
-
-                icon.addEventListener('mouseleave', () => {
-                    tooltip.classList.remove('visible');
-                });
-            }
+    // === Cichy Tryb Skupienia ===
+    if (whisperModeBtn && chatContentView && chatInputArea) {
+        whisperModeBtn.addEventListener('click', () => {
+            chatContentView.classList.toggle('blurred-focus');
+            chatInputArea.classList.toggle('blurred-focus-input');
         });
     }
+
+    // === Tooltipy (podpowiedzi) dla ikon nawigacji ===
+    navIconsAndTooltips.forEach(element => {
+        element.addEventListener('mouseenter', function() {
+            const tooltipText = this.dataset.tooltip;
+            if (tooltipText) {
+                const tooltip = document.createElement('div');
+                tooltip.className = 'tooltip';
+                tooltip.textContent = tooltipText;
+                document.body.appendChild(tooltip);
+
+                const rect = this.getBoundingClientRect();
+                // Pozycjonowanie tooltipa obok elementu
+                tooltip.style.left = `${rect.right + 10}px`;
+                tooltip.style.top = `${rect.top + rect.height / 2 - tooltip.offsetHeight / 2}px`;
+                tooltip.style.opacity = '1';
+            }
+        });
+
+        element.addEventListener('mouseleave', () => {
+            const tooltip = document.querySelector('.tooltip');
+            if (tooltip) {
+                tooltip.style.opacity = '0';
+                setTimeout(() => tooltip.remove(), 200);
+            }
+        });
+    });
+
+    // === Drag & Drop dla "Fal Konwersacji" (przykładowa implementacja) ===
+    document.querySelectorAll('.message-wave').forEach(wave => {
+        wave.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', e.target.textContent); // Przekazujemy tekst
+            e.dataTransfer.effectAllowed = 'copy';
+            console.log('Dragging wave:', e.target.textContent);
+        });
+    });
+
 
     // === Globalna funkcja do resetowania UI ===
     // Przypisujemy implementację do eksportowanej funkcji
     resetUI = () => {
         closeChatPanel(); // Używamy już zdefiniowanej funkcji w tym samym skrypcie
 
-        // Upewnij się, że kapsuła kontekstu i panel konta są zamknięte
-        // Używamy document.querySelector bezpośrednio dla pewności, że odwołujemy się do aktualnych elementów
-        document.querySelector('.context-capsule')?.classList.remove('open');
-        document.querySelector('.account-panel')?.classList.remove('open');
+        // Zamknij kapsułę kontekstu
+        if (contextCapsule) {
+            contextCapsule.classList.add('hidden');
+            contextCapsule.classList.remove('active');
+        }
+        // Zamknij panel konta
+        if (accountPanel) {
+            accountPanel.classList.add('hidden');
+            accountPanel.classList.remove('active');
+        }
+
+        // Reset pola wyszukiwania
+        if (searchInput) {
+            searchInput.value = '';
+            searchInput.style.width = '120px'; // Zwiń pole
+        }
+        if (filterBtn) {
+            filterBtn.style.opacity = '0';
+            filterBtn.classList.add('hidden');
+        }
+
+        // Usuń klasy blurred-focus
+        chatContentView?.classList.remove('blurred-focus');
+        chatInputArea?.classList.remove('blurred-focus-input');
 
 
-        // Musimy ponownie pobrać referencje do tych elementów, ponieważ są one lokalne
-        // dla bieżącego zakresu DOMContentLoaded.
-        const currentSearchInput = document.querySelector('.search-input');
-        const currentFilterBtn = document.querySelector('.filter-btn');
-
-        if (currentSearchInput) currentSearchInput.value = '';
-        currentFilterBtn?.classList.remove('visible'); // Zmieniamy na usuwanie 'visible'
-
-        // Wyczyść dynamicznie ładowane treści
+        // Wyczyść dynamicznie ładowane treści (jeśli są)
         const conversationList = document.querySelector('.conversation-list');
-        const chatContentView = document.querySelector('.chat-content-view');
+        // Tutaj usuwasz wszystkie elementy konwersacji, jeśli chcesz zacząć od zera.
+        // Jeśli chcesz zachować statyczne konwersacje z HTML, możesz to pominąć.
+        // if (conversationList) conversationList.innerHTML = '';
 
-        if (conversationList) conversationList.innerHTML = '';
-        if (chatContentView) chatContentView.innerHTML = '';
+
+        const chatContentViewMessages = document.querySelector('.chat-content-view');
+        // Możesz wyczyścić wiadomości w panelu czatu
+        if (chatContentViewMessages) {
+             // Opcjonalnie: usuń wszystkie dzieci oprócz tych statycznych z HTML
+             // Aby to zrobić, musiałbyś zidentyfikować, które wiadomości są statyczne
+             // Na razie, jeśli chcesz wyczyścić wszystko, co było w panelu czatu, możesz użyć:
+             // chatContentViewMessages.innerHTML = '';
+             // Pamiętaj, że to usunie też te wiadomości, które są w Twoim HTML.
+             // Jeśli chcesz resetować tylko dynamicznie dodane, potrzebna byłaby inna logika.
+        }
+
 
         // Reset nagłówka czatu
         const chatHeaderName = document.querySelector('.chat-header-name');
         const chatHeaderAvatar = document.querySelector('.chat-header-avatar');
         const chatStatusSpan = document.querySelector('.chat-status');
-        if (chatHeaderName) chatHeaderName.textContent = '';
-        if (chatHeaderAvatar) chatHeaderAvatar.src = ''; // Ustaw pusty src
+        if (chatHeaderName) chatHeaderName.textContent = 'Wybierz konwersację'; // Ustaw domyślny tekst
+        if (chatHeaderAvatar) chatHeaderAvatar.src = ''; // Ustaw pusty src lub domyślny avatar
         if (chatStatusSpan) {
             chatStatusSpan.textContent = '';
             chatStatusSpan.classList.remove('online', 'offline');
