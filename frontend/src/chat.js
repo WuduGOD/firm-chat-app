@@ -1,400 +1,157 @@
 import { loadAllProfiles, getUserLabelById } from './profiles.js';
 import { supabase } from './supabaseClient.js';
+// Importujemy funkcje do zarządzania UI, które są w ui.js
+import { openChatPanel, closeChatPanel, resetUI } from './ui.js';
 
 let currentUser = null;
 let currentChatUser = null;
 let currentRoom = null;
 
-let contactsList;
-let messagesDiv;
-let inputMsg;
-let sendBtn;
+// ZMIENIONE SELEKTORY HTML ZGODNE Z NOWYM DESIGNEM
+let conversationList; // Poprzednio: contactsList
+let messagesDiv; // Poprzednio: messageContainer, teraz: .chat-content-view
+let messageInput; // Poprzednio: messageInput, teraz: .message-input
+let sendMessageBtn; // Poprzednio: sendButton, teraz: .send-message-btn
 
-let logoScreen;
-let chatArea;
-let backButton;
+// ZMIENIONE SELEKTORY DLA POKAZYWANIA/UKRYWANIA WIDOKÓW
+// Nie potrzebujemy już logoScreen, chatArea, backButton bezpośrednio w chat.js,
+// bo ich widoczność jest zarządzana przez ui.js przy użyciu klas na app-container/content-area/active-chat-panel.
+// Będziemy korzystać z funkcji openChatPanel/closeChatPanel z ui.js.
 
 let socket = null;
 let reconnectAttempts = 0;
 
-let themeToggle;
-const body = document.body;
-
-// NOWE ZMIENNE DLA NOWYCH ELEMENTÓW UI
-let menuButton;
-let dropdownMenu;
-let logoutButton; // Przeniesiony do menu
-let chatSettingsButton;
-let chatSettingsDropdown;
-let chatUserNameSpan; // Element do wyświetlania nazwy użytkownika czatu
-let userStatusSpan; // Element do wyświetlania statusu online/offline
-let typingStatusDiv; // Element do wyświetlania statusu pisania
-let typingIndicatorDiv; // Nowy element dla animacji pisania
-
-// ZMIENNE DLA NOWYCH OPCJI CZATU (W SETTINGS DROPDOWN)
-let nicknameInput;
-let setNicknameButton;
-let messageSearchInput;
-let searchMessagesButton;
-let colorBoxes;
-let bgBoxes;
+// ZMIENNE DLA NOWYCH ELEMENTÓW UI (POZOSATAWIAM TYLKO TE, KTÓRE SĄ UŻYWANE W TEJ LOGICE CZATU)
+// Pozostałe, które obsługują menu, dropdowny itp. są teraz w ui.js
+let chatHeaderName; // Element do wyświetlania nazwy użytkownika czatu (chat-header-name)
+let chatHeaderAvatar; // Element do wyświetlania avatara użytkownika czatu (chat-header-avatar)
+let chatStatusSpan; // Element do wyświetlania statusu online/offline (chat-status)
+let typingIndicatorDiv; // Nowy element dla animacji pisania (typing-indicator) - musi być w HTML
 
 
 // --- FUNKCJE OBSŁUGI ZDARZEŃ DLA NOWYCH ELEMENTÓW ---
-
-function setupNewUIListeners() {
-    // Obsługa głównego menu
-    menuButton = document.getElementById('menuButton');
-    dropdownMenu = document.getElementById('dropdownMenu');
-    logoutButton = document.getElementById('logoutButton'); // Teraz pobieramy go z dropdownu
-    
-    if (menuButton) {
-        menuButton.addEventListener('click', () => {
-            dropdownMenu.classList.toggle('hidden');
-            // Accessibility: aktualizuj aria-expanded
-            const isHidden = dropdownMenu.classList.contains('hidden');
-            menuButton.setAttribute('aria-expanded', !isHidden);
-        });
-    }
-
-    if (logoutButton) {
-        logoutButton.addEventListener('click', async () => {
-            const { error } = await supabase.auth.signOut();
-            if (error) {
-                console.error('Błąd wylogowania:', error.message);
-                alert('Błąd wylogowania!');
-            } else {
-                window.location.href = '/login.html'; // Przekieruj na stronę logowania po wylogowaniu
-            }
-        });
-    }
-
-    // Obsługa ustawień czatu
-    chatSettingsButton = document.getElementById('chatSettingsButton');
-    chatSettingsDropdown = document.getElementById('chatSettingsDropdown');
-    
-    if (chatSettingsButton) {
-        chatSettingsButton.addEventListener('click', () => {
-            chatSettingsDropdown.classList.toggle('hidden');
-        });
-    }
-
-    // Obsługa zmiany motywu wiadomości (kolory dymków)
-    colorBoxes = document.querySelectorAll('.color-box');
-    colorBoxes.forEach(box => {
-        box.addEventListener('click', () => {
-            const colorTheme = box.dataset.color;
-            messagesDiv.className = 'messages'; // Resetuj wszystkie klasy tematyczne
-            messagesDiv.classList.add(`${colorTheme}-theme`); // Dodaj nową klasę tematyczną
-            
-            // Opcjonalnie: zapisz wybór do localStorage
-            localStorage.setItem('chatMessageTheme', colorTheme);
-
-            // Aktywuj wybrany box
-            colorBoxes.forEach(cb => cb.classList.remove('active'));
-            box.classList.add('active');
-        });
-    });
-    // Wczytaj zapisany motyw po załadowaniu
-    const savedMessageTheme = localStorage.getItem('chatMessageTheme') || 'default';
-    if (savedMessageTheme !== 'default') {
-        messagesDiv.classList.add(`${savedMessageTheme}-theme`);
-    }
-    // Ustaw aktywny box na podstawie zapisanego motywu
-    const activeColorBox = document.querySelector(`.color-box[data-color="${savedMessageTheme}"]`);
-    if (activeColorBox) activeColorBox.classList.add('active');
-
-
-    // Obsługa zmiany tła czatu
-    bgBoxes = document.querySelectorAll('.bg-box');
-    bgBoxes.forEach(box => {
-        box.addEventListener('click', () => {
-            const bgTheme = box.dataset.bg;
-            messagesDiv.classList.remove('dark-bg', 'pattern-bg'); // Usuń poprzednie klasy tła
-            if (bgTheme !== 'default') {
-                messagesDiv.classList.add(`${bgTheme}-bg`); // Dodaj nową klasę tła
-            }
-            
-            // Opcjonalnie: zapisz wybór do localStorage
-            localStorage.setItem('chatBackgroundTheme', bgTheme);
-
-            // Aktywuj wybrany box
-            bgBoxes.forEach(bb => bb.classList.remove('active'));
-            box.classList.add('active');
-        });
-    });
-    // Wczytaj zapisane tło po załadowaniu
-    const savedBackgroundTheme = localStorage.getItem('chatBackgroundTheme') || 'default';
-    if (savedBackgroundTheme !== 'default') {
-        messagesDiv.classList.add(`${savedBackgroundTheme}-bg`);
-    }
-    // Ustaw aktywny box na podstawie zapisanego tła
-    const activeBgBox = document.querySelector(`.bg-box[data-bg="${savedBackgroundTheme}"]`);
-    if (activeBgBox) activeBgBox.classList.add('active');
-
-
-    // Obsługa ustawiania nicku
-    nicknameInput = document.getElementById('nicknameInput');
-    setNicknameButton = document.getElementById('setNicknameButton');
-    if (setNicknameButton) {
-        setNicknameButton.addEventListener('click', async () => {
-            const newNickname = nicknameInput.value.trim();
-            if (newNickname) {
-                // TUTAJ: Implementacja zapisywania nicku do profilu użytkownika w Supabase
-                // Prawdopodobnie będziesz musiał zmodyfikować funkcję `updateProfile` lub podobną
-                // w `profiles.js` lub bezpośrednio tutaj, jeśli nie masz takiej funkcji.
-                // Przykład (jeśli `profiles.js` ma funkcję `updateCurrentUserProfile`):
-                // const { error } = await updateCurrentUserProfile({ nickname: newNickname });
-                // if (!error) {
-                //     alert('Nick zmieniony!');
-                //     // Odśwież kontakty, aby nick się zaktualizował wszędzie
-                //     await loadAllProfiles(); 
-                //     await loadContacts();
-                //     if (currentChatUser) {
-                //         document.getElementById('chatUserName').textContent = getUserLabelById(currentChatUser.id) || currentChatUser.email;
-                //     }
-                // } else {
-                //     console.error("Błąd zapisu nicku:", error.message);
-                //     alert("Nie udało się zapisać nicku.");
-                // }
-                alert('Funkcja zmiany nicku niezaimplementowana.'); // Usuń po implementacji
-            }
-        });
-    }
-
-    // Obsługa wyszukiwania wiadomości
-    messageSearchInput = document.getElementById('messageSearchInput');
-    searchMessagesButton = document.getElementById('searchMessagesButton');
-    if (searchMessagesButton) {
-        searchMessagesButton.addEventListener('click', () => {
-            const searchText = messageSearchInput.value.trim().toLowerCase();
-            if (searchText) {
-                // TUTAJ: Implementacja wyszukiwania wiadomości w aktualnym czacie
-                // To wymagałoby przechowywania wiadomości w pamięci lub ponownego ich pobierania
-                // i filtrowania.
-                // Przykład (bardzo uproszczony, tylko dla już załadowanych wiadomości):
-                const allMessages = messagesDiv.querySelectorAll('.message');
-                allMessages.forEach(msgDiv => {
-                    const msgText = msgDiv.textContent.toLowerCase();
-                    if (msgText.includes(searchText)) {
-                        msgDiv.style.backgroundColor = 'yellow'; // Podświetl
-                        msgDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    } else {
-                        msgDiv.style.backgroundColor = ''; // Usuń podświetlenie
-                    }
-                });
-                alert('Funkcja wyszukiwania wiadomości niezaimplementowana.'); // Usuń po implementacji
-            }
-        });
-    }
-
-    // Obsługa przycisków załącznika i emoji (obecnie tylko alert)
-    const attachButton = document.querySelector('.attach-button');
-    const emojiButton = document.querySelector('.emoji-button');
-
-    if (attachButton) {
-        attachButton.addEventListener('click', () => {
-            alert('Funkcja załączania plików niezaimplementowana!');
-        });
-    }
-
-    if (emojiButton) {
-        emojiButton.addEventListener('click', () => {
-            alert('Funkcja wyboru emoji niezaimplementowana!');
-        });
-    }
-
-    // Zamknięcie dropdownów po kliknięciu poza nimi
-    document.addEventListener('click', (event) => {
-        if (dropdownMenu && !dropdownMenu.contains(event.target) && !menuButton.contains(event.target)) {
-            dropdownMenu.classList.add('hidden');
-            menuButton.setAttribute('aria-expanded', false);
-        }
-        if (chatSettingsDropdown && !chatSettingsDropdown.contains(event.target) && !chatSettingsButton.contains(event.target)) {
-            chatSettingsDropdown.classList.add('hidden');
-        }
-    });
-}
-
-
-function initDarkMode() {
-    themeToggle = document.getElementById('themeToggle'); // Ten element jest teraz w dropdownie
-    // Tutaj nie pobieramy już bezpośrednio themeToggle, bo jest w dropdownie
-    // Powinien być obsługiwany przez setupNewUIListeners
-    
-    // Jeśli nie przeniosłeś themeToggle do dropdownu, ale jest w main-header, to ten kod poniżej zadziała
-    // w zależności od Twojego finalnego HTML.
-    
-    // Zostawiam ten blok, ale pamiętaj, że przycisk themeToggle jest teraz w dropdownMenu
-    // i jego event listener powinien być dodany w setupNewUIListeners, aby dropdownMenu działało poprawnie.
-    // Zmieniam to tak, aby pobierał go z dropdownu.
-    
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-        body.classList.add('dark-mode');
-    }
-
-    // Usunięcie tego event listenera stąd, zostanie przeniesiony do setupNewUIListeners
-    // if (themeToggle) {
-    //     themeToggle.addEventListener('click', () => {
-    //         body.classList.toggle('dark-mode');
-    //         if (body.classList.contains('dark-mode')) {
-    //             localStorage.setItem('theme', 'dark');
-    //         } else {
-    //             localStorage.setItem('theme', 'light');
-    //         }
-    //     });
-    // }
-}
-
+// UWAGA: Funkcje takie jak setupNewUIListeners, initDarkMode, i zmienne z nimi związane
+// zostały usunięte z chat.js, ponieważ są teraz w ui.js.
+// Pozostawiłem tylko te, które są integralnie związane z logiką czatu (np. chatUserNameSpan, userStatusSpan).
 
 export async function initChatApp() {
-    contactsList = document.getElementById('contactsList');
-    messagesDiv = document.getElementById('messageContainer');
-    inputMsg = document.getElementById('messageInput');
-    sendBtn = document.getElementById('sendButton');
+    // PRZYPISANIE NOWYCH SELEKTORÓW DO ZMIENNYCH
+    conversationList = document.querySelector('.conversation-list'); // Lista konwersacji
+    messagesDiv = document.querySelector('.chat-content-view'); // Obszar wiadomości
+    messageInput = document.querySelector('.message-input'); // Pole wprowadzania wiadomości
+    sendMessageBtn = document.querySelector('.send-message-btn'); // Przycisk wysyłania
 
-    logoScreen = document.getElementById('logoScreen');
-    chatArea = document.getElementById('chatArea');
-    backButton = document.getElementById('backButton');
-    
-    // NOWE POBIERANIE ELEMENTÓW
-    chatUserNameSpan = document.getElementById('chatUserName');
-    userStatusSpan = document.getElementById('userStatus');
-    typingStatusDiv = document.getElementById('typingStatus'); // Stary element "typing-status"
-    typingIndicatorDiv = document.getElementById('typingIndicator'); // Nowy element animacji
-    
-    initDarkMode(); // Uruchomienie trybu ciemnego (sprawdza tylko localStorage)
-    setupNewUIListeners(); // Uruchomienie listenerów dla nowych elementów UI, w tym themeToggle
+    chatHeaderName = document.querySelector('.chat-header-name'); // Nazwa w nagłówku czatu
+    chatHeaderAvatar = document.querySelector('.chat-header-avatar'); // Avatar w nagłówku czatu
+    chatStatusSpan = document.querySelector('.chat-status'); // Status w nagłówku czatu
+
+    // Elementy do obsługi statusu pisania
+    // UWAGA: Upewnij się, że w HTML masz element z klasą 'typing-indicator'
+    // np. <div class="typing-indicator hidden">...</div>
+    typingIndicatorDiv = document.querySelector('.typing-indicator'); // Animacja pisania
+
+    // Sprawdzenie, czy wszystkie kluczowe elementy zostały znalezione
+    if (!conversationList || !messagesDiv || !messageInput || !sendMessageBtn || !chatHeaderName || !chatHeaderAvatar || !chatStatusSpan) {
+        console.error('Błąd: Nie wszystkie elementy UI zostały znalezione. Sprawdź selektory w chat.js i plik index.html.');
+        // Możesz dodać alert lub inną obsługę błędu
+        return;
+    }
 
     // Pobierz aktualnego usera (Supabase auth)
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) {
-        window.location.href = 'login.html';
+        window.location.href = 'login.html'; // Przekieruj na stronę logowania, jeśli brak sesji
         return;
     }
     currentUser = session.user;
 
-    await loadAllProfiles();
-    await loadContacts();
-    setupSendMessage();
-    initWebSocket();
+    await loadAllProfiles(); // Ładuje profile użytkowników (np. do funkcji getUserLabelById)
+    await loadContacts(); // Ładuje listę konwersacji
+
+    setupSendMessage(); // Ustawia event listenery dla wysyłania wiadomości
+    initWebSocket(); // Inicjuje połączenie WebSocket
 
     // Odświeżanie profili co 10 minut
     setInterval(loadAllProfiles, 10 * 60 * 1000);
 
-    // Domyślny stan po załadowaniu
-    logoScreen.classList.remove('hidden');
-    chatArea.classList.remove('active');
-    // backButton.classList.remove('show'); // Ta klasa powinna być dodana tylko na mobilnym
-
-    inputMsg.disabled = true;
-    sendBtn.disabled = true;
-
-    // Obsługa przycisku "Wróć" (na mobilnym)
-    backButton.addEventListener('click', () => {
-        chatArea.classList.remove('active');
-        logoScreen.classList.remove('hidden');
-        backButton.classList.remove('show-on-mobile'); // Zmiana klasy na "show-on-mobile"
-        messagesDiv.innerHTML = '';
-        inputMsg.disabled = true;
-        sendBtn.disabled = true;
-
-        // Opcjonalnie: ukryj menu boczne, jeśli jest otwarte (dla responsywności)
-        const sidebarWrapper = document.querySelector('.sidebar-wrapper');
-        if (sidebarWrapper) {
-            sidebarWrapper.classList.remove('visible');
-        }
-    });
-
-    // --- NOWA LOGIKA DLA PRZEŁĄCZANIA WIDOKÓW NA MOBILE ---
-    // (Ten kod powinien być dodany np. w initChatApp lub w osobnym module responsywności)
-    // To jest przykładowa logika, jak można obsłużyć widoczność sidebara na mobile.
-    // Będzie to wymagało dostosowania w zależności od implementacji responsywności.
-    if (window.innerWidth <= 768) { // Jeśli to jest urządzenie mobilne
-        const sidebarWrapper = document.querySelector('.sidebar-wrapper');
-        if (sidebarWrapper) {
-            sidebarWrapper.classList.add('visible'); // Pokaż sidebar domyślnie na mobile
-        }
-        // Upewnij się, że chatArea jest ukryta, dopóki kontakt nie zostanie wybrany
-        chatArea.classList.remove('active');
-        logoScreen.classList.remove('hidden');
-    } else {
-        // Na desktopie zawsze ukrywaj sidebar po załadowaniu czatu, jeśli chatArea jest widoczna
-        const sidebarWrapper = document.querySelector('.sidebar-wrapper');
-        if (sidebarWrapper) {
-            sidebarWrapper.classList.remove('visible');
-        }
+    // Domyślny stan po załadowaniu: początkowo ukryj aktywny panel czatu
+    // ui.js już zajmuje się domyślną widocznością.
+    // Tutaj możesz dodatkowo upewnić się, że panel czatu nie jest aktywny na starcie
+    const activeChatPanel = document.querySelector('.active-chat-panel');
+    if (activeChatPanel) {
+        activeChatPanel.classList.remove('active');
     }
-    // Event listener dla zmiany rozmiaru okna (do dynamicznego przełączania)
-    window.addEventListener('resize', () => {
-        if (window.innerWidth <= 768) {
-            // Na mobile, jeśli chatArea jest aktywna, ukryj sidebar
-            if (chatArea.classList.contains('active')) {
-                document.querySelector('.sidebar-wrapper')?.classList.remove('visible');
-            } else {
-                document.querySelector('.sidebar-wrapper')?.classList.add('visible');
-            }
-        } else {
-            // Na desktopie zawsze widoczny sidebar
-            document.querySelector('.sidebar-wrapper')?.classList.remove('visible');
-        }
-    });
 
+    // Dodatkowe ustawienia początkowe inputa i przycisku wysyłania
+    messageInput.disabled = true;
+    sendMessageBtn.disabled = true;
+
+    // UWAGA: Obsługa przycisku "Wróć" (back-to-list-btn) jest teraz w ui.js.
+    // Funkcja closeChatPanel importowana z ui.js.
+    // Potrzebujesz jedynie wywołać ją, jeśli w logiczny sposób chcesz cofnąć widok
+    // np. po kliknięciu na istniejący przycisk 'Wróć' (back-to-list-btn), który jest obsługiwany w ui.js
+    // jeśli to potrzebne, możesz z nim powiązać też logikę czyszczenia stanu chat.js
+    document.querySelector('.back-to-list-btn')?.addEventListener('click', () => {
+        // Dodatkowa logika czyszczenia stanu czatu po powrocie do listy
+        messagesDiv.innerHTML = '';
+        messageInput.disabled = true;
+        sendMessageBtn.disabled = true;
+        currentChatUser = null;
+        currentRoom = null;
+        // Funkcja closeChatPanel z ui.js obsługuje widoczność paneli
+    });
 }
 
 async function loadContacts() {
     const { data: users, error } = await supabase.rpc('get_other_users', { current_email: currentUser.email });
     if (error) {
-        alert('Błąd ładowania kontaktów');
         console.error('Błąd ładowania kontaktów:', error);
         return;
     }
 
-    contactsList.innerHTML = '';
+    conversationList.innerHTML = ''; // Wyczyść listę konwersacji
     users.forEach(user => {
-        const li = document.createElement('li');
-        li.classList.add('contact');
-        li.dataset.id = user.id;
-        li.dataset.email = user.email; // Dodaj email do dataset, może być przydatne
-        
-        // NOWE ELEMENTY W KONTAKTCIE
-        li.innerHTML = `
-            <img src="https://via.placeholder.com/45" alt="Avatar" class="avatar">
-            <div class="contact-info">
-                <span class="contact-name">${getUserLabelById(user.id) || user.email}</span>
-                <span class="last-message">Brak wiadomości</span>
-            </div>
-            <div class="contact-meta">
-                <span class="last-message-time"></span>
-                <span class="unread-count hidden">0</span>
-            </div>
-        `;
-        // Możesz dynamicznie ustawiać status online/offline na podstawie user.status
-        // <span class="status ${user.is_online ? 'online' : 'offline'}"></span> (jeśli baza ma pole is_online)
-        // W tym HTML status jest tekstem, więc trzeba go aktualizować w JS.
-        // Jeśli chcesz kolorową kropkę, musisz zmodyfikować HTML lub CSS.
-        
-        li.onclick = () => startChatWith(user);
-        contactsList.appendChild(li);
+        // Nowa struktura dla `.convo-item`
+        const convoItem = document.createElement('div');
+        convoItem.classList.add('convo-item');
+        convoItem.dataset.convoId = user.id; // Używamy data-convo-id zamiast data-id
+        convoItem.dataset.email = user.email; // Dodaj email do dataset
+
+        // UWAGA: Avatary są domyślnie puste, musisz je dynamicznie ładować (np. z Supabase Storage)
+        // Poniżej używam tymczasowego, losowego avatara, który nie będzie ładowany, jeśli nie masz logiki do tego.
+        // Będziesz musiał dostosować `img src` do swojej logiki ładowania avatarów.
+        const avatarSrc = `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 70) + 1}`; // Tymczasowy losowy avatar
+
+        convoItem.innerHTML = `
+            <img src="${avatarSrc}" alt="Avatar" class="convo-avatar">
+            <div class="convo-info">
+                <div class="convo-name">${getUserLabelById(user.id) || user.email}</div>
+                <div class="convo-preview">Brak wiadomości</div> </div>
+            <span class="convo-time"></span> <span class="unread-count hidden">0</span> `;
+
+        // Obsługa kliknięcia na konwersację
+        convoItem.addEventListener('click', () => {
+            // Usuń klasę 'active' ze wszystkich innych konwersacji
+            document.querySelectorAll('.convo-item').forEach(item => item.classList.remove('active'));
+            // Dodaj klasę 'active' do klikniętej konwersacji
+            convoItem.classList.add('active');
+
+            startChatWith(user); // Uruchom czat z wybranym użytkownikiem
+        });
+
+        conversationList.appendChild(convoItem);
     });
 }
 
 function getRoomName(user1, user2) {
+    // Używamy ID użytkowników, bo email może się zmienić, a ID jest stałe.
+    // Upewnij się, że currentUser.id jest dostępne.
     return [user1, user2].sort().join('_');
 }
 
 async function startChatWith(user) {
-    logoScreen.classList.add('hidden');
-    chatArea.classList.add('active');
-    
-    // Pokaż przycisk Wróć na mobile, ukryj sidebar
-    if (window.innerWidth <= 768) {
-        backButton.classList.add('show-on-mobile');
-        document.querySelector('.sidebar-wrapper')?.classList.remove('visible');
-    } else {
-        backButton.classList.remove('show-on-mobile'); // Na desktopie ten przycisk jest domyślnie ukryty w CSS
-    }
+    // Otwórz panel czatu, używając funkcji z ui.js
+    openChatPanel();
 
     currentChatUser = {
         id: user.id,
@@ -402,57 +159,63 @@ async function startChatWith(user) {
         email: user.email,
     };
 
-    messagesDiv.innerHTML = '';
-    currentRoom = getRoomName(currentUser.email, currentChatUser.email);
+    messagesDiv.innerHTML = ''; // Wyczyść wiadomości przed załadowaniem nowych
+    // currentRoom = getRoomName(currentUser.email, currentChatUser.email); // Zmieniono na ID
+    currentRoom = getRoomName(currentUser.id, currentChatUser.id);
+
 
     if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({
             type: 'join',
-            name: currentUser.email,
+            // name: currentUser.email, // Zmieniono na ID
+            name: currentUser.id,
             room: currentRoom,
         }));
     }
 
-    chatUserNameSpan.textContent = currentChatUser.username; // Użyj nowej zmiennej
-    // userStatusSpan.textContent = user.is_online ? 'online' : 'offline'; // Zakładając, że `user` ma pole `is_online`
-    // userStatusSpan.classList.toggle('online', user.is_online); // Jeśli chcesz kolorową kropkę
+    // Aktualizacja nagłówka czatu
+    chatHeaderName.textContent = currentChatUser.username;
+    // Aktualizacja avatara w nagłówku czatu
+    // Będziesz musiał załadować prawdziwy avatar dla currentChatUser.id
+    chatHeaderAvatar.src = `https://i.pravatar.cc/150?img=${user.id % 70 + 1}`; // Tymczasowy avatar
 
-    inputMsg.disabled = false;
-    sendBtn.disabled = false;
-    inputMsg.focus();
+    // Aktualizacja statusu użytkownika (jeśli masz to w bazie lub z WebSocket)
+    // chatStatusSpan.textContent = user.is_online ? 'Online' : 'Offline'; // Jeśli `user` ma pole `is_online`
+    // chatStatusSpan.classList.toggle('online', user.is_online);
+    // chatStatusSpan.classList.toggle('offline', !user.is_online);
+
+    messageInput.disabled = false;
+    sendMessageBtn.disabled = false;
+    messageInput.focus();
 }
 
 function setupSendMessage() {
-    sendBtn.onclick = () => {
-        const text = inputMsg.value.trim();
+    sendMessageBtn.onclick = () => {
+        const text = messageInput.value.trim();
         if (!text || !currentChatUser || !socket || socket.readyState !== WebSocket.OPEN) return;
 
         const msgData = {
             type: 'message',
-            username: currentUser.email,
+            username: currentUser.id, // Wysyłaj ID użytkownika, a nie email
             text,
             room: currentRoom,
         };
 
         console.log("Wysyłanie wiadomości:", msgData);
         socket.send(JSON.stringify(msgData));
-        inputMsg.value = '';
-        inputMsg.focus();
+        messageInput.value = '';
+        messageInput.focus();
     };
 
-    inputMsg.addEventListener('keydown', (e) => {
+    messageInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
-            sendBtn.click();
+            sendMessageBtn.click();
         }
-        // DODANIE LOGIKI TYPING INDICATOR
-        // Musisz wysłać event 'typing' do serwera WebSocket
-        // I obsłużyć odebrane eventy 'typing' w onmessage
-        // To wymaga zmian po stronie serwera WebSocket!
-        // Przykład (bardzo uproszczony):
+        // Logika wysyłania statusu pisania (nadal wymaga backendu)
         // if (socket && socket.readyState === WebSocket.OPEN && currentRoom) {
         //     socket.send(JSON.stringify({
         //         type: 'typing',
-        //         username: currentUser.email,
+        //         username: currentUser.id,
         //         room: currentRoom
         //     }));
         // }
@@ -462,40 +225,48 @@ function setupSendMessage() {
 function addMessageToChat(msg) {
     console.log("Dodawanie wiadomości do interfejsu:", msg);
 
-    const label = (msg.username === currentUser.email)
-        ? 'Ty' // Możesz użyć 'Ty' lub nazwy użytkownika, np. currentUser.username
-        : getUserLabelById(msg.username) || msg.username;
+    // Sprawdź, czy wiadomość jest przeznaczona dla aktywnego pokoju
+    if (msg.room !== currentRoom) {
+        console.log("Wiadomość nie jest dla aktywnego pokoju, ignoruję.");
+        return;
+    }
 
     const div = document.createElement('div');
-    div.classList.add('message', msg.username === currentUser.email ? 'sent' : 'received');
+    // Używamy 'sent' lub 'received' dla dymków wiadomości
+    div.classList.add('message-wave', msg.username === currentUser.id ? 'sent' : 'received', 'animate-in'); // Dodaj animate-in dla animacji
 
-    let timePart = '';
-    let timestamp = new Date(msg.inserted_at || Date.now()); // Użyj Date.now() dla wiadomości wysłanych teraz
-    timePart = `<span class="timestamp">${timestamp.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })}</span>`;
-    
-    // Nowa struktura HTML dla wiadomości (bez username w dymku)
-    div.innerHTML = `${msg.text}${timePart}`;
+    const timestamp = new Date(msg.inserted_at || Date.now()); // Użyj Date.now() dla wiadomości wysłanych teraz
+    const timeString = timestamp.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+
+    // Nowa struktura HTML dla wiadomości
+    div.innerHTML = `
+        <p>${msg.text}</p>
+        <span class="message-time">${timeString}</span>
+    `;
     messagesDiv.appendChild(div);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    messagesDiv.scrollTop = messagesDiv.scrollHeight; // Przewiń na dół
 }
 
 function updateUserStatusIndicator(userId, isOnline) {
-    const contactEl = document.querySelector(`.contact[data-id="${userId}"]`);
-    if (contactEl) {
-        // Jeśli status ma być wizualizowany jako kropka (w CSS to masz):
-        const statusSpan = contactEl.querySelector('.status'); // Zakładam, że w HTML kontaktu jest <span class="status">
-        if (statusSpan) {
-            statusSpan.classList.toggle('online', isOnline);
-            statusSpan.classList.toggle('offline', !isOnline);
-        }
+    // Aktualizacja statusu w liście konwersacji (jeśli masz tam element statusu)
+    const convoItem = document.querySelector(`.convo-item[data-convo-id="${userId}"]`);
+    if (convoItem) {
+        // Jeśli masz element na status w convo-item, np. <span class="convo-status"></span>
+        // const convoStatusSpan = convoItem.querySelector('.convo-status');
+        // if (convoStatusSpan) {
+        //     convoStatusSpan.textContent = isOnline ? 'Online' : 'Offline';
+        //     convoStatusSpan.classList.toggle('online', isOnline);
+        //     convoStatusSpan.classList.toggle('offline', !isOnline);
+        // }
     }
-    
-    // Zaktualizuj status w nagłówku czatu
+
+    // Zaktualizuj status w nagłówku aktywnego czatu, jeśli to ten użytkownik
     if (currentChatUser && currentChatUser.id === userId) {
-        if (userStatusSpan) {
-            userStatusSpan.textContent = isOnline ? 'online' : 'offline';
-            userStatusSpan.classList.toggle('online', isOnline);
-            userStatusSpan.classList.toggle('offline', !isOnline);
+        if (chatStatusSpan) {
+            chatStatusSpan.textContent = isOnline ? 'Online' : 'Offline';
+            // Jeśli masz style dla 'online'/'offline' na samym elemencie statusu
+            chatStatusSpan.classList.toggle('online', isOnline);
+            chatStatusSpan.classList.toggle('offline', !isOnline);
         }
     }
 }
@@ -503,20 +274,26 @@ function updateUserStatusIndicator(userId, isOnline) {
 // NOWA FUNKCJA DO POKAZYWANIA/UKRYWANIA TYPING INDICATOR
 // (Będzie wymagać sygnału z serwera WebSocket)
 let typingTimeout;
-function showTypingIndicator(username) {
-    if (typingIndicatorDiv) {
-        const label = getUserLabelById(username) || username;
-        typingStatusDiv.textContent = `${label} pisze...`; // Stary element 'typing-status'
-        typingIndicatorDiv.classList.remove('hidden'); // Nowy element animacji
-        clearTimeout(typingTimeout);
-        typingTimeout = setTimeout(() => {
-            typingIndicatorDiv.classList.add('hidden');
-            typingStatusDiv.textContent = '';
-        }, 3000); // Ukryj po 3 sekundach braku aktywności
+function showTypingIndicator(usernameId) {
+    // Pokaż tylko jeśli to użytkownik, z którym aktualnie czatujemy
+    if (currentChatUser && usernameId === currentChatUser.id) {
+        if (typingIndicatorDiv) {
+            // Możesz chcieć wyświetlić nazwę użytkownika, który pisze
+            // const label = getUserLabelById(usernameId) || usernameId;
+            // typingIndicatorDiv.textContent = `${label} pisze...`; // Jeśli to tekst
+            typingIndicatorDiv.classList.remove('hidden'); // Pokaż animację
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                typingIndicatorDiv.classList.add('hidden');
+                // typingIndicatorDiv.textContent = ''; // Wyczyść tekst, jeśli był
+            }, 3000); // Ukryj po 3 sekundach braku aktywności
+        }
     }
 }
 
 function initWebSocket() {
+    // UWAGA: Upewnij się, że zmienna środowiskowa VITE_CHAT_WS_URL jest poprawnie ustawiona
+    // i wskazuje na Twój serwer WebSocket (np. ws://localhost:3000 lub wss://twoj-serwer.com/ws)
     const wsUrl = import.meta.env.VITE_CHAT_WS_URL;
     socket = new WebSocket(wsUrl);
 
@@ -524,10 +301,11 @@ function initWebSocket() {
         console.log('WebSocket połączony');
         reconnectAttempts = 0;
 
+        // Jeśli użytkownik był już w pokoju, dołącz ponownie
         if (currentRoom && currentUser) {
             socket.send(JSON.stringify({
                 type: 'join',
-                name: currentUser.email,
+                name: currentUser.id, // Używaj ID użytkownika
                 room: currentRoom,
             }));
         }
@@ -539,21 +317,21 @@ function initWebSocket() {
 
         if (data.type === 'message') {
             addMessageToChat({
-                username: data.username,
+                username: data.username, // To jest ID użytkownika, który wysłał wiadomość
                 text: data.text,
                 inserted_at: data.inserted_at,
+                room: data.room, // Dodajemy 'room' do danych wiadomości
             });
         }
         // OBSŁUGA NOWEGO TYPU WIADOMOŚCI 'TYPING'
         if (data.type === 'typing') {
-            // Upewnij się, że pokazujesz status pisania tylko dla aktualnego czatu
-            if (currentChatUser && data.username === currentChatUser.email) {
-                showTypingIndicator(data.username);
-            }
+            showTypingIndicator(data.username);
         }
 
         if (data.type === 'history' && Array.isArray(data.messages)) {
             console.log("Ładowanie historii wiadomości:", data.messages);
+            // Upewnij się, że ładowana historia dotyczy aktywnego pokoju
+            messagesDiv.innerHTML = ''; // Wyczyść przed załadowaniem historii
             data.messages.forEach((msg) => addMessageToChat(msg));
         }
 
@@ -573,3 +351,9 @@ function initWebSocket() {
 }
 
 export { startChatWith };
+
+// WAŻNE: Wywołaj initChatApp po załadowaniu DOM
+// Możesz to zrobić tutaj lub w osobnym pliku entrypoint.js
+// document.addEventListener('DOMContentLoaded', initChatApp);
+// LUB: Jeśli używasz `defer` w tagu script, możesz wywołać to bezpośrednio
+initChatApp(); // Wywołaj inicjalizację aplikacji po załadowaniu skryptu
