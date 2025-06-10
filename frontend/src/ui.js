@@ -1,3 +1,10 @@
+// Deklarujemy i eksportujemy funkcje na najwyższym poziomie,
+// aby były dostępne dla importu w innych modułach.
+// Ich implementacje zostaną przypisane w `DOMContentLoaded`.
+export let openChatPanel;
+export let closeChatPanel;
+export let resetUI;
+
 document.addEventListener('DOMContentLoaded', () => {
     // === Selektory DOM, które są lokalne dla tego skryptu UI ===
     const activeChatPanel = document.querySelector('.active-chat-panel');
@@ -16,9 +23,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const tooltip = document.querySelector('.tooltip');
 
     // === Obsługa przełączania paneli (chat, kontekst, konto) ===
-    // Funkcja otwierająca panel czatu i ukrywająca listę konwersacji
-    // Eksportowana, aby inne moduły mogły ją wywołać (np. chat.js po wybraniu konwersacji)
-    export const openChatPanel = () => {
+    // Przypisujemy implementację do eksportowanych funkcji
+    openChatPanel = () => {
         if (activeChatPanel && contentArea) {
             activeChatPanel.classList.add('active');
             contentArea.classList.add('hidden-on-mobile'); // Ukryj listę konwersacji na małych ekranach
@@ -28,9 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Funkcja powrotu do listy konwersacji
-    // Eksportowana, aby inne moduły mogły ją wywołać (np. chat.js po kliknięciu "Wróć")
-    export const closeChatPanel = () => {
+    closeChatPanel = () => {
         if (activeChatPanel && contentArea) {
             activeChatPanel.classList.remove('active');
             contentArea.classList.remove('hidden-on-mobile'); // Pokaż listę konwersacji
@@ -110,9 +114,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // === Globalna funkcja do resetowania UI ===
-    // Eksportowana, aby inne moduły mogły ją wywołać (np. chat.js po wylogowaniu)
-    export const resetUI = () => {
-        closeChatPanel(); // Używamy eksportowanej funkcji
+    // Przypisujemy implementację do eksportowanej funkcji
+    resetUI = () => {
+        closeChatPanel(); // Używamy już zdefiniowanej funkcji w tym samym skrypcie
         contextCapsule?.classList.remove('open');
         accountPanel?.classList.remove('open');
 
@@ -125,8 +129,11 @@ document.addEventListener('DOMContentLoaded', () => {
         currentFilterBtn?.classList.add('hidden');
 
         // Wyczyść dynamicznie ładowane treści
-        document.querySelector('.conversation-list').innerHTML = '';
-        document.querySelector('.chat-content-view').innerHTML = '';
+        const conversationList = document.querySelector('.conversation-list');
+        const chatContentView = document.querySelector('.chat-content-view');
+
+        if (conversationList) conversationList.innerHTML = '';
+        if (chatContentView) chatContentView.innerHTML = '';
 
         // Reset nagłówka czatu
         const chatHeaderName = document.querySelector('.chat-header-name');
