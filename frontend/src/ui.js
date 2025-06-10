@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // === Selektory DOM, które są lokalne dla tego skryptu UI ===
     const activeChatPanel = document.querySelector('.active-chat-panel');
     const contentArea = document.querySelector('.content-area'); // Lista konwersacji
+    const appContainer = document.querySelector('.app-container'); // Nowy selektor
     const backToListBtn = document.querySelector('.back-to-list-btn');
     const flowBar = document.querySelector('.flow-bar');
     const contextCapsule = document.querySelector('.context-capsule');
@@ -25,19 +26,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // === Obsługa przełączania paneli (chat, kontekst, konto) ===
     // Przypisujemy implementację do eksportowanych funkcji
     openChatPanel = () => {
-        if (activeChatPanel && contentArea) {
+        if (activeChatPanel && contentArea && appContainer) { // Dodaj appContainer do warunku
             activeChatPanel.classList.add('active');
-            contentArea.classList.add('hidden-on-mobile'); // Ukryj listę konwersacji na małych ekranach
+            contentArea.classList.add('hidden-on-mobile');
+            appContainer.classList.add('chat-panel-open'); // Dodaj tę klasę!
             // Upewnij się, że kapsuła kontekstu i panel konta są zamknięte
-            contextCapsule?.classList.remove('open');
-            accountPanel?.classList.remove('open');
+            // Używamy document.querySelector bezpośrednio dla pewności, że odwołujemy się do aktualnych elementów
+            document.querySelector('.context-capsule')?.classList.remove('open');
+            document.querySelector('.account-panel')?.classList.remove('open');
         }
     };
 
     closeChatPanel = () => {
-        if (activeChatPanel && contentArea) {
+        if (activeChatPanel && contentArea && appContainer) { // Dodaj appContainer do warunku
             activeChatPanel.classList.remove('active');
             contentArea.classList.remove('hidden-on-mobile'); // Pokaż listę konwersacji
+            appContainer.classList.remove('chat-panel-open'); // Usuń tę klasę!
         }
     };
 
@@ -73,19 +77,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // === Obsługa animacji wyszukiwania ===
     if (searchInput && filterBtn) {
         searchInput.addEventListener('focus', () => {
-            filterBtn.classList.remove('hidden');
+            filterBtn.classList.add('visible'); // Zmieniamy na 'visible'
+            // Nie usuwamy już 'hidden', bo zakładamy, że zarządzamy klasą 'visible'
         });
 
         searchInput.addEventListener('blur', () => {
             // Ukryj przycisk filtra tylko jeśli pole wyszukiwania jest puste
             if (searchInput.value.trim() === '') {
-                filterBtn.classList.add('hidden');
+                filterBtn.classList.remove('visible'); // Usuwamy 'visible'
             }
         });
 
         // Pokaż przycisk filtra, jeśli po załadowaniu strony input ma wartość
         if (searchInput.value.trim() !== '') {
-            filterBtn.classList.remove('hidden');
+            filterBtn.classList.add('visible'); // Zmieniamy na 'visible'
         }
     }
 
@@ -117,8 +122,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Przypisujemy implementację do eksportowanej funkcji
     resetUI = () => {
         closeChatPanel(); // Używamy już zdefiniowanej funkcji w tym samym skrypcie
-        contextCapsule?.classList.remove('open');
-        accountPanel?.classList.remove('open');
+
+        // Upewnij się, że kapsuła kontekstu i panel konta są zamknięte
+        // Używamy document.querySelector bezpośrednio dla pewności, że odwołujemy się do aktualnych elementów
+        document.querySelector('.context-capsule')?.classList.remove('open');
+        document.querySelector('.account-panel')?.classList.remove('open');
+
 
         // Musimy ponownie pobrać referencje do tych elementów, ponieważ są one lokalne
         // dla bieżącego zakresu DOMContentLoaded.
@@ -126,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentFilterBtn = document.querySelector('.filter-btn');
 
         if (currentSearchInput) currentSearchInput.value = '';
-        currentFilterBtn?.classList.add('hidden');
+        currentFilterBtn?.classList.remove('visible'); // Zmieniamy na usuwanie 'visible'
 
         // Wyczyść dynamicznie ładowane treści
         const conversationList = document.querySelector('.conversation-list');

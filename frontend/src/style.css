@@ -15,7 +15,7 @@ body {
     color: #333;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    overflow: hidden;
+    overflow: hidden; /* KLUCZOWE: Zapobiega przewijaniu całego body */
 }
 
 /* --- Główne animacje --- */
@@ -44,7 +44,7 @@ body {
 
 /* --- Kontener aplikacji --- */
 .app-container {
-    display: flex; /* Zmieniono na flex */
+    display: flex;
     width: 95vw;
     max-width: 1600px; /* Zwiększono maksymalną szerokość aplikacji */
     height: 90vh;
@@ -52,7 +52,7 @@ body {
     background: #ffffff;
     border-radius: 25px; /* Bardziej zaokrąglony */
     box-shadow: 0 25px 80px rgba(0, 0, 0, 0.15); /* Głębszy cień */
-    overflow: hidden; /* Upewnij się, że nie ma scrolla poza kontenerem */
+    overflow: hidden; /* KLUCZOWE: Upewnij się, że nie ma scrolla poza kontenerem */
     position: relative;
     transition: filter 0.3s ease-out;
 }
@@ -74,6 +74,7 @@ body {
     align-items: center;
     flex-shrink: 0;
     box-shadow: 3px 0 10px rgba(0,0,0,0.1);
+    z-index: 30; /* Upewnij się, że sidebar jest na wierzchu */
 }
 
 .app-logo-wrapper {
@@ -172,7 +173,7 @@ body {
 
 /* --- Obszar treści (główny widok listy konwersacji) --- */
 .content-area {
-    flex-grow: 1; /* Pozwala na rozciąganie */
+    flex-grow: 1; /* Pozwala na rozciąganie, ale będziemy kontrolować szerokość */
     flex-shrink: 0; /* Zapobiega kurczeniu się poniżej minimalnej zawartości */
     display: flex;
     flex-direction: column;
@@ -181,12 +182,84 @@ body {
     transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Animacja szerokości */
     width: 380px; /* Domyślna szerokość listy konwersacji */
     min-width: 320px; /* Minimalna szerokość, żeby nie było za wąsko */
+    z-index: 20; /* Nad panelem czatu na mobile */
 }
 
-/* Kiedy czat jest otwarty, zmniejsz szerokość content-area i przesuń ją w lewo */
-.app-container.chat-open .content-area {
-    width: 280px; /* Nowa, mniejsza szerokość */
-    /* Możesz też użyć transform: translateX(-Xpx) jeśli wolisz taki efekt */
+/* --- Aktywny Panel Czatu (KLUCZOWE ZMIANY TUTAJ) --- */
+.active-chat-panel {
+    /* Domyślnie na desktopie, gdy aplikacja się ładuje: */
+    width: 0; /* Ustawiamy 0, aby był niewidoczny */
+    opacity: 0; /* Całkowicie niewidoczny */
+    pointer-events: none; /* Wyłącz interakcje */
+    display: none; /* Dodatkowo ukrywamy go, aby nie zajmował miejsca */
+
+    background: linear-gradient(180deg, #FDFDFE, #EAF4FB);
+    flex-direction: column;
+    height: 100%;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease; /* Dodaj opacity do transition */
+    z-index: 10; /* Domyślnie pod listą konwersacji */
+    border-radius: 25px; /* Zaokrąglenie z prawej strony kontenera */
+    overflow: hidden; /* Ważne, aby zawartość się nie wylewała */
+    flex-shrink: 0; /* Zapobiega kurczeniu się */
+    flex-grow: 1; /* Pozwala mu się rozciągnąć, gdy jest aktywny */
+}
+
+/* Gdy panel czatu jest aktywny (dodawana klasa 'active' przez JS) */
+.active-chat-panel.active {
+    display: flex; /* Zmieniamy na flex, aby był widoczny */
+    width: calc(100% - 80px - 320px); /* Cała szerokość - sidebar - szerokość listy konwersacji */
+    /* Jeśli chcesz konkretną stałą szerokość, użyj np.: width: 900px; */
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Dopasowanie szerokości listy konwersacji, gdy panel czatu jest aktywny */
+/* To styl dla `.content-area` gdy `.active-chat-panel` ma klasę `active` */
+/* W tym setupie nie potrzebujesz app-container.chat-open, wystarczy aktywacja active-chat-panel */
+.active-chat-panel.active + .content-area { /* Ten selektor nie zadziała tak jak chcesz */
+    /* Lepiej jest ustawić domyślny wygląd dla content-area i active-chat-panel */
+    /* A następnie zmieniać je odpowiednio w media queries lub poprzez klasy na app-container */
+}
+
+/* === ZMIENIONA LOGIKA DESKTOPOWA === */
+/* Desktop (szerszy niż 768px): Oba panele mogą być widoczne */
+@media (min-width: 769px) {
+    .content-area {
+        flex-grow: 0; /* Nie rozciąga się, ma stałą szerokość */
+        width: 380px; /* Domyślna szerokość listy konwersacji */
+    }
+
+    .active-chat-panel {
+        /* Domyślnie schowany, jak wyżej */
+        width: 0;
+        opacity: 0;
+        pointer-events: none;
+        display: none; /* Całkowite ukrycie */
+    }
+
+    .active-chat-panel.active {
+        display: flex; /* Aktywacja */
+        flex-grow: 1; /* Zajmuje pozostałą przestrzeń */
+        width: auto; /* Pozwalamy flex-grow na kontrolę szerokości */
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    /* Jeśli chcesz, aby content-area zmieniała szerokość, gdy chat-panel jest aktywny */
+    /* To wymaga klasy na wspólnym rodzicu, np. na .app-container */
+    /* Będziemy używać klasy 'chat-panel-open' na .app-container */
+    .app-container.chat-panel-open .content-area {
+        width: 320px; /* Może być mniejszy, gdy panel czatu jest otwarty */
+        transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .app-container.chat-panel-open .active-chat-panel {
+        /* Włączamy wyświetlanie i pozwalamy mu się rozciągnąć */
+        display: flex;
+        flex-grow: 1;
+        width: auto;
+        opacity: 1;
+        pointer-events: auto;
+    }
 }
 
 
@@ -201,7 +274,6 @@ body {
     box-shadow: 0 2px 5px rgba(0,0,0,0.03);
     z-index: 2;
     flex-shrink: 0;
-    /* Dodajemy transition dla elementow wewnatrz naglowka jesli maja byc animowane */
     transition: padding 0.3s ease;
 }
 
@@ -225,7 +297,7 @@ body {
     border-radius: 20px;
     font-size: 0.95rem;
     outline: none;
-    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), font-size 0.3s ease; /* Płynna animacja */
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), font-size 0.3s ease;
     width: 120px; /* Domyślna szerokość */
     background: #f8f8f8;
 }
@@ -243,23 +315,25 @@ body {
     border-radius: 50%;
     transition: opacity 0.3s ease;
     opacity: 0; /* Domyślnie ukryty */
+    pointer-events: none; /* Wyłącz interakcje, gdy ukryty */
+}
+.filter-btn.visible { /* Nowa klasa do pokazywania */
+    opacity: 1;
+    pointer-events: auto;
 }
 .filter-btn:hover { background: #f0f0f0; }
-.filter-btn.hidden {
-    display: none; /* Dopiero potem display none */
-}
 
-/* Kiedy czat jest otwarty, zmień nagłówek listy konwersacji */
-.app-container.chat-open .main-header {
+/* Kiedy panel czatu jest otwarty (na desktopie) */
+.app-container.chat-panel-open .main-header {
     padding: 18px 10px; /* Zmniejsz padding, przesuwając zawartość */
 }
-.app-container.chat-open .header-title {
+.app-container.chat-panel-open .header-title {
     font-size: 1.1rem; /* Zmniejsz rozmiar czcionki */
 }
-.app-container.chat-open .search-container {
+.app-container.chat-panel-open .search-container {
     transform: translateX(-10px); /* Przesuń w lewo */
 }
-.app-container.chat-open .search-input {
+.app-container.chat-panel-open .search-input {
     width: 90px; /* Zmniejsz szerokość pola szukania */
     font-size: 0.8rem;
 }
@@ -337,7 +411,7 @@ body {
     position: absolute;
     top: 15px;
     right: 15px;
-    transition: transform 0.3s ease, font-size 0.3s ease; /* Dodaj transition */
+    transition: transform 0.3s ease, font-size 0.3s ease;
 }
 
 .unread-count {
@@ -355,50 +429,24 @@ body {
     bottom: 10px;
     right: 10px;
     box-shadow: 0 2px 5px rgba(255,107,107,0.3);
-    transition: transform 0.3s ease; /* Dodaj transition */
+    transition: transform 0.3s ease;
 }
 .unread-count.animate-activity {
-    animation: elasticExpand 0.5s ease-out; /* Elastyczny efekt */
+    animation: elasticExpand 0.5s ease-out;
 }
 
-/* Kiedy czat jest otwarty, przesuń daty i liczniki nieprzeczytanych */
-.app-container.chat-open .convo-time {
-    transform: translateX(-15px); /* Przesuń w lewo */
-    font-size: 0.65rem; /* Zmniejsz czcionkę dla kompaktowości */
+/* Zmiana stylu convo-item, gdy panel czatu jest otwarty (na desktopie) */
+.app-container.chat-panel-open .convo-time {
+    transform: translateX(-15px);
+    font-size: 0.65rem;
 }
-.app-container.chat-open .unread-count {
-    transform: translateX(-10px); /* Przesuń w lewo */
-    width: 20px; /* Zmniejsz nieco rozmiar licznika */
+.app-container.chat-panel-open .unread-count {
+    transform: translateX(-10px);
+    width: 20px;
     height: 20px;
     font-size: 0.65rem;
 }
 
-
-/* --- Aktywny Panel Czatu --- */
-.active-chat-panel {
-    width: 0; /* Domyślnie szerokość 0 */
-    background: linear-gradient(180deg, #FDFDFE, #EAF4FB);
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    /* Nie jest już absolute, jest flex itemem */
-    /* Usunięto transform: translateX(100%); */
-    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 100;
-    border-radius: 25px;
-    overflow: hidden;
-    flex-shrink: 0; /* Zapobiega kurczeniu się poniżej content */
-    /* Ukryj zawartość, gdy panel jest schowany */
-    opacity: 0;
-    pointer-events: none;
-}
-
-/* Gdy klasa chat-open jest na app-container, panel czatu rozszerza się */
-.app-container.chat-open .active-chat-panel {
-    width: 900px; /* Ustalona szerokość panelu czatu */
-    opacity: 1;
-    pointer-events: auto;
-}
 
 .chat-panel-header {
     display: flex;
@@ -419,6 +467,7 @@ body {
     padding: 5px;
     border-radius: 50%;
     transition: background 0.2s;
+    display: none; /* Domyślnie ukryty na desktopie, pokazywany tylko na mobile */
 }
 .back-to-list-btn:hover { background: rgba(255, 255, 255, 0.2); }
 
@@ -460,10 +509,10 @@ body {
     margin-right: 15px;
     cursor: pointer;
     transition: all 0.3s ease;
-    transform: scaleY(1); /* Domyślna "płynność" */
+    transform: scaleY(1);
 }
 .flow-bar:hover {
-    height: 8px; /* Pogrubienie na hover */
+    height: 8px;
     box-shadow: 0 0 15px rgba(255,255,255,0.5);
 }
 
@@ -489,18 +538,18 @@ body {
     flex-grow: 1;
     overflow-y: auto;
     padding: 20px 25px;
-    background: #f8fbfd; /* Bazowy kolor tła */
-    transition: filter 0.3s ease; /* Dla trybu skupienia */
-    display: flex; /* Używamy flexbox dla układu wiadomości */
+    background: #f8fbfd;
+    transition: filter 0.3s ease;
+    display: flex;
     flex-direction: column;
-    gap: 15px; /* Odstęp między wiadomościami */
+    gap: 15px;
 }
 .chat-content-view.blurred-focus {
     filter: blur(5px);
 }
 
 .message-wave {
-    max-width: 65%; /* ZMNIEJSZONA SZEROKOŚĆ FAL */
+    max-width: 65%;
     word-wrap: break-word;
     padding: 12px 18px;
     font-size: 0.95rem;
@@ -508,65 +557,62 @@ body {
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04);
     cursor: grab;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
-    display: flex; /* Używamy flexbox dla wewnętrznego układu (czas + tekst) */
-    align-items: flex-end; /* Wyrównanie czasu do dołu wiadomości */
-    gap: 8px; /* Odstęp między czasem a tekstem */
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
 }
 .message-wave.animate-in {
     animation: fadeInSlideUp 0.3s ease-out;
 }
 
 .message-wave.received {
-    background: linear-gradient(90deg, #e0f2ff, #f0f8ff); /* Jasny gradient dla otrzymanych */
+    background: linear-gradient(90deg, #e0f2ff, #f0f8ff);
     color: #222;
-    align-self: flex-start; /* Wyrównanie do lewej w chat-content-view */
+    align-self: flex-start;
     border-top-right-radius: 25px;
     border-bottom-right-radius: 25px;
     border-bottom-left-radius: 5px;
     border-top-left-radius: 25px;
-    padding-left: 10px; /* Więcej miejsca na czas */
+    padding-left: 10px;
     padding-right: 18px;
 }
 .message-wave.sent {
-    background: linear-gradient(90deg, #7BBFEE, #4682B4); /* Ciemniejszy gradient dla wysłanych */
+    background: linear-gradient(90deg, #7BBFEE, #4682B4);
     color: white;
-    align-self: flex-end; /* Wyrównanie do prawej w chat-content-view */
+    align-self: flex-end;
     border-top-left-radius: 25px;
     border-bottom-left-radius: 25px;
     border-bottom-right-radius: 5px;
     border-top-right-radius: 25px;
-    flex-direction: row-reverse; /* ODWRACA KOLEJNOŚĆ (CZAS PO LEWEJ, TEKST PO PRAWEJ) */
-    padding-right: 10px; /* Więcej miejsca na czas */
+    flex-direction: row-reverse;
+    padding-right: 10px;
     padding-left: 18px;
 }
 
 .message-time {
     font-size: 0.7rem;
     color: #999;
-    flex-shrink: 0; /* Zapobiega zmniejszaniu się czasu */
-    opacity: 0; /* Domyślne ukrycie */
-    transition: opacity 0.2s ease; /* Płynne pojawianie się */
-    white-space: nowrap; /* Zapobiega zawijaniu się czasu */
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    white-space: nowrap;
 }
-/* Po najechaniu na falę, czas staje się widoczny */
 .message-wave:hover .message-time {
     opacity: 1;
 }
 
-/* Dostosowanie kolorów dla czasu w wysłanych wiadomościach */
 .message-wave.sent .message-time {
-    color: rgba(255,255,255,0.7); /* Jasniejszy kolor dla czytelnosci na ciemnym tle */
+    color: rgba(255,255,255,0.7);
 }
 
-/* Style dla obrazów i linków w falach */
 .image-wave {
-    padding: 0; /* Obrazki nie mają wewnętrznego paddingu */
+    padding: 0;
     background: none;
     box-shadow: none;
     overflow: hidden;
-    display: flex; /* Flex dla obrazka i tekstu */
+    display: flex;
     flex-direction: column;
-    gap: 0; /* Bez gapu między obrazkiem a tekstem */
+    gap: 0;
 }
 .image-wave img {
     max-width: 100%;
@@ -578,7 +624,7 @@ body {
     font-size: 0.9rem;
     background: rgba(255,255,255,0.9);
     border-radius: 0 0 20px 20px;
-    width: 100%; /* Rozszerz na całą szerokość fali */
+    width: 100%;
 }
 .image-wave.sent p {
     background: rgba(70, 130, 180, 0.9);
@@ -586,10 +632,10 @@ body {
 }
 
 .link-wave {
-    padding: 0; /* Linki nie mają wewnętrznego paddingu */
+    padding: 0;
     background: none;
     box-shadow: none;
-    display: flex; /* Flex dla linka i czasu */
+    display: flex;
     flex-direction: column;
     gap: 0;
 }
@@ -604,8 +650,8 @@ body {
     color: #333;
     box-shadow: 0 3px 10px rgba(0,0,0,0.08);
     transition: background 0.2s;
-    padding: 10px; /* Padding dla samego linka */
-    width: 100%; /* Rozszerz na całą szerokość fali */
+    padding: 10px;
+    width: 100%;
 }
 .link-wave a:hover { background: #dceefb; }
 .link-wave img {
@@ -617,7 +663,7 @@ body {
 }
 .link-wave span {
     font-size: 0.9rem;
-    padding-right: 5px; /* Zmniejsz padding */
+    padding-right: 5px;
 }
 .link-wave.sent a {
     background: #6A96C1;
@@ -637,11 +683,11 @@ body {
     background: #fdfefe;
     gap: 10px;
     flex-shrink: 0;
-    transition: filter 0.3s ease; /* Dla trybu skupienia */
+    transition: filter 0.3s ease;
 }
 .chat-input-area.blurred-focus-input {
     filter: blur(5px);
-    pointer-events: none; /* Wyłącz interakcje */
+    pointer-events: none;
 }
 
 .input-action-btn {
@@ -672,7 +718,7 @@ body {
 }
 
 .send-message-btn {
-    background: linear-gradient(45deg, #7BBFEE, #4682B4); /* Koresponduje z wysłanymi falami */
+    background: linear-gradient(45deg, #7BBFEE, #4682B4);
     color: white;
     border: none;
     border-radius: 25px;
@@ -711,17 +757,17 @@ body {
     border-radius: 25px;
     box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
     padding: 25px;
-    z-index: 200; /* Nad czatem */
+    z-index: 200;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.context-capsule.active {
+.context-capsule.open { /* Zmieniono z .active na .open zgodnie z JS */
     opacity: 1;
     transform: translate(-50%, -50%) scale(1);
     pointer-events: auto;
 }
-.context-capsule.hidden {
+.context-capsule.hidden { /* Ta klasa może być zbędna jeśli używasz tylko .open */
     display: none;
 }
 
@@ -755,7 +801,7 @@ body {
     gap: 8px;
 }
 .node-tag {
-    background: #e0f2ff; /* Jasny błękit */
+    background: #e0f2ff;
     color: #4682B4;
     padding: 6px 12px;
     border-radius: 15px;
@@ -843,10 +889,10 @@ body {
     display: flex;
     flex-direction: column;
 }
-.account-panel.active {
+.account-panel.open { /* Zmieniono z .active na .open zgodnie z JS */
     transform: translateX(0%);
 }
-.account-panel.hidden {
+.account-panel.hidden { /* Ta klasa może być zbędna jeśli używasz tylko .open */
     display: none;
 }
 
@@ -974,113 +1020,47 @@ body {
     }
 
     .content-area {
-        width: 100%; /* Rozszerz na pełną szerokość */
-        border-right: none;
-        /* Kiedy czat jest otwarty na mobile, ukryj content-area */
-        opacity: 1;
-        transform: translateX(0);
-    }
-    .app-container.chat-open .content-area {
-        width: 0; /* Całkowicie ukryj content-area na mobile */
-        opacity: 0;
-        pointer-events: none;
-        /* Możesz dodać transform: translateX(-100%) aby przesunąć poza ekran */
-    }
-
-
-    .main-header {
-        padding: 10px 15px;
-    }
-    .header-title {
-        font-size: 1.1rem;
-    }
-    .search-input {
-        width: 100px; /* Bardzo małe na mobile */
-        padding: 6px 10px;
-        font-size: 0.8rem;
-    }
-    .search-input:focus {
-        width: 150px;
-    }
-    .filter-btn {
-        font-size: 1.1rem;
-    }
-    /* Zresetuj zmiany nagłówka na mobile */
-    .app-container.chat-open .main-header {
-        padding: 10px 15px;
-    }
-    .app-container.chat-open .header-title {
-        font-size: 1.1rem;
-    }
-    .app-container.chat-open .search-container {
-        transform: translateX(0);
-    }
-    .app-container.chat-open .search-input {
-        width: 100px;
-        font-size: 0.8rem;
-    }
-
-    .conversation-list {
-        padding: 15px 15px;
-    }
-    .convo-item {
-        padding: 10px 12px;
-        border-radius: 15px;
-        margin-bottom: 10px;
-    }
-    .convo-avatar {
-        width: 50px;
-        height: 50px;
-    }
-    .convo-name {
-        font-size: 0.9rem;
-    }
-    .convo-preview {
-        font-size: 0.75rem;
-    }
-    .convo-time {
-        font-size: 0.7rem;
-        top: 10px;
-        right: 10px;
-    }
-    .unread-count {
-        width: 20px;
-        height: 20px;
-        font-size: 0.7rem;
-        bottom: 8px;
-        right: 8px;
-    }
-    /* Zresetuj zmiany convo-item na mobile */
-    .app-container.chat-open .convo-time {
-        transform: translateX(0);
-        font-size: 0.7rem;
-    }
-    .app-container.chat-open .unread-count {
-        transform: translateX(0);
-        width: 20px;
-        height: 20px;
-        font-size: 0.7rem;
-    }
-
-    /* Aktywny panel czatu - pełny ekran */
-    .active-chat-panel {
-        width: 100%; /* Zawsze 100% na mobile, gdy aktywny */
-        border-radius: 0;
+        position: absolute; /* KLUCZOWE: Pozycjonowanie absolutne dla warstw */
         top: 0;
-        right: 0;
-        opacity: 0;
-        pointer-events: none;
+        left: 0;
+        width: 100%; /* Rozszerz na pełną szerokość */
+        height: 100%; /* Pełna wysokość */
+        max-width: none;
+        transform: translateX(0); /* Domyślnie widoczna */
+        transition: transform 0.3s ease-out;
+        border-right: none;
+        z-index: 20; /* Nad panelem czatu, gdy aktywna */
+        pointer-events: auto; /* Domyślnie interaktywna */
     }
-    .app-container.chat-open .active-chat-panel {
-        width: 100%;
-        opacity: 1;
-        pointer-events: auto;
+    /* Kiedy panel czatu jest aktywny na mobile, ukryj content-area */
+    .content-area.hidden-on-mobile { /* Ta klasa jest dodawana przez ui.js */
+        transform: translateX(-100%); /* Przesuń poza ekran */
+        pointer-events: none; /* Wyłącz interakcje */
+    }
+
+
+    /* Aktywny panel czatu - pełny ekran na mobile */
+    .active-chat-panel {
+        position: absolute; /* KLUCZOWE: Pozycjonowanie absolutne dla warstw */
+        top: 0;
+        left: 0;
+        width: 100%; /* Zawsze 100% na mobile, gdy aktywny */
+        height: 100%; /* Pełna wysokość */
+        border-radius: 0;
+        z-index: 30; /* Nad listą konwersacji */
+        display: none; /* KLUCZOWE: Domyślnie ukryty na mobile */
+    }
+    .active-chat-panel.active { /* Ta klasa jest dodawana przez ui.js */
+        display: flex; /* Pokazany, gdy aktywny */
+        opacity: 1; /* Upewnij się, że jest widoczny */
+        pointer-events: auto; /* Włącz interakcje */
     }
 
     .chat-panel-header {
         padding: 10px 15px;
     }
     .back-to-list-btn {
+        display: block; /* Pokaż przycisk Wstecz na mobile */
         font-size: 1.6rem;
     }
     .chat-header-avatar {
@@ -1106,16 +1086,15 @@ body {
         padding: 15px 15px;
     }
     .message-wave {
-        max-width: 85%; /* Na mobile fale mogą być szersze, ale nadal nie na całą szerokość */
+        max-width: 85%;
         padding: 10px 15px;
         font-size: 0.85rem;
         border-radius: 15px;
-        margin-bottom: 12px; /* Możesz usunąć jeśli wolisz gap */
+        margin-bottom: 12px;
     }
     .message-time {
         font-size: 0.65rem;
     }
-    /* Upewnij się, że image-wave i link-wave też mają odpowiedni padding */
     .image-wave p {
         padding: 8px 12px;
     }
@@ -1179,6 +1158,7 @@ body {
         left: 0; /* Zaczynać od lewej */
         border-radius: 0;
         padding: 15px;
+        z-index: 160; /* Upewnij się, że jest nad listą konwersacji */
     }
     .account-panel header {
         margin-bottom: 20px;
@@ -1206,10 +1186,11 @@ body {
     }
 }
 
+/* Te style dla `.typing-indicator` mogą być gdziekolwiek, nie są specyficzne dla układu. */
 .typing-indicator {
     display: flex;
     align-items: center;
-    justify-content: flex-start; /* Zależy gdzie chcesz żeby był */
+    justify-content: flex-start;
     height: 20px;
     margin-bottom: 5px;
     opacity: 0;
@@ -1218,7 +1199,7 @@ body {
 
 .typing-indicator.hidden {
     opacity: 0;
-    height: 0; /* Zapewnia, że nie zajmuje miejsca */
+    height: 0;
     overflow: hidden;
 }
 
@@ -1248,80 +1229,80 @@ body {
     }
 }
 
-/* Styl dla body strony logowania/rejestracji */
+/* Styl dla body strony logowania/rejestracji (niezwiązane z główną aplikacją) */
 .auth-body {
-  background: #f9f9f9;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  font-family: sans-serif;
+    background: #f9f9f9;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-family: sans-serif;
 }
 
 /* Kontener formularzy autoryzacji */
 .auth-container {
-  background: #fff;
-  padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-  width: 300px;
-  text-align: center;
+    background: #fff;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    width: 300px;
+    text-align: center;
 }
 
 /* Formularz autoryzacji (login/register) */
 .auth-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
 }
 
 /* Pola input w formularzach autoryzacji */
 .auth-form input {
-  padding: 0.8rem;
-  border-radius: 8px;
-  border: 1px solid #ddd;
-  background: #f1f2f3;
-  font-size: 0.95rem;
+    padding: 0.8rem;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    background: #f1f2f3;
+    font-size: 0.95rem;
 }
 
 /* Wrapper dla pola hasła (dla ikonki oka) */
 .password-wrapper {
-  position: relative;
+    position: relative;
 }
 
 /* Styl ikonki oka w polu hasła */
 .password-wrapper .eye {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  cursor: pointer;
-  color: #888;
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #888;
 }
 
 /* Przycisk logowania/rejestracji */
 .login-btn {
-  padding: 0.8rem;
-  background: linear-gradient(to right, #fda4af, #f87171); /* Twoje oryginalne kolory */
-  border: none;
-  border-radius: 8px;
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background 0.3s;
+    padding: 0.8rem;
+    background: linear-gradient(to right, #fda4af, #f87171);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s;
 }
 
 .login-btn:hover {
-  background: linear-gradient(to right, #fb7185, #ef4444);
+    background: linear-gradient(to right, #fb7185, #ef4444);
 }
 
 /* Link do przełączania między logowaniem a rejestracją */
 .switch-link {
-  margin-top: 1rem;
-  font-size: 0.9rem;
+    margin-top: 1rem;
+    font-size: 0.9rem;
 }
 
 .switch-link a {
-  color: #ef4444; /* Twoje oryginalne kolory */
-  text-decoration: none;
+    color: #ef4444;
+    text-decoration: none;
 }
