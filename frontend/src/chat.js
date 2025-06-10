@@ -220,25 +220,30 @@
     }
 
     function addMessageToChat(msg) {
-        console.log("Adding message to UI:", msg);
+    console.log("Dodawanie wiadomości do interfejsu:", msg);
+    console.log("Porównanie pokoi: msg.room =", msg.room, ", currentRoom =", currentRoom); // <-- DODANA LINIA DEBUGUJĄCA
 
-        if (msg.room !== currentRoom) {
-            console.log("Message not for active room, ignoring.");
-            return;
-        }
+    // Sprawdź, czy wiadomość jest przeznaczona dla aktywnego pokoju
+    if (msg.room !== currentRoom) {
+        console.log("Wiadomość nie jest dla aktywnego pokoju, ignoruję.");
+        return;
+    }
 
-        const div = document.createElement('div');
-        div.classList.add('message-wave', msg.username === currentUser.id ? 'sent' : 'received', 'animate-in');
+    const div = document.createElement('div');
+    div.classList.add('message-wave', msg.username === currentUser.id ? 'sent' : 'received', 'animate-in');
 
-        const timestamp = new Date(msg.inserted_at || Date.now());
-        const timeString = timestamp.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+    const timestamp = new Date(msg.inserted_at || Date.now());
+    const timeString = timestamp.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
 
-        div.innerHTML = `
-            <p>${msg.text}</p>
-            <span class="message-time">${timeString}</span>
-        `;
+    div.innerHTML = `
+        <p>${msg.text}</p>
+        <span class="message-time">${timeString}</span>
+    `;
+    if (messagesDiv) {
         messagesDiv.appendChild(div);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    } else {
+        console.error("messagesDiv is null when trying to add message.");
     }
 
     function updateUserStatusIndicator(userId, isOnline) {
@@ -262,58 +267,68 @@
     }
 
     function initWebSocket() {
-        const wsUrl = import.meta.env.VITE_CHAT_WS_URL || "wss://firm-chat-app-backend.onrender.com";
+    const wsUrl = import.meta.env.VITE_CHAT_WS_URL || "wss://firm-chat-app-backend.onrender.com";
+    
+    if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTing)) {
+        console.log("WebSocket connection already open or connecting.");
+        return;
+    }
 
-        if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
-            console.log("WebSocket connection already open or connecting.");
-            return;
+    socket = new WebSocket(wsUrl);
+
+    socket.onopen = () => {
+        console.log('WebSocket połączony');
+        reconnectAttempts = 0;
+        if (currentRoom && currentUser) {
+            socket.send(JSON.stringify({
+                type: 'join',
+                name: currentUser.id,
+                room: currentRoom,
+            }));
+            console.log(`Joined room ${currentRoom} on WebSocket open.`);
+        } else {
+            console.warn("WebSocket opened but currentRoom or currentUser is not set. Cannot join room yet.");
         }
+    };
 
-        socket = new WebSocket(wsUrl);
+    socket.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        console.log('Received via WS (full data object):', data); // <-- DODANA LINIA DEBUGUJĄCA
 
-        socket.onopen = () => {
-            console.log('WebSocket połączony');
-            reconnectAttempts = 0;
-            if (currentRoom && currentUser) {
-                socket.send(JSON.stringify({
-                    type: 'join',
-                    name: currentUser.id,
-                    room: currentRoom,
-                }));
-                console.log(`Joined room ${currentRoom} on WebSocket open.`);
-            }
-        };
-
-        socket.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            console.log('Received via WS:', data);
-
-            switch (data.type) {
-                case 'message':
-                    addMessageToChat({
-                        username: data.username,
-                        text: data.text,
-                        inserted_at: data.inserted_at,
-                        room: data.room,
-                    });
-                    break;
-                case 'typing':
-                    showTypingIndicator(data.username);
-                    break;
-                case 'history':
-                    console.log("Loading message history:", data.messages);
+        switch (data.type) {
+            case 'message':
+                // Check if message is for the ACTIVE room
+                // No longer checking here, as addMessageToChat will do it
+                addMessageToChat({
+                    username: data.username,
+                    text: data.text,
+                    inserted_at: data.inserted_at,
+                    room: data.room, // Upewnij się, że 'room' jest w danych
+                });
+                break;
+            case 'typing':
+                showTypingIndicator(data.username);
+                break;
+            case 'history':
+                // This 'history' message often contains a 'room' property itself
+                console.log("Loading message history. History room:", data.room, "Current room:", currentRoom); // <-- DODANA LINIA DEBUGUJĄCA
+                if (data.room === currentRoom) { // WAŻNE: Sprawdź tutaj zgodność pokoju historii z aktywnym pokojem
+                    console.log("Loading message history for active room:", data.messages);
                     if (messagesDiv) {
                         messagesDiv.innerHTML = '';
                         data.messages.forEach((msg) => addMessageToChat(msg));
                     }
-                    break;
-                case 'status':
-                    updateUserStatusIndicator(data.user, data.online);
-                    break;
-                default:
-                    console.warn("Unknown WS message type:", data.type, data);
-            }
-        };
+                } else {
+                    console.warn("Received history for non-active room, ignoring.");
+                }
+                break;
+            case 'status':
+                updateUserStatusIndicator(data.user, data.online);
+                break;
+            default:
+                console.warn("Unknown WS message type:", data.type, data);
+        }
+    };
 
         socket.onclose = () => {
             console.log('WebSocket disconnected. Attempting to reconnect...');
