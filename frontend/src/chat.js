@@ -321,15 +321,10 @@ function initWebSocket() {
                 break;
             case 'history':
                 console.log("Loading message history. History room:", data.room, "Current room:", currentRoom);
-                if (data.room === currentRoom) {
-                    console.log("Loading message history for active room:", data.messages);
                     if (messagesDiv) {
                         messagesDiv.innerHTML = '';
                         data.messages.forEach((msg) => addMessageToChat(msg));
                     }
-                } else {
-                    console.warn("Received history for non-active room, ignoring.");
-                }
                 break;
             case 'status':
                 updateUserStatusIndicator(data.user, data.online);
