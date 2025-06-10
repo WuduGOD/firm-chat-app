@@ -14,7 +14,7 @@ const pool = new Pool({
   database: process.env.DB_NAME,
   password: process.env.DB_PASS,
   port: parseInt(process.env.DB_PORT),
-  ssl: { rejectUnauthorized: false }, 
+  ssl: { rejectUnauthorized: false },
   connectionTimeoutMillis: 5000,
   keepAlive: true
 });
@@ -31,24 +31,32 @@ wss.on('connection', (ws) => {
   ws.on('message', async (message) => {
     try {
       const data = JSON.parse(message);
-	  console.log('Odebrana wiadomość przez WebSocket:', data);
+      console.log('Odebrana wiadomość przez WebSocket:', data);
 
       if (data.type === 'join') {
         // Najpierw wysyłamy historię wiadomości, aby klient zdążył zarejestrować onmessage
         const history = await getLastMessages(data.room);
+
+        // WAŻNA ZMIANA 1: Dodajemy pole 'room' do KAŻDEGO obiektu wiadomości w historii
+        // oraz do samego obiektu 'history' wysyłanego do klienta.
         ws.send(JSON.stringify({
           type: 'history',
+          room: data.room, // <-- DODANE: ID pokoju dla całego obiektu historii
           messages: history.map(msg => ({
             username: msg.username,
             text: msg.text,
             inserted_at: msg.inserted_at,
+            room: data.room // <-- DODANE: ID pokoju dla każdej wiadomości
           })),
         }));
+        console.log(`Wysłano historię do pokoju ${data.room}:`, history.length, 'wiadomości.');
 
         // Teraz rejestrujemy użytkownika i zapisujemy jego dane
         userData = { username: data.name, room: data.room };
         clients.set(ws, userData);
         userStatus.set(userData.username, true);
+        console.log(`Użytkownik ${userData.username} dołączył do pokoju ${userData.room}.`);
+
 
         // Emitujemy status online do wszystkich klientów
         broadcastUserStatus(userData.username, true);
@@ -57,19 +65,22 @@ wss.on('connection', (ws) => {
       if (data.type === 'message' && userData) {
         // Zapisz wiadomość w bazie i pobierz timestamp z bazy
         const inserted_at = await saveMessage(userData.username, userData.room, data.text);
-		console.log('Zapisano wiadomość w bazie:', inserted_at);
+        console.log('Zapisano wiadomość w bazie:', inserted_at);
 
 
-        // Przygotuj obiekt wiadomości z czasem
+        // Przygotuj obiekt wiadomości z czasem i POKOJEM
+        // WAŻNA ZMIANA 2: Dodajemy pole 'room' do wiadomości rozsyłanej
         const msgObj = {
           type: 'message',
           username: userData.username,
           text: data.text,
           inserted_at,
+          room: userData.room, // <-- DODANE: ID pokoju z userData
         };
 
         // Rozsyłamy wiadomość do wszystkich klientów w danym pokoju
         broadcastToRoom(userData.room, JSON.stringify(msgObj));
+        console.log('Rozesłano wiadomość do pokoju:', userData.room, 'Wiadomość:', msgObj);
       }
     } catch (err) {
       console.error('Błąd przy odbiorze wiadomości:', err);
@@ -81,6 +92,7 @@ wss.on('connection', (ws) => {
       clients.delete(ws);
       userStatus.set(userData.username, false);
       broadcastUserStatus(userData.username, false);
+      console.log(`Użytkownik ${userData.username} opuścił pokój ${userData.room || 'nieznany'}.`);
     }
   });
 });
@@ -123,7 +135,7 @@ async function saveMessage(username, room, text) {
   } catch (err) {
     console.error('Błąd zapisu wiadomości:', err);
   }
-  return new Date();
+  return new Date(); // Zwróć bieżącą datę w przypadku błędu
 }
 
 async function getLastMessages(room, limit = 50) {
@@ -131,8 +143,8 @@ async function getLastMessages(room, limit = 50) {
 
   try {
     const res = await pool.query(query, [room, limit]);
-    console.log('Wczytana historia wiadomości:', res.rows);
-    return res.rows.reverse();
+    console.log('Wczytana historia wiadomości:', res.rows.length, 'wiadomości dla pokoju:', room);
+    return res.rows.reverse(); // Zwróć wiadomości w kolejności chronologicznej
   } catch (err) {
     console.error('Błąd pobierania historii:', err);
     return [];
