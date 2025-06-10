@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // === Obsługa przełączania paneli (chat, kontekst, konto) ===
+    // === Selektory DOM, które są lokalne dla tego skryptu UI ===
     const activeChatPanel = document.querySelector('.active-chat-panel');
     const contentArea = document.querySelector('.content-area'); // Lista konwersacji
     const backToListBtn = document.querySelector('.back-to-list-btn');
@@ -10,8 +10,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const accountPanel = document.querySelector('.account-panel');
     const closeAccountBtn = document.querySelector('.account-panel .close-account-btn');
 
+    const searchInput = document.querySelector('.search-input');
+    const filterBtn = document.querySelector('.filter-btn');
+    const navIcons = document.querySelectorAll('.sidebar .nav-icon, .sidebar-account .account-icon');
+    const tooltip = document.querySelector('.tooltip');
+
+    // === Obsługa przełączania paneli (chat, kontekst, konto) ===
     // Funkcja otwierająca panel czatu i ukrywająca listę konwersacji
-    const openChatPanel = () => {
+    // Eksportowana, aby inne moduły mogły ją wywołać (np. chat.js po wybraniu konwersacji)
+    export const openChatPanel = () => {
         if (activeChatPanel && contentArea) {
             activeChatPanel.classList.add('active');
             contentArea.classList.add('hidden-on-mobile'); // Ukryj listę konwersacji na małych ekranach
@@ -22,20 +29,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Funkcja powrotu do listy konwersacji
-    const closeChatPanel = () => {
+    // Eksportowana, aby inne moduły mogły ją wywołać (np. chat.js po kliknięciu "Wróć")
+    export const closeChatPanel = () => {
         if (activeChatPanel && contentArea) {
             activeChatPanel.classList.remove('active');
             contentArea.classList.remove('hidden-on-mobile'); // Pokaż listę konwersacji
         }
     };
-
-    // Obsługa kliknięcia w dowolną konwersację (będzie zintegrowane z dynamicznym ładowaniem w chat.js)
-    // Na razie symulujemy kliknięcie, które otwiera panel czatu
-    document.querySelectorAll('.convo-item').forEach(item => {
-        item.addEventListener('click', () => {
-            openChatPanel();
-        });
-    });
 
     // Obsługa przycisku "Wróć do listy" w panelu czatu
     if (backToListBtn) {
@@ -67,9 +67,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // === Obsługa animacji wyszukiwania ===
-    const searchInput = document.querySelector('.search-input');
-    const filterBtn = document.querySelector('.filter-btn');
-
     if (searchInput && filterBtn) {
         searchInput.addEventListener('focus', () => {
             filterBtn.classList.remove('hidden');
@@ -89,9 +86,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // === Obsługa tooltipów (podpowiedzi) dla ikon bocznego paska ===
-    const navIcons = document.querySelectorAll('.sidebar .nav-icon, .sidebar-account .account-icon');
-    const tooltip = document.querySelector('.tooltip');
-
     if (tooltip) {
         navIcons.forEach(icon => {
             const tooltipText = icon.getAttribute('data-tooltip');
@@ -115,15 +109,34 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Dodatkowa funkcja do resetowania UI, przydatna przy wylogowaniu/zmianie użytkownika
-    window.resetUI = () => {
-        closeChatPanel();
+    // === Globalna funkcja do resetowania UI ===
+    // Eksportowana, aby inne moduły mogły ją wywołać (np. chat.js po wylogowaniu)
+    export const resetUI = () => {
+        closeChatPanel(); // Używamy eksportowanej funkcji
         contextCapsule?.classList.remove('open');
         accountPanel?.classList.remove('open');
-        if (searchInput) searchInput.value = '';
-        filterBtn?.classList.add('hidden');
-        // Możesz dodać tutaj czyszczenie listy konwersacji jeśli nie jest ona zarządzana bezpośrednio przez chat.js
-        // document.querySelector('.conversation-list').innerHTML = '';
-        // document.querySelector('.chat-content-view').innerHTML = '';
+
+        // Musimy ponownie pobrać referencje do tych elementów, ponieważ są one lokalne
+        // dla bieżącego zakresu DOMContentLoaded.
+        const currentSearchInput = document.querySelector('.search-input');
+        const currentFilterBtn = document.querySelector('.filter-btn');
+
+        if (currentSearchInput) currentSearchInput.value = '';
+        currentFilterBtn?.classList.add('hidden');
+
+        // Wyczyść dynamicznie ładowane treści
+        document.querySelector('.conversation-list').innerHTML = '';
+        document.querySelector('.chat-content-view').innerHTML = '';
+
+        // Reset nagłówka czatu
+        const chatHeaderName = document.querySelector('.chat-header-name');
+        const chatHeaderAvatar = document.querySelector('.chat-header-avatar');
+        const chatStatusSpan = document.querySelector('.chat-status');
+        if (chatHeaderName) chatHeaderName.textContent = '';
+        if (chatHeaderAvatar) chatHeaderAvatar.src = ''; // Ustaw pusty src
+        if (chatStatusSpan) {
+            chatStatusSpan.textContent = '';
+            chatStatusSpan.classList.remove('online', 'offline');
+        }
     };
 });
