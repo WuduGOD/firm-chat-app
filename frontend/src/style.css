@@ -183,7 +183,7 @@ body {
     background: #fcfdfe;
     border-right: 1px solid #f0f0f0;
     flex-shrink: 0;
-    width: 100%; /* Domyślnie zajmuje całą szerokość (minus sidebar) */
+    width: calc(100% - 80px); /* Domyślnie zajmuje całą szerokość (minus sidebar) */
     flex-grow: 1;
     min-width: 320px;
     position: relative;
@@ -229,7 +229,6 @@ body {
     overflow: hidden;
     opacity: 0; /* Domyślnie niewidoczny */
     pointer-events: none; /* Domyślnie nieklikalny */
-    transform: translateX(0); /* Początkowe przesunięcie w "zerowej" pozycji */
     /* Transition dla left i opacity */
     transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
 }
@@ -397,7 +396,10 @@ body {
     font-size: 1.5rem;
     cursor: pointer;
     margin-right: 15px;
-    display: none; /* Domyślnie ukryty na desktopie, widoczny tylko na mobile */
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.3s ease, transform 0.3s ease;
+	transform: translateX(-10px);
 }
 
 /* Na mobilu, zawsze pokaż przycisk wstecz, gdy czat jest otwarty */
@@ -872,6 +874,12 @@ body {
         /* Dodaj transition, jeśli ma się wsuwać z boku (obecnie nie ma triggera w JS) */
         transition: transform 0.3s ease, opacity 0.3s ease;
     }
+	
+	.app-container.chat-active .back-to-list-btn {
+		opacity: 1;
+		pointer-events: auto;
+		transform: translateX(0); /* Wróć do normalnej pozycji */
+	}
 
     /* Gdy czat jest aktywny na mobile, sidebar pozostaje ukryty */
     .app-container.chat-active .sidebar {
