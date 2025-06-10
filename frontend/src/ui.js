@@ -4,244 +4,187 @@ export let closeChatPanel;
 export let resetUI;
 
 document.addEventListener('DOMContentLoaded', () => {
-    // === Selektory DOM ===
     const appContainer = document.querySelector('.app-container');
-    const conversationList = document.querySelector('.conversation-list');
-    const backToListBtn = document.querySelector('.back-to-list-btn'); // Przycisk "Wróć do listy"
-
-    const searchInput = document.querySelector('.search-input');
-    const filterBtn = document.querySelector('.filter-btn');
-
+    const convoItems = document.querySelectorAll('.convo-item');
+    const backToListBtn = document.querySelector('.back-to-list-btn');
+    const accountIcon = document.querySelector('.account-icon');
+    const accountPanel = document.querySelector('.account-panel');
+    const closeAccountBtn = document.querySelector('.close-account-btn');
     const flowBar = document.querySelector('.flow-bar');
     const contextCapsule = document.querySelector('.context-capsule');
     const closeCapsuleBtn = document.querySelector('.close-capsule-btn');
-
-    const accountIcon = document.querySelector('.sidebar-account .account-icon');
-    const accountPanel = document.querySelector('.account-panel');
-    const closeAccountBtn = document.querySelector('.account-panel .close-account-btn');
-
     const whisperModeBtn = document.querySelector('.whisper-mode-btn');
     const chatContentView = document.querySelector('.chat-content-view');
     const chatInputArea = document.querySelector('.chat-input-area');
+    const navIcons = document.querySelectorAll('.nav-icon');
+    const searchInput = document.querySelector('.search-input');
+    const filterBtn = document.querySelector('.filter-btn');
 
-    // Selektory dla elementów nagłówka czatu, które będą dynamicznie aktualizowane
-    const activeChatPanel = document.querySelector('.active-chat-panel');
-    const chatHeaderAvatar = activeChatPanel?.querySelector('.chat-header-avatar');
-    const chatHeaderName = activeChatPanel?.querySelector('.chat-header-name');
-    const chatStatus = activeChatPanel?.querySelector('.chat-status');
+    let currentActiveConvo = null; // Przechowuje aktualnie aktywną konwersację
+    let whisperModeActive = false; // Stan trybu szeptu
 
-    // Selektor dla aktywnej ikony nawigacji (np. "Czat")
-    const chatNavIcon = document.querySelector('.nav-icon[data-tooltip="Czat"]');
-    const navIcons = document.querySelectorAll('.main-nav .nav-icon');
+    // --- Obsługa kliknięć na konwersacje ---
+    convoItems.forEach(item => {
+        item.addEventListener('click', () => {
+            // Usuń klasę 'active' z poprzedniej aktywnej konwersacji
+            if (currentActiveConvo) {
+                currentActiveConvo.classList.remove('active');
+            }
+            // Dodaj klasę 'active' do klikniętej konwersacji
+            item.classList.add('active');
+            currentActiveConvo = item;
 
-    // Wszystkie ikony nawigacyjne i inne elementy z tooltipami
-    const navIconsAndTooltips = document.querySelectorAll('.nav-icon, .account-icon, .flow-bar, .whisper-mode-btn');
-
-
-    // === Funkcje sterujące stanami widoku ===
-
-    /**
-     * Otwiera panel czatu w widoku podzielonym (lista konwersacji + czat).
-     * @param {HTMLElement} [convoItem=null] - Element konwersacji, który został kliknięty (opcjonalnie).
-     */
-    openChatPanel = (convoItem = null) => {
-        if (appContainer) {
-            // KLUCZOWA ZMIANA: Używamy klasy 'chat-open' z Twojego CSS
+            // Dodaj klasę 'chat-open' do głównego kontenera aplikacji
+            // To wywoła animację otwierania panelu czatu i zwężania listy
             appContainer.classList.add('chat-open');
 
-            // Aktualizuj nagłówek czatu, jeśli convoItem jest podany
-            if (convoItem) {
-                const convoAvatarSrc = convoItem.querySelector('.convo-avatar')?.src;
-                const convoName = convoItem.querySelector('.convo-name')?.textContent;
-                const convoStatus = convoItem.dataset.status || 'offline'; // Przykład: status z data-status
-
-                if (chatHeaderAvatar) chatHeaderAvatar.src = convoAvatarSrc || 'https://via.placeholder.com/48'; // Domyślny avatar
-                if (chatHeaderName) chatHeaderName.textContent = convoName || 'Nieznany użytkownik';
-                if (chatStatus) {
-                    chatStatus.textContent = convoStatus === 'online' ? 'Online' : 'Offline';
-                    chatStatus.classList.remove('online', 'offline');
-                    chatStatus.classList.add(convoStatus);
-                }
-
-                // Ustawia aktywną konwersację na liście
-                document.querySelectorAll('.convo-item').forEach(item => item.classList.remove('active'));
-                convoItem.classList.add('active');
-            }
-
-            // Upewnij się, że inne panele (konto, kapsuła) są zamknięte
-            if (contextCapsule) contextCapsule.classList.remove('active');
-            if (accountPanel) accountPanel.classList.remove('active');
-        }
-    };
-
-    /**
-     * Zamyka panel czatu i powraca do stanu początkowego (pełnej listy konwersacji).
-     */
-    closeChatPanel = () => {
-        if (appContainer) {
-            // KLUCZOWA ZMIANA: Używamy klasy 'chat-open' z Twojego CSS
-            appContainer.classList.remove('chat-open');
-
-            // Usuń aktywną konwersację z listy
-            document.querySelectorAll('.convo-item').forEach(item => item.classList.remove('active'));
-
-            // Reset nagłówka czatu
-            if (chatHeaderName) chatHeaderName.textContent = 'Wybierz konwersację';
-            if (chatHeaderAvatar) chatHeaderAvatar.src = ''; // Ustaw pusty lub domyślny avatar
-            if (chatStatus) {
-                chatStatus.textContent = '';
-                chatStatus.classList.remove('online', 'offline');
-            }
-        }
-    };
-
-    // === Event Listenery ===
-
-    // 1. Kliknięcie na element konwersacji (przełącza na WIDOK PODZIELONY)
-    // Użyj delegacji zdarzeń, jeśli konwersacje są dodawane dynamicznie
-    if (conversationList) {
-        conversationList.addEventListener('click', (event) => {
-            const convoItem = event.target.closest('.convo-item');
-            if (convoItem) {
-                openChatPanel(convoItem);
-            }
-        });
-    }
-
-    // 2. Kliknięcie na przycisk "Wróć do listy" (teraz działa!)
-    if (backToListBtn) {
-        backToListBtn.addEventListener('click', closeChatPanel);
-    }
-
-    // 3. Aktywacja ikony "Czat" w sidebarze (upewnij się, że ten sam widok listy jest aktywny)
-    if (chatNavIcon) {
-        chatNavIcon.addEventListener('click', () => {
-            navIcons.forEach(icon => icon.classList.remove('active'));
-            chatNavIcon.classList.add('active');
-            closeChatPanel(); // Upewnij się, że jest widoczna pełna lista konwersacji
-        });
-    }
-
-    // === Obsługa otwierania/zamykania Kapsuły Kontekstu ===
-    if (flowBar && contextCapsule && closeCapsuleBtn) {
-        flowBar.addEventListener('click', () => {
-            contextCapsule.classList.toggle('active');
-            if (accountPanel) accountPanel.classList.remove('active');
-            // Jeśli otwieramy kapsułę, zamykamy czat (wracamy do listy)
-            // KLUCZOWA ZMIANA: Używamy klasy 'chat-open'
-            if (appContainer.classList.contains('chat-open')) {
-                closeChatPanel();
-            }
-        });
-        closeCapsuleBtn.addEventListener('click', () => {
-            contextCapsule.classList.remove('active');
-        });
-    }
-
-    // === Obsługa otwierania/zamykania Panelu Konta ===
-    if (accountIcon && accountPanel && closeAccountBtn) {
-        accountIcon.addEventListener('click', () => {
-            accountPanel.classList.toggle('active');
-            if (contextCapsule) contextCapsule.classList.remove('active');
-            // Jeśli otwieramy panel konta, zamykamy czat (wracamy do listy)
-            // KLUCZOWA ZMIANA: Używamy klasy 'chat-open'
-            if (appContainer.classList.contains('chat-open')) {
-                closeChatPanel();
-            }
-        });
-        closeAccountBtn.addEventListener('click', () => {
-            accountPanel.classList.remove('active');
-        });
-    }
-
-    // === Obsługa animacji wyszukiwania ===
-    if (searchInput && filterBtn) {
-        searchInput.addEventListener('focus', () => {
-            searchInput.style.width = '200px';
-            filterBtn.classList.add('active');
-            filterBtn.classList.remove('hidden');
-        });
-
-        searchInput.addEventListener('blur', () => {
-            if (!searchInput.value) {
-                searchInput.style.width = '120px';
-                filterBtn.classList.remove('active');
+            // Aktywuj animację aktywności na liczniku nieprzeczytanych (jeśli istnieje)
+            const unreadCount = item.querySelector('.unread-count');
+            if (unreadCount) {
+                unreadCount.classList.add('animate-activity');
                 setTimeout(() => {
-                    filterBtn.classList.add('hidden');
-                }, 300);
+                    unreadCount.classList.remove('animate-activity');
+                }, 500); // Czas trwania animacji elasticExpand
             }
-        });
-        // Utrzymaj stan po przeładowaniu, jeśli pole ma wartość
-        if (searchInput.value.trim() !== '') {
-            filterBtn.classList.add('active');
-            filterBtn.classList.remove('hidden');
-            searchInput.style.width = '200px';
-        } else {
-            filterBtn.classList.add('hidden');
-        }
-    }
-
-    // === Cichy Tryb Skupienia (Blurring) ===
-    if (whisperModeBtn && chatContentView && chatInputArea) {
-        whisperModeBtn.addEventListener('click', () => {
-            chatContentView.classList.toggle('blurred-focus');
-            chatInputArea.classList.toggle('blurred-focus-input');
-        });
-    }
-
-    // === Tooltipy ===
-    navIconsAndTooltips.forEach(element => {
-        element.addEventListener('mouseenter', function() {
-            const tooltipText = this.dataset.tooltip;
-            if (tooltipText) {
-                let tooltip = document.querySelector('.tooltip');
-                if (!tooltip) { tooltip = document.createElement('div'); tooltip.className = 'tooltip'; document.body.appendChild(tooltip); }
-                tooltip.textContent = tooltipText;
-                const rect = this.getBoundingClientRect();
-                tooltip.style.left = `${rect.right + 10}px`;
-                tooltip.style.top = `${rect.top + rect.height / 2 - tooltip.offsetHeight / 2}px`;
-                tooltip.style.opacity = '1';
-            }
-        });
-        element.addEventListener('mouseleave', () => {
-            const tooltip = document.querySelector('.tooltip');
-            if (tooltip) { tooltip.style.opacity = '0'; setTimeout(() => tooltip.remove(), 200); }
         });
     });
 
-    // === Globalna funkcja do resetowania UI ===
-    resetUI = () => {
-        closeChatPanel(); // Zamyka panel czatu i przywraca widok listy konwersacji
+    // --- Obsługa przycisku "Wróć do listy" w czacie ---
+    if (backToListBtn) {
+        backToListBtn.addEventListener('click', () => {
+            // Usuń klasę 'chat-open' z głównego kontenera aplikacji
+            // To wywoła animację zamykania panelu czatu i rozszerzania listy
+            appContainer.classList.remove('chat-open');
 
-        if (contextCapsule) contextCapsule.classList.remove('active');
-        if (accountPanel) accountPanel.classList.remove('active');
+            // Opcjonalnie: Usuń klasę 'active' z aktywnej konwersacji po powrocie
+            // if (currentActiveConvo) {
+            //     currentActiveConvo.classList.remove('active');
+            // }
 
-        if (searchInput) {
-            searchInput.value = '';
-            searchInput.style.width = '120px';
-        }
-        if (filterBtn) {
-            filterBtn.classList.remove('active');
-            filterBtn.classList.add('hidden');
-        }
-
-        chatContentView?.classList.remove('blurred-focus');
-        chatInputArea?.classList.remove('blurred-focus-input');
-
-        document.querySelectorAll('.convo-item').forEach(item => item.classList.remove('active'));
-
-        // Reset aktywnej ikony nawigacji na "Czat"
-        navIcons.forEach(icon => icon.classList.remove('active'));
-        if (chatNavIcon) {
-            chatNavIcon.classList.add('active');
-        }
-    };
-
-    // === Początkowa inicjalizacja (po załadowaniu strony) ===
-    // Upewnij się, że przycisk "Czat" jest aktywny domyślnie
-    if (chatNavIcon) {
-        chatNavIcon.classList.add('active');
+            // Wyłącz tryb szeptu po powrocie do listy
+            if (whisperModeActive) {
+                toggleWhisperMode();
+            }
+        });
     }
-    // Upewnij się, że panel czatu jest początkowo ukryty (usuń klasę chat-open, jeśli jest)
-    appContainer.classList.remove('chat-open');
+
+    // --- Obsługa otwierania/zamykania panelu konta ---
+    if (accountIcon && accountPanel && closeAccountBtn) {
+        accountIcon.addEventListener('click', () => {
+            accountPanel.classList.remove('hidden'); // Upewnij się, że nie ma display:none
+            setTimeout(() => { // Mały delay, aby transition zadziałało
+                accountPanel.classList.add('active');
+                // Opcjonalnie: rozmyj tło aplikacji, jeśli to pożądane
+                // appContainer.classList.add('blurred');
+            }, 10);
+        });
+
+        closeAccountBtn.addEventListener('click', () => {
+            accountPanel.classList.remove('active');
+            // appContainer.classList.remove('blurred');
+            setTimeout(() => {
+                accountPanel.classList.add('hidden'); // Ukryj po animacji
+            }, 300); // Czas musi odpowiadać transition-duration
+        });
+    }
+
+    // --- Obsługa otwierania/zamykania kapsuły kontekstu (Flow Bar) ---
+    if (flowBar && contextCapsule && closeCapsuleBtn) {
+        flowBar.addEventListener('click', () => {
+            contextCapsule.classList.remove('hidden'); // Upewnij się, że nie ma display:none
+            setTimeout(() => { // Mały delay, aby transition zadziałało
+                contextCapsule.classList.add('active');
+                // Opcjonalnie: rozmyj tło aplikacji
+                // appContainer.classList.add('blurred');
+            }, 10);
+        });
+
+        closeCapsuleBtn.addEventListener('click', () => {
+            contextCapsule.classList.remove('active');
+            // appContainer.classList.remove('blurred');
+            setTimeout(() => {
+                contextCapsule.classList.add('hidden'); // Ukryj po animacji
+            }, 300); // Czas musi odpowiadać transition-duration
+        });
+    }
+
+    // --- Obsługa trybu "Szeptu" (Whisper Mode) ---
+    if (whisperModeBtn && chatContentView && chatInputArea) {
+        whisperModeBtn.addEventListener('click', toggleWhisperMode);
+
+        function toggleWhisperMode() {
+            whisperModeActive = !whisperModeActive;
+            chatContentView.classList.toggle('blurred-focus', whisperModeActive);
+            chatInputArea.classList.toggle('blurred-focus-input', whisperModeActive);
+            whisperModeBtn.classList.toggle('active', whisperModeActive); // Dodaj klasę active, jeśli chcesz zmienić styl przycisku
+        }
+    }
+
+
+    // --- Obsługa aktywnych ikon nawigacyjnych w sidebarze ---
+    if (navIcons.length > 0) {
+        navIcons.forEach(icon => {
+            icon.addEventListener('click', () => {
+                navIcons.forEach(i => i.classList.remove('active')); // Usuń 'active' ze wszystkich
+                icon.classList.add('active'); // Dodaj 'active' do klikniętej
+            });
+        });
+        // Ustaw domyślną aktywną ikonę po załadowaniu
+        const defaultActiveIcon = document.querySelector('.nav-icon[data-tooltip="Główne"]');
+        if (defaultActiveIcon) {
+            defaultActiveIcon.classList.add('active');
+        }
+    }
+
+    // --- Obsługa Tooltipów ---
+    const tooltip = document.createElement('div');
+    tooltip.classList.add('tooltip');
+    document.body.appendChild(tooltip);
+
+    document.querySelectorAll('[data-tooltip]').forEach(element => {
+        element.addEventListener('mouseenter', (e) => {
+            const text = e.target.getAttribute('data-tooltip');
+            if (text) {
+                tooltip.textContent = text;
+                tooltip.style.opacity = '1';
+                tooltip.style.pointerEvents = 'auto'; // Umożliwia widoczność
+
+                // Pozycjonowanie tooltipa
+                const rect = e.target.getBoundingClientRect();
+                // Dla sidebara, tooltip powinien być po prawej stronie elementu
+                const isSidebarElement = e.target.closest('.sidebar');
+                if (isSidebarElement) {
+                    tooltip.style.left = `${rect.right + 10}px`; // 10px odstępu od prawej krawędzi elementu
+                    tooltip.style.top = `${rect.top + rect.height / 2 - tooltip.offsetHeight / 2}px`; // Wyśrodkuj pionowo
+                    tooltip.style.transform = 'none'; // Reset transform z CSS, jeśli jest
+                } else {
+                    // Domyślne pozycjonowanie dla innych tooltipów (np. obrazków)
+                    tooltip.style.left = `${rect.left + rect.width / 2}px`;
+                    tooltip.style.top = `${rect.top - 10}px`;
+                    tooltip.style.transform = `translate(-50%, -100%)`; // Pozycja nad elementem
+                }
+            }
+        });
+
+        element.addEventListener('mouseleave', () => {
+            tooltip.style.opacity = '0';
+            tooltip.style.pointerEvents = 'none'; // Wyłącz interakcje
+        });
+    });
+
+    // --- Obsługa wyszukiwania (rozszerzanie pola i pokazywanie filtra) ---
+    if (searchInput && filterBtn) {
+        searchInput.addEventListener('focus', () => {
+            searchInput.style.width = '180px'; // Rozszerz na focus
+            filterBtn.style.opacity = '1'; // Pokaż przycisk
+        });
+
+        searchInput.addEventListener('blur', () => {
+            if (searchInput.value === '') {
+                searchInput.style.width = '120px'; // Zwiń, jeśli puste
+                filterBtn.style.opacity = '0'; // Ukryj przycisk
+            }
+        });
+    }
+
 });

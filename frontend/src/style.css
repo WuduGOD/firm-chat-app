@@ -19,7 +19,7 @@ body {
     color: #333;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    overflow: hidden; /* Ważne, aby panele wysuwające się poza ekran nie tworzyły scrolla */
+    overflow: hidden;
 }
 
 /* --- Główne animacje --- */
@@ -57,7 +57,7 @@ body {
     border-radius: 25px; /* Bardziej zaokrąglony */
     box-shadow: 0 25px 80px rgba(0, 0, 0, 0.15); /* Głębszy cień */
     overflow: hidden; /* Upewnij się, że nie ma scrolla poza kontenerem */
-    position: relative; /* Ważne dla pozycjonowania absolutnego overlay'ów, jeśli takie będą */
+    position: relative;
     transition: filter 0.3s ease-out;
 }
 
@@ -182,18 +182,17 @@ body {
     flex-direction: column;
     background: #fcfdfe;
     border-right: 1px solid #f0f0f0;
-    /* Transition dla width jest już tutaj, SUPER! */
-    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Animacja szerokości */
     width: 380px; /* Domyślna szerokość listy konwersacji */
     min-width: 320px; /* Minimalna szerokość, żeby nie było za wąsko */
 }
 
-/* Kiedy czat jest otwarty, zmniejsz szerokość content-area */
+/* Kiedy czat jest otwarty, ZMIENIONO: szerokość content-area na 45% */
 .app-container.chat-open .content-area {
-    width: 280px; /* Nowa, mniejsza szerokość */
-    /* Nie dodajemy transform: translateX(-Xpx) tutaj na desktopie,
-       bo flexbox i zmiana width już to załatwią. */
+    width: 45%; /* Nowa, procentowa szerokość dla równego podziału */
+    /* Możesz też użyć transform: translateX(-Xpx) jeśli wolisz taki efekt */
 }
+
 
 /* Nagłówek obszaru treści */
 .main-header {
@@ -381,33 +380,28 @@ body {
 
 /* --- Aktywny Panel Czatu --- */
 .active-chat-panel {
-    /* Domyślnie jest schowany poza prawą krawędzią kontenera */
-    width: 0; /* Początkowa szerokość 0 */
+    width: 0; /* Domyślnie szerokość 0 */
     background: linear-gradient(180deg, #FDFDFE, #EAF4FB);
     display: flex;
     flex-direction: column;
     height: 100%;
+    /* Nie jest już absolute, jest flex itemem */
+    /* Usunięto transform: translateX(100%); */
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 100;
     border-radius: 25px;
     overflow: hidden;
     flex-shrink: 0; /* Zapobiega kurczeniu się poniżej content */
-    opacity: 0; /* Domyślnie niewidoczny */
-    pointer-events: none; /* Domyślnie nieklikalny */
-    /* KLUCZOWE: Początkowe przesunięcie poza ekran + płynne przejście */
-    transform: translateX(100%); /* Początkowo jest na prawo od swojego "normalnego" miejsca */
-    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                opacity 0.3s ease,
-                transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Ukryj zawartość, gdy panel jest schowany */
+    opacity: 0;
+    pointer-events: none;
 }
 
-/* Gdy klasa chat-open jest na app-container, panel czatu rozszerza się i wysuwa */
+/* Gdy klasa chat-open jest na app-container, panel czatu rozszerza się - ZMIENIONO: szerokość panelu czatu na 55% */
 .app-container.chat-open .active-chat-panel {
-    /* Pozwalamy flex-grow określić szerokość, zajmie resztę miejsca */
-    width: auto;
-    flex-grow: 1; /* Rozciąga się, aby zająć pozostałe miejsce */
+    width: 55%; /* Ustalona szerokość panelu czatu */
     opacity: 1;
     pointer-events: auto;
-    transform: translateX(0); /* Wsuwa się na swoje docelowe miejsce */
 }
 
 .chat-panel-header {
@@ -420,7 +414,6 @@ body {
     flex-shrink: 0;
 }
 
-/* Przycisk "Wróć do listy" w nagłówku czatu */
 .back-to-list-btn {
     background: none;
     border: none;
@@ -429,20 +422,9 @@ body {
     cursor: pointer;
     padding: 5px;
     border-radius: 50%;
-    transition: background 0.2s, opacity 0.3s ease, transform 0.3s ease; /* Dodajemy transition */
-    /* Domyślnie ukryty na desktopie, gdy czat jest nieaktywny */
-    opacity: 0;
-    pointer-events: none;
-    transform: translateX(-10px); /* Lekkie przesunięcie przy pojawianiu */
+    transition: background 0.2s;
 }
 .back-to-list-btn:hover { background: rgba(255, 255, 255, 0.2); }
-
-/* Pokaż przycisk "Wstecz" TYLKO gdy czat jest aktywny i NIE JESTEŚMY NA MOBILE */
-.app-container.chat-open .back-to-list-btn {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translateX(0); /* Wróć do normalnej pozycji */
-}
 
 .chat-header-info {
     display: flex;
@@ -999,14 +981,14 @@ body {
         width: 100%; /* Rozszerz na pełną szerokość */
         border-right: none;
         /* Kiedy czat jest otwarty na mobile, ukryj content-area */
-        opacity: 1; /* Musi być 1, żeby animować z 1 na 0 */
-        transform: translateX(0); /* Musi być 0, żeby animować z 0 na -100% */
+        opacity: 1;
+        transform: translateX(0);
     }
     .app-container.chat-open .content-area {
         width: 0; /* Całkowicie ukryj content-area na mobile */
         opacity: 0;
         pointer-events: none;
-        transform: translateX(-100%); /* Przesuń poza ekran w lewo */
+        /* Możesz dodać transform: translateX(-100%) aby przesunąć poza ekran */
     }
 
 
@@ -1027,7 +1009,7 @@ body {
     .filter-btn {
         font-size: 1.1rem;
     }
-    /* Zresetuj zmiany nagłówka na mobile, gdy czat jest otwarty */
+    /* Zresetuj zmiany nagłówka na mobile */
     .app-container.chat-open .main-header {
         padding: 10px 15px;
     }
@@ -1072,7 +1054,7 @@ body {
         bottom: 8px;
         right: 8px;
     }
-    /* Zresetuj zmiany convo-item na mobile, gdy czat jest otwarty */
+    /* Zresetuj zmiany convo-item na mobile */
     .app-container.chat-open .convo-time {
         transform: translateX(0);
         font-size: 0.7rem;
@@ -1086,29 +1068,24 @@ body {
 
     /* Aktywny panel czatu - pełny ekran */
     .active-chat-panel {
-        /* Nadpisuje desktopowe style, aby był ukryty po prawej, na pełną szerokość */
-        width: 100%;
+        width: 100%; /* Zawsze 100% na mobile, gdy aktywny */
         border-radius: 0;
+        top: 0;
+        right: 0;
         opacity: 0;
         pointer-events: none;
-        transform: translateX(100%); /* Całkowicie poza ekranem po prawej */
     }
     .app-container.chat-open .active-chat-panel {
-        width: 100%; /* Zawsze 100% na mobile, gdy aktywny */
+        width: 100%;
         opacity: 1;
         pointer-events: auto;
-        transform: translateX(0); /* Wsuwa się na środek ekranu */
     }
 
     .chat-panel-header {
         padding: 10px 15px;
     }
-    /* Na mobilu, zawsze pokaż przycisk wstecz, gdy czat jest otwarty (nadpisuje desktop) */
-    .back-to-list-btn { /* Tutaj już bez .app-container.chat-open, bo to mobile */
+    .back-to-list-btn {
         font-size: 1.6rem;
-        opacity: 1; /* Upewnij się, że jest widoczny */
-        pointer-events: auto;
-        transform: translateX(0);
     }
     .chat-header-avatar {
         width: 45px;
