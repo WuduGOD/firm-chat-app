@@ -515,5 +515,4 @@
             });
         }
 
-        console.log("Flow chat application initialization complete. Ready!");
-    }    
+        console.log("Flow chat application initialization complete. Ready!");    
