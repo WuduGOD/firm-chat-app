@@ -346,7 +346,7 @@
 
     // GŁÓWNA FUNKCJA INICJALIZUJĄCA CAŁĄ APLIKACJĘ
     // WAŻNA ZMIANA: Dodano "export"
-    export async function initializeApp() {
+    async function initializeApp() {
         console.log("Initializing Flow chat application...");
 
         // 1. Pobieranie referencji do wszystkich elementów DOM
@@ -516,8 +516,4 @@
         }
 
         console.log("Flow chat application initialization complete. Ready!");
-    }
-
-    // WAŻNA ZMIANA: Usunięto linię `document.addEventListener("DOMContentLoaded", initializeApp);`
-    // ponieważ `chat-entry.js` będzie odpowiedzialny za wywołanie `initializeApp`.
-    
+    }    
