@@ -834,25 +834,43 @@ body {
 .account-panel {
     position: absolute;
     top: 0;
-    left: 80px; /* Po prawej stronie sidebara */
+    left: 80px; /* Nadal zaczyna się od krawędzi sidebara */
     height: 100%;
     width: 280px; /* Szerokość panelu */
     background: #ffffff;
     box-shadow: 10px 0 30px rgba(0,0,0,0.1);
-    transform: translateX(-100%); /* Domyślnie ukryty */
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* KLUCZOWE ZMIANY DLA UKRYCIA NA START: */
+    transform: translateX(-100%); /* Panel jest przesunięty o swoją szerokość w lewo, poza widok */
+    opacity: 0; /* Całkowicie niewidoczny */
+    visibility: hidden; /* Upewnia się, że nie można w niego kliknąć, gdy jest schowany */
+    pointer-events: none; /* Dodatkowe zabezpieczenie, aby nie przechwytywał zdarzeń myszy */
+
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), /* Animacja przesunięcia */
+                opacity 0.3s ease-out, /* Animacja przezroczystości */
+                visibility 0.3s ease-out; /* Animacja widoczności */
+    
     z-index: 150;
-    border-radius: 25px; /* Zaokrąglenie */
+    border-radius: 25px;
     padding: 25px;
     display: flex;
     flex-direction: column;
 }
+
 .account-panel.active {
-    transform: translateX(0%);
+    transform: translateX(0%); /* Przesuń na widok */
+    opacity: 1; /* Pokaż */
+    visibility: visible; /* Ustaw jako widoczny */
+    pointer-events: auto; /* Włącz interakcje */
 }
-.account-panel.hidden {
-    display: none;
-}
+
+/* WAŻNE: Usunęliśmy `display: none;` z .account-panel.hidden w CSS,
+   ponieważ chcemy używać opacity/visibility/transform do płynnych animacji.
+   Klasa 'hidden' na starcie HTML nadal będzie potrzebna w JS,
+   aby ustawić początkowy stan, ale później JS będzie nią manipulował.*/
+/* .account-panel.hidden {
+    display: none; // Usuń tę regułę lub upewnij się, że nie jest aktywna dla account-panel
+} */
 
 .account-panel header {
     display: flex;

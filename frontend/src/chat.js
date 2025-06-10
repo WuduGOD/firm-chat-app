@@ -401,13 +401,17 @@
         if (accountIcon && accountPanel && closeAccountBtn) {
             accountIcon.addEventListener('click', () => {
                 console.log('Account icon clicked (UI)');
+				accountPanel.style.visibility = 'visible';
                 accountPanel.classList.remove('hidden');
-                setTimeout(() => { accountPanel.classList.add('active'); }, 10);
+                accountPanel.classList.add('active');
             });
             closeAccountBtn.addEventListener('click', () => {
                 console.log('Close account button clicked (UI)');
                 accountPanel.classList.remove('active');
-                setTimeout(() => { accountPanel.classList.add('hidden'); }, 300);
+                setTimeout(() => {
+					accountPanel.style.visibility = 'hidden';
+					accountPanel.classList.add('hidden');
+				}, 300);
             });
         }
 
