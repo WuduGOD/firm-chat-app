@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // === Selektory DOM ===
     const appContainer = document.querySelector('.app-container');
     const conversationList = document.querySelector('.conversation-list');
-    const backToListBtn = document.querySelector('.back-to-list-btn');
+    const backToListBtn = document.querySelector('.back-to-list-btn'); // Przycisk "Wróć do listy"
 
     const searchInput = document.querySelector('.search-input');
     const filterBtn = document.querySelector('.filter-btn');
@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const accountPanel = document.querySelector('.account-panel');
     const closeAccountBtn = document.querySelector('.account-panel .close-account-btn');
 
-    const whisperModeBtn = document.querySelector('.whisper-mode-btn'); // Nowy selektor dla przycisku szeptu
+    const whisperModeBtn = document.querySelector('.whisper-mode-btn');
     const chatContentView = document.querySelector('.chat-content-view');
     const chatInputArea = document.querySelector('.chat-input-area');
 
@@ -34,6 +34,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatNavIcon = document.querySelector('.nav-icon[data-tooltip="Czat"]');
     const navIcons = document.querySelectorAll('.main-nav .nav-icon');
 
+    // Wszystkie ikony nawigacyjne i inne elementy z tooltipami
+    const navIconsAndTooltips = document.querySelectorAll('.nav-icon, .account-icon, .flow-bar, .whisper-mode-btn');
+
 
     // === Funkcje sterujące stanami widoku ===
 
@@ -43,15 +46,14 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     openChatPanel = (convoItem = null) => {
         if (appContainer) {
-            // Dodaj klasę, która aktywuje styl dla widoku podzielonego
-            appContainer.classList.add('chat-active');
+            // KLUCZOWA ZMIANA: Używamy klasy 'chat-open' z Twojego CSS
+            appContainer.classList.add('chat-open');
 
             // Aktualizuj nagłówek czatu, jeśli convoItem jest podany
             if (convoItem) {
                 const convoAvatarSrc = convoItem.querySelector('.convo-avatar')?.src;
                 const convoName = convoItem.querySelector('.convo-name')?.textContent;
-                // Zakładam, że status jest w `data-status` atrybucie `convo-item`
-                const convoStatus = convoItem.dataset.status || 'offline';
+                const convoStatus = convoItem.dataset.status || 'offline'; // Przykład: status z data-status
 
                 if (chatHeaderAvatar) chatHeaderAvatar.src = convoAvatarSrc || 'https://via.placeholder.com/48'; // Domyślny avatar
                 if (chatHeaderName) chatHeaderName.textContent = convoName || 'Nieznany użytkownik';
@@ -77,8 +79,8 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     closeChatPanel = () => {
         if (appContainer) {
-            // Usuń klasę, aby przywrócić widok początkowy
-            appContainer.classList.remove('chat-active');
+            // KLUCZOWA ZMIANA: Używamy klasy 'chat-open' z Twojego CSS
+            appContainer.classList.remove('chat-open');
 
             // Usuń aktywną konwersację z listy
             document.querySelectorAll('.convo-item').forEach(item => item.classList.remove('active'));
@@ -96,6 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // === Event Listenery ===
 
     // 1. Kliknięcie na element konwersacji (przełącza na WIDOK PODZIELONY)
+    // Użyj delegacji zdarzeń, jeśli konwersacje są dodawane dynamicznie
     if (conversationList) {
         conversationList.addEventListener('click', (event) => {
             const convoItem = event.target.closest('.convo-item');
@@ -105,13 +108,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 2. Kliknięcie na przycisk "Wróć do listy" (przełącza na WIDOK POCZĄTKOWY)
+    // 2. Kliknięcie na przycisk "Wróć do listy" (teraz działa!)
     if (backToListBtn) {
         backToListBtn.addEventListener('click', closeChatPanel);
     }
 
     // 3. Aktywacja ikony "Czat" w sidebarze (upewnij się, że ten sam widok listy jest aktywny)
-    // Jeśli kliknięcie na "Czat" ma też zamykać inne panele, to jest dobre miejsce
     if (chatNavIcon) {
         chatNavIcon.addEventListener('click', () => {
             navIcons.forEach(icon => icon.classList.remove('active'));
@@ -126,7 +128,8 @@ document.addEventListener('DOMContentLoaded', () => {
             contextCapsule.classList.toggle('active');
             if (accountPanel) accountPanel.classList.remove('active');
             // Jeśli otwieramy kapsułę, zamykamy czat (wracamy do listy)
-            if (appContainer.classList.contains('chat-active')) {
+            // KLUCZOWA ZMIANA: Używamy klasy 'chat-open'
+            if (appContainer.classList.contains('chat-open')) {
                 closeChatPanel();
             }
         });
@@ -141,7 +144,8 @@ document.addEventListener('DOMContentLoaded', () => {
             accountPanel.classList.toggle('active');
             if (contextCapsule) contextCapsule.classList.remove('active');
             // Jeśli otwieramy panel konta, zamykamy czat (wracamy do listy)
-            if (appContainer.classList.contains('chat-active')) {
+            // KLUCZOWA ZMIANA: Używamy klasy 'chat-open'
+            if (appContainer.classList.contains('chat-open')) {
                 closeChatPanel();
             }
         });
@@ -178,7 +182,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // === Cichy Tryb Skupienia (Blurring) ===
-    // Upewnij się, że przycisk whisperModeBtn istnieje w HTML
     if (whisperModeBtn && chatContentView && chatInputArea) {
         whisperModeBtn.addEventListener('click', () => {
             chatContentView.classList.toggle('blurred-focus');
@@ -239,6 +242,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (chatNavIcon) {
         chatNavIcon.classList.add('active');
     }
-    // Upewnij się, że panel czatu jest początkowo ukryty (usuń klasę chat-active, jeśli jest)
-    appContainer.classList.remove('chat-active');
+    // Upewnij się, że panel czatu jest początkowo ukryty (usuń klasę chat-open, jeśli jest)
+    appContainer.classList.remove('chat-open');
 });
