@@ -496,39 +496,40 @@ async function initializeApp() { // Usunięto 'export'
                     tooltip.style.left = `${rect.right + 10}px`;
                     tooltip.style.top = `${rect.top + rect.height / 2 - tooltip.offsetHeight / 2}px`;
                     tooltip.style.transform = 'none';
-                } else {
-                    tooltip.style.left = `${rect.left + rect.width / 2}px`;
-                    tooltip.style.top = `${rect.top - 10}px`;
-                    tooltip.style.transform = `translate(-50%, -100%)`;
+                    } else {
+                        tooltip.style.left = `${rect.left + rect.width / 2}px`;
+                        tooltip.style.top = `${rect.top - 10}px`;
+                        tooltip.style.transform = `translate(-50%, -100%)`;
+                    }
                 }
-            }
+            });
+
+            element.addEventListener('mouseleave', () => {
+                tooltip.style.opacity = '0';
+                tooltip.style.pointerEvents = 'none';
+            });
         });
 
-        element.addEventListener('mouseleave', () => {
-            tooltip.style.opacity = '0';
-            tooltip.style.pointerEvents = 'none';
-        });
-    });
+        if (searchInput && filterBtn) {
+            searchInput.addEventListener('focus', () => {
+                console.log('Search input focused.');
+                searchInput.style.width = '180px';
+                filterBtn.style.opacity = '1';
+            });
 
-    if (searchInput && filterBtn) {
-        searchInput.addEventListener('focus', () => {
-            console.log('Search input focused.');
-            searchInput.style.width = '180px';
-            filterBtn.style.opacity = '1';
-        });
+            searchInput.addEventListener('blur', () => {
+                if (searchInput.value === '') {
+                    console.log('Search input blurred and empty.');
+                    searchInput.style.width = '120px';
+                    filterBtn.style.opacity = '0';
+                }
+            });
+        }
 
-        searchInput.addEventListener('blur', () => {
-            if (searchInput.value === '') {
-                console.log('Search input blurred and empty.');
-                searchInput.style.width = '120px';
-                filterBtn.style.opacity = '0';
-            }
-        });
-    }
+        console.log("Flow chat application initialization complete. Ready!");
+    } // <-- Upewnij się, że ten nawias jest, zamyka initializeApp
 
-    console.log("Flow chat application initialization complete. Ready!");
-}
 
-// Ten plik jest importowany przez chat-entry.js, który wywołuje initializeApp().
-// Dlatego nie umieszczamy tutaj listenera DOMContentLoaded dla initializeApp.
-// document.addEventListener("DOMContentLoaded", initializeApp); // <-- TA LINIA MUSI BYĆ ZAKOMENTOWANA LUB USUNIĘTA
+    // WAŻNE: Dodaj tę linię na samym końcu pliku,
+    // aby initializeApp uruchomiła się automatycznie po załadowaniu DOM.
+    document.addEventListener("DOMContentLoaded", initializeApp);
