@@ -368,7 +368,6 @@ body {
 /* Kiedy czat jest otwarty, przesuń daty i liczniki nieprzeczytanych */
 .app-container.chat-open .convo-time {
     transform: translateX(-15px); /* Przesuń w lewo */
-    font-size: 0.65rem; /* Zmniejsz czcionkę dla kompaktowości */
 }
 .app-container.chat-open .unread-count {
     transform: translateX(-10px); /* Przesuń w lewo */
