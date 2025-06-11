@@ -372,8 +372,8 @@ body {
 }
 .app-container.chat-open .unread-count {
     transform: translateX(-10px); /* Przesuń w lewo */
-    width: 20px; /* Zmniejsz nieco rozmiar licznika */
-    height: 20px;
+    width: 24px;
+    height: 24px;
     font-size: 0.65rem;
 }
 
