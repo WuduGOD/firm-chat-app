@@ -498,6 +498,7 @@ body {
     display: flex; /* Używamy flexbox dla układu wiadomości */
     flex-direction: column;
     gap: 15px; /* Odstęp między wiadomościami */
+	align-items: flex-start;
 }
 .chat-content-view.blurred-focus {
     filter: blur(5px);
