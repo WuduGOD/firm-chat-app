@@ -189,8 +189,8 @@ body {
 
 /* Kiedy czat jest otwarty, ZMIENIONO: szerokość content-area na 45% */
 .app-container.chat-open .content-area {
-    width: 45%; /* Nowa, procentowa szerokość dla równego podziału */
-    /* Możesz też użyć transform: translateX(-Xpx) jeśli wolisz taki efekt */
+    width: 320px;
+	min-width: 300px;
 }
 
 
@@ -399,9 +399,10 @@ body {
 
 /* Gdy klasa chat-open jest na app-container, panel czatu rozszerza się - ZMIENIONO: szerokość panelu czatu na 55% */
 .app-container.chat-open .active-chat-panel {
-    width: 55%; /* Ustalona szerokość panelu czatu */
+    width: auto; /* Ustalona szerokość panelu czatu */
     opacity: 1;
     pointer-events: auto;
+	flex-grow: 1;
 }
 
 .chat-panel-header {
