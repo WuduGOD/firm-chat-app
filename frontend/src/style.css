@@ -1176,60 +1176,110 @@ body.dark-mode .nav-icon::after {
     text-decoration: none;
 }
 
-/* Formularz autoryzacji (login/register) */
+body.auth-body {
+    display: flex; /* Użyj flexbox do centrowania zawartości */
+    justify-content: center; /* Centruj poziomo */
+    align-items: center; /* Centruj pionowo */
+    min-height: 100vh; /* Upewnij się, że body ma przynajmniej wysokość widokową */
+    background: var(--bg-color-light); /* Jasne tło dla całej strony, zdefiniowane w :root */
+    font-family: 'Segoe UI', sans-serif; /* Spójna czcionka */
+    margin: 0; /* Usuń domyślny margines body */
+    box-sizing: border-box; /* Model pudełkowy dla łatwiejszego rozmiarowania */
+}
+
+/* Kontener główny formularza (Login/Rejestracja) */
+.auth-container {
+    background: var(--bg-color-container); /* Białe tło dla kontenera formularza */
+    padding: 2.5rem; /* Wewnętrzne odstępy */
+    border-radius: 12px; /* Zaokrąglone rogi */
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1); /* Delikatny cień */
+    text-align: center; /* Centruj tekst wewnątrz kontenera */
+    width: 100%; /* Pełna szerokość */
+    max-width: 400px; /* Ogranicz maksymalną szerokość dla lepszego wyglądu */
+    margin: 20px; /* Margines, aby nie przylegało do krawędzi na mniejszych ekranach */
+}
+
+/* Nagłówki h2 w kontenerach autoryzacji */
+.auth-container h2 {
+    font-size: 1.8rem; /* Rozmiar czcionki */
+    color: var(--primary-color); /* Kolor główny aplikacji */
+    margin-bottom: 1.5rem; /* Odstęp pod nagłówkiem */
+}
+
+/* Formularz autoryzacji (Login/Rejestracja) */
 .auth-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
+    display: flex; /* Użyj flexbox dla elementów formularza */
+    flex-direction: column; /* Ułóż elementy pionowo */
+    gap: 1rem; /* Odstęp między elementami formularza */
 }
 
 /* Pola input w formularzach autoryzacji */
 .auth-form input {
-    padding: 0.8rem;
-    border-radius: 8px;
-    border: 1px solid #ddd;
-    background: #f1f2f3;
-    font-size: 0.95rem;
+    padding: 0.8rem; /* Wewnętrzne odstępy */
+    border-radius: 8px; /* Zaokrąglone rogi */
+    border: 1px solid var(--border-color-medium); /* Kolor ramki */
+    background: var(--bg-color-input); /* Jasne tło inputu */
+    font-size: 0.95rem; /* Rozmiar czcionki */
+    color: var(--text-color-dark); /* Kolor tekstu */
+    outline: none; /* Usuń domyślny focus outline */
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out; /* Płynne przejścia */
+}
+.auth-form input:focus {
+    border-color: var(--primary-color); /* Kolor ramki na focusie */
+    box-shadow: 0 0 0 2px rgba(106, 90, 205, 0.2); /* Delikatny cień na focusie */
+}
+.auth-form input::placeholder {
+    color: var(--text-color-medium); /* Kolor placeholder'a */
 }
 
 /* Wrapper dla pola hasła (dla ikonki oka) */
 .password-wrapper {
-    position: relative;
+    position: relative; /* Ważne dla pozycjonowania ikonki oka */
 }
 
 /* Styl ikonki oka w polu hasła */
 .password-wrapper .eye {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    cursor: pointer;
-    color: #888;
+    position: absolute; /* Pozycjonowanie absolutne względem password-wrapper */
+    right: 12px; /* Odległość od prawej krawędzi */
+    top: 50%; /* W połowie wysokości */
+    transform: translateY(-50%); /* Korekta pionowa do środka */
+    cursor: pointer; /* Kursor wskazujący na klikalność */
+    color: var(--text-color-medium); /* Kolor ikonki */
+    font-size: 1.1rem; /* Rozmiar ikonki */
+    transition: color 0.2s; /* Płynne przejście koloru na hover */
+}
+.password-wrapper .eye:hover {
+    color: var(--text-color-dark); /* Ciemniejszy kolor na hover */
 }
 
 /* Przycisk logowania/rejestracji */
 .login-btn {
-    padding: 0.8rem;
-    background: linear-gradient(to right, #fda4af, #f87171);
-    border: none;
-    border-radius: 8px;
-    color: white;
-    font-weight: bold;
-    cursor: pointer;
-    transition: background 0.3s;
+    padding: 0.8rem; /* Wewnętrzne odstępy */
+    background: var(--primary-color); /* Kolor główny aplikacji */
+    border: none; /* Brak ramki */
+    border-radius: 8px; /* Zaokrąglone rogi */
+    color: var(--text-color-light); /* Biały tekst */
+    font-weight: bold; /* Pogrubiony tekst */
+    cursor: pointer; /* Kursor wskazujący na klikalność */
+    transition: background 0.3s ease-in-out; /* Płynne przejście tła */
 }
-
 .login-btn:hover {
-    background: linear-gradient(to right, #fb7185, #ef4444);
+    background: var(--primary-color-dark); /* Ciemniejszy kolor na hover */
 }
 
 /* Link do przełączania między logowaniem a rejestracją */
 .switch-link {
-    margin-top: 1rem;
-    font-size: 0.9rem;
+    margin-top: 1.5rem; /* Odstęp od formularza */
+    font-size: 0.9rem; /* Rozmiar czcionki */
+    color: var(--text-color-dark); /* Kolor tekstu */
 }
 
 .switch-link a {
-    color: #ef4444;
-    text-decoration: none;
+    color: var(--primary-color); /* Kolor główny dla linku */
+    text-decoration: none; /* Brak podkreślenia */
+    font-weight: bold; /* Pogrubiony tekst */
+    transition: color 0.2s; /* Płynne przejście koloru */
+}
+.switch-link a:hover {
+    color: var(--primary-color-dark); /* Ciemniejszy kolor na hover */
 }
