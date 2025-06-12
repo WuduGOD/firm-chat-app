@@ -120,6 +120,15 @@ async function getLastMessageForRoom(roomId) {
     return data && data.length > 0 ? data[0] : null;
 }
 
+// *** NOWA FUNKCJA: Sortowanie konwersacji ***
+function sortConversations(conversations) {
+    return [...conversations].sort((a, b) => {
+        const timeA = a.lastMessage ? new Date(a.lastMessage.inserted_at) : new Date(0); // Starsze wiadomości na dole
+        const timeB = b.lastMessage ? new Date(b.lastMessage.inserted_at) : new Date(0);
+        return timeB.getTime() - timeA.getTime(); // Sortuj od najnowszej
+    });
+}
+
 
 async function loadContacts() {
     console.log("Loading contacts...");
@@ -144,8 +153,10 @@ async function loadContacts() {
         return { user, lastMessage, roomId };
     }));
 
+    // *** SORTOWANIE KONWERSACJI ***
+    const sortedContacts = sortConversations(contactsWithLastMessage);
 
-    contactsWithLastMessage.forEach(({ user, lastMessage, roomId }) => {
+    sortedContacts.forEach(({ user, lastMessage, roomId }) => {
         const convoItem = document.createElement('div');
         convoItem.classList.add('convo-item');
         convoItem.dataset.convoId = user.id;
@@ -161,7 +172,7 @@ async function loadContacts() {
             // Sprawdzamy, czy nadawcą jestem ja, czy inny użytkownik
             const senderName = String(lastMessage.username) === String(currentUser.id) ? "Ja" : (getUserLabelById(lastMessage.username) || lastMessage.username);
             previewText = `${senderName}: ${lastMessage.text}`;
-            
+
             const lastMessageTime = new Date(lastMessage.inserted_at);
             timeText = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
         }
@@ -182,7 +193,7 @@ async function loadContacts() {
 
         conversationListEl.appendChild(convoItem);
     });
-    console.log("Contacts loaded and rendered with last messages.");
+    console.log("Contacts loaded and rendered with last messages (and sorted).");
 }
 
 
@@ -310,12 +321,12 @@ function addMessageToChat(msg) {
     if (convoItemToUpdate) {
         const previewEl = convoItemToUpdate.querySelector('.convo-preview');
         const timeEl = convoItemToUpdate.querySelector('.convo-time');
-        
+
         if (previewEl && timeEl) {
             // Sprawdzamy, czy nadawcą jestem ja, czy inny użytkownik
             const senderName = String(msg.username) === String(currentUser.id) ? "Ja" : (getUserLabelById(msg.username) || msg.username);
             previewEl.textContent = `${senderName}: ${msg.text}`;
-            
+
             const timestamp = new Date(msg.inserted_at || Date.now());
             timeEl.textContent = timestamp.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
         }
@@ -323,7 +334,7 @@ function addMessageToChat(msg) {
         // Jeśli wiadomość nie jest dla aktywnie otwartego pokoju, przenieś ją na górę i zwiększ licznik nieprzeczytanych
         if (msg.room !== currentRoom) {
             conversationListEl.prepend(convoItemToUpdate); // Przenieś element na początek listy
-            
+
             const unreadCountEl = convoItemToUpdate.querySelector('.unread-count');
             if (unreadCountEl) {
                 let currentUnread = parseInt(unreadCountEl.textContent, 10);
@@ -385,7 +396,7 @@ function showTypingIndicator(usernameId) {
 
 function initWebSocket() {
     const wsUrl = import.meta.env.VITE_CHAT_WS_URL || "wss://firm-chat-app-backend.onrender.com";
-    
+
     if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
         console.log("WebSocket connection already open or connecting.");
         return;
@@ -404,7 +415,7 @@ function initWebSocket() {
             }));
             console.log(`Joined room ${currentRoom} on WebSocket open.`);
         } else {
-             console.warn("WebSocket opened but currentRoom or currentUser is not set. Cannot join room yet.");
+            console.warn("WebSocket opened but currentRoom or currentUser is not set. Cannot join room yet.");
         }
     };
 
@@ -426,10 +437,10 @@ function initWebSocket() {
                 break;
             case 'history':
                 console.log("Loading message history. History room:", data.room, "Current room:", currentRoom);
-                    if (messagesDiv) {
-                        messagesDiv.innerHTML = ''; // Wyczyść istniejące wiadomości przed załadowaniem historii
-                        data.messages.forEach((msg) => addMessageToChat(msg));
-                    }
+                if (messagesDiv) {
+                    messagesDiv.innerHTML = ''; // Wyczyść istniejące wiadomości przed załadowaniem historii
+                    data.messages.forEach((msg) => addMessageToChat(msg));
+                }
                 break;
             case 'status':
                 updateUserStatusIndicator(data.user, data.online);
@@ -608,42 +619,42 @@ async function initializeApp() { // Usunięto 'export'
                     tooltip.style.left = `${rect.right + 10}px`;
                     tooltip.style.top = `${rect.top + rect.height / 2 - tooltip.offsetHeight / 2}px`;
                     tooltip.style.transform = 'none';
-                    } else {
-                        tooltip.style.left = `${rect.left + rect.width / 2}px`;
-                        tooltip.style.top = `${rect.top - 10}px`;
-                        tooltip.style.transform = `translate(-50%, -100%)`;
-                    }
+                } else {
+                    tooltip.style.left = `${rect.left + rect.width / 2}px`;
+                    tooltip.style.top = `${rect.top - 10}px`;
+                    tooltip.style.transform = `translate(-50%, -100%)`;
                 }
-            });
-
-            element.addEventListener('mouseleave', () => {
-                tooltip.style.opacity = '0';
-                tooltip.style.pointerEvents = 'none';
-            });
+            }
         });
 
-        if (searchInput && filterBtn) {
-            searchInput.addEventListener('focus', () => {
-                console.log('Search input focused.');
-                searchInput.style.width = '180px';
-                filterBtn.style.opacity = '1';
-                filterBtn.classList.remove('hidden'); // Upewnij się, że przycisk się pojawia
-            });
+        element.addEventListener('mouseleave', () => {
+            tooltip.style.opacity = '0';
+            tooltip.style.pointerEvents = 'none';
+        });
+    });
 
-            searchInput.addEventListener('blur', () => {
-                if (searchInput.value === '') {
-                    console.log('Search input blurred and empty.');
-                    searchInput.style.width = '120px';
-                    filterBtn.style.opacity = '0';
-                    setTimeout(() => { filterBtn.classList.add('hidden'); }, 300); // Ukryj po animacji
-                }
-            });
-        }
+    if (searchInput && filterBtn) {
+        searchInput.addEventListener('focus', () => {
+            console.log('Search input focused.');
+            searchInput.style.width = '180px';
+            filterBtn.style.opacity = '1';
+            filterBtn.classList.remove('hidden'); // Upewnij się, że przycisk się pojawia
+        });
 
-        console.log("Flow chat application initialization complete. Ready!");
-    } // <-- Upewnij się, że ten nawias jest, zamyka initializeApp
+        searchInput.addEventListener('blur', () => {
+            if (searchInput.value === '') {
+                console.log('Search input blurred and empty.');
+                searchInput.style.width = '120px';
+                filterBtn.style.opacity = '0';
+                setTimeout(() => { filterBtn.classList.add('hidden'); }, 300); // Ukryj po animacji
+            }
+        });
+    }
+
+    console.log("Flow chat application initialization complete. Ready!");
+} // <-- Upewnij się, że ten nawias jest, zamyka initializeApp
 
 
-    // WAŻNE: Dodaj tę linię na samym końcu pliku,
-    // aby initializeApp uruchomiła się automatycznie po załadowaniu DOM.
-    document.addEventListener("DOMContentLoaded", initializeApp);
+// WAŻNE: Dodaj tę linię na samym końcu pliku,
+// aby initializeApp uruchomiła się automatycznie po załadowaniu DOM.
+document.addEventListener("DOMContentLoaded", initializeApp);
