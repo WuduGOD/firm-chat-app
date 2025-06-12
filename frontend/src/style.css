@@ -611,11 +611,19 @@ body {
   background: #e9eef2;
   position: relative;
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  width: fit-content;
+  min-width: 60px;
 }
 .message.sent {
   margin-left: auto;
   background: #6a5acd;
   color: white;
+}
+
+.message.received {
+  margin-right: auto;
+  background-color: var(--bg-color-message-received);
+  color: var(--text-color-dark);
 }
 
 /* Ogonki dymków wiadomości */
