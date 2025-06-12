@@ -621,9 +621,9 @@ body {
 }
 
 .message.received {
-  margin-right: auto;
-  background-color: var(--bg-color-message-received);
-  color: var(--text-color-dark);
+  margin-right: auto;
+  background-color: var(--bg-color-message-received);
+  color: var(--text-color-dark);
 }
 
 /* Ogonki dymków wiadomości */
@@ -634,14 +634,16 @@ body {
     height: 0;
     border-style: solid;
     border-width: 0 12px 12px 0;
-    border-color: transparent #e9eef2 transparent transparent;
+    /* POPRAWIONE: Użycie zmiennej CSS */
+    border-color: transparent var(--bg-color-message-received) transparent transparent;
     bottom: 0;
     left: -10px;
 }
 
 .message.sent::before {
     border-width: 0 0 12px 12px;
-    border-color: transparent transparent transparent #6a5acd;
+    /* POPRAWIONE: Użycie zmiennej CSS */
+    border-color: transparent transparent transparent var(--primary-color);
     left: auto;
     right: -10px;
 }
@@ -898,18 +900,19 @@ body.dark-mode {
 
 /* Wiadomości w dark mode */
 .dark-mode .message {
-  background-color: #3a3a5e;
-  color: #eee;
+  background-color: var(--bg-color-message-received); /* Teraz używamy zmiennej */
+  color: var(--text-color-light); /* Teraz używamy zmiennej */
 }
 .dark-mode .message.sent {
-  background-color: #6a5acd;
-  color: #fff;
+  background-color: var(--primary-color); /* Teraz używamy zmiennej */
 }
 .dark-mode .message::before {
-    border-color: transparent #3a3a5e transparent transparent;
+  /* Kolor ogonka dla wiadomości otrzymanych w dark mode */
+  border-color: transparent var(--bg-color-message-received) transparent transparent;
 }
 .dark-mode .message.sent::before {
-    border-color: transparent transparent transparent #6a5acd;
+  /* Kolor ogonka dla wiadomości wysłanych w dark mode */
+  border-color: transparent transparent transparent var(--primary-color);
 }
 .dark-mode .timestamp {
     color: #bbb;
@@ -976,22 +979,22 @@ body.dark-mode {
 
 /* Pole wpisywania wiadomości w dark mode */
 .dark-mode .chat-footer input {
-  background-color: #2e2e4a;
-  border: 1px solid #555;
-  color: #fff;
+    background-color: #2e2e4a;
+    border: 1px solid #555;
+    color: #fff;
 }
 .dark-mode .chat-footer input::placeholder {
-  color: #aaa;
+    color: #aaa;
 }
 
 /* Przyciski w dark mode */
 .dark-mode .chat-footer button {
-  background-color: #6a5acd;
-  color: #fff;
+    background-color: #6a5acd;
+    color: #fff;
 }
 .dark-mode .chat-footer button:disabled {
-  background-color: #555;
-  color: #ccc;
+    background-color: #555;
+    color: #ccc;
 }
 .dark-mode .chat-footer .attach-button,
 .dark-mode .chat-footer .emoji-button {
@@ -1103,6 +1106,64 @@ body.dark-mode {
     .back-button.show-on-mobile { /* Upewnij się, że ten styl jest używany w JS do pokazywania przycisku */
         display: block;
     }
+}
+
+/* Formularz autoryzacji (login/register) */
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Pola input w formularzach autoryzacji */
+.auth-form input {
+    padding: 0.8rem;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    background: #f1f2f3;
+    font-size: 0.95rem;
+}
+
+/* Wrapper dla pola hasła (dla ikonki oka) */
+.password-wrapper {
+    position: relative;
+}
+
+/* Styl ikonki oka w polu hasła */
+.password-wrapper .eye {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #888;
+}
+
+/* Przycisk logowania/rejestracji */
+.login-btn {
+    padding: 0.8rem;
+    background: linear-gradient(to right, #fda4af, #f87171);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.login-btn:hover {
+    background: linear-gradient(to right, #fb7185, #ef4444);
+}
+
+/* Link do przełączania między logowaniem a rejestracją */
+.switch-link {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+}
+
+.switch-link a {
+    color: #ef4444;
+    text-decoration: none;
 }
 
 /* Formularz autoryzacji (login/register) */
