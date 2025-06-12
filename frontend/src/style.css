@@ -502,6 +502,50 @@ body {
     filter: blur(5px);
 }
 
+.typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 15px;
+    background: #e0f2ff; /* Lekkie tło */
+    border-radius: 20px;
+    width: fit-content; /* Dopasuj szerokość do zawartości */
+    margin-top: 10px; /* Odstęp od wiadomości */
+    margin-left: 25px; /* Wyrównanie z lewą krawędzią wiadomości odebranych */
+    opacity: 0; /* Domyślnie ukryty */
+    transition: opacity 0.3s ease-out;
+}
+
+.typing-indicator.hidden {
+    opacity: 0;
+    pointer-events: none; /* Upewnij się, że nie można kliknąć ukrytego */
+}
+/* Kiedy jest widoczny */
+.typing-indicator.visible {
+    opacity: 1;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    background-color: #777;
+    border-radius: 50%;
+    animation: bounce 1.4s infinite ease-in-out;
+}
+
+.dot:nth-child(1) { animation-delay: -0.32s; }
+.dot:nth-child(2) { animation-delay: -0.16s; }
+.dot:nth-child(3) { animation-delay: 0s; }
+
+@keyframes bounce {
+    0%, 80%, 100% {
+        transform: scale(0);
+    }
+    40% {
+        transform: scale(1);
+    }
+}
+
 .message-wave {
     max-width: 60%; /* ZMNIEJSZONA SZEROKOŚĆ FAL */
 	overflow-wrap: break-word;
@@ -511,17 +555,10 @@ body {
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04);
     cursor: grab;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
-    display: flex; /* Używamy flexbox dla wewnętrznego układu (czas + tekst) */
-    align-items: flex-end; /* Wyrównanie czasu do dołu wiadomości */
-    gap: 8px; /* Odstęp między czasem a tekstem */
+    position: relative;
 }
 .message-wave.animate-in {
     animation: fadeInSlideUp 0.3s ease-out;
-}
-
-.message-wave p {
-    flex-grow: 1;   /* Pozwoli akapitowi z tekstem wiadomości zająć dostępną przestrzeń */
-    min-width: 0;   /* KLUCZOWE: Zapobiega przepełnieniu w flexboxie, gdy zawartość jest za duża */
 }
 
 .message-wave.received {
@@ -532,8 +569,6 @@ body {
     border-bottom-right-radius: 25px;
     border-bottom-left-radius: 5px;
     border-top-left-radius: 25px;
-    padding-left: 10px; /* Więcej miejsca na czas */
-    padding-right: 18px;
 }
 .message-wave.sent {
     background: linear-gradient(90deg, #7BBFEE, #4682B4); /* Ciemniejszy gradient dla wysłanych */
@@ -543,27 +578,43 @@ body {
     border-bottom-left-radius: 25px;
     border-bottom-right-radius: 5px;
     border-top-right-radius: 25px;
-    flex-direction: row-reverse; /* ODWRACA KOLEJNOŚĆ (CZAS PO LEWEJ, TEKST PO PRAWEJ) */
-    padding-right: 10px; /* Więcej miejsca na czas */
-    padding-left: 18px;
 }
 
 .message-time {
-    font-size: 0.7rem;
-    color: #999;
-    flex-shrink: 0; /* Zapobiega zmniejszaniu się czasu */
-    opacity: 0; /* Domyślne ukrycie */
-    transition: opacity 0.2s ease; /* Płynne pojawianie się */
-    white-space: nowrap; /* Zapobiega zawijaniu się czasu */
+    position: absolute; /* Pozycjonowanie względem .message-wave */
+    bottom: -10px; /* Przesunięcie pod dymek, będzie animowane */
+    font-size: 0.75rem; /* Nieco większy niż wcześniej, bardziej czytelny */
+    white-space: nowrap;
+    padding: 6px 10px; /* Wewnętrzny padding dymka */
+    border-radius: 10px; /* Zaokrąglone rogi dymka */
+    background: rgba(0, 0, 0, 0.75); /* Ciemne tło dymka */
+    color: white; /* Biały tekst */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); /* Delikatny cień */
+    z-index: 5; /* Upewnij się, że jest nad innymi elementami */
+
+    opacity: 0; /* Domyślnie ukryty */
+    pointer-events: none; /* Nie przechwytuje zdarzeń myszy */
+    transform: translateY(10px); /* Początkowe przesunięcie w dół */
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out; /* Płynna animacja */
 }
+
 /* Po najechaniu na falę, czas staje się widoczny */
 .message-wave:hover .message-time {
     opacity: 1;
+    transform: translateY(0);
 }
 
 /* Dostosowanie kolorów dla czasu w wysłanych wiadomościach */
 .message-wave.sent .message-time {
-    color: rgba(255,255,255,0.7); /* Jasniejszy kolor dla czytelnosci na ciemnym tle */
+    right: 0; /* Wyrównanie do prawej krawędzi wiadomości */
+    transform-origin: bottom right; /* Punkt startowy transformacji */
+    /* Nadpisz kolor jeśli był wcześniej zmieniony dla wysłanych wiadomości */
+    color: white; /* Upewnij się, że tekst jest biały na ciemnym tle */
+}
+
+.message-wave.received .message-time {
+    left: 0; /* Wyrównanie do lewej krawędzi wiadomości */
+    transform-origin: bottom left; /* Punkt startowy transformacji */
 }
 
 /* Style dla obrazów i linków w falach */
