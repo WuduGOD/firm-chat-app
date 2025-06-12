@@ -652,29 +652,6 @@ body {
   color: var(--text-color-dark);
 }
 
-/* Ogonki dymków wiadomości */
-.message::before {
-    content: '';
-    position: absolute;
-    width: 0;
-    height: 0;
-    border-style: solid;
-    border-width: 0 12px 12px 0;
-    /* POPRAWIONE: Użycie zmiennej CSS */
-    border-color: transparent var(--bg-color-message-received) transparent transparent;
-    bottom: 0;
-    left: -10px;
-}
-
-.message.sent::before {
-    border-width: 0 0 12px 12px;
-    /* POPRAWIONE: Użycie zmiennej CSS */
-    border-color: transparent transparent transparent var(--primary-color);
-    left: auto;
-    right: -10px;
-}
-
-
 .timestamp {
   font-size: 0.7rem;
   opacity: 0.7;
