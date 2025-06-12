@@ -177,10 +177,36 @@ body {
   justify-content: center;
   align-items: center;
   transition: background 0.3s, color 0.3s;
+  position: relative;
+}
+
+.nav-icon::after {
+    content: attr(data-tooltip); /* Pobiera tekst z atrybutu data-tooltip */
+    position: absolute;
+    left: 100%; /* Ustawia tooltip obok elementu (po prawej) */
+    top: 50%;
+    transform: translateY(-50%) translateX(10px); /* Przesunięcie i odstęp od ikony */
+    white-space: nowrap; /* Zapobiega zawijaniu tekstu */
+    background-color: rgba(0, 0, 0, 0.8); /* Ciemne tło */
+    color: #fff; /* Jasny tekst */
+    padding: 0.5rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    opacity: 0; /* Domyślnie ukryty */
+    visibility: hidden; /* Domyślnie ukryty */
+    transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out, transform 0.2s ease-in-out;
+    z-index: 1000; /* Upewnij się, że tooltip jest na wierzchu */
+    pointer-events: none; /* Ważne: pozwala na klikanie pod tooltipem */
 }
 
 .nav-icon:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+.nav-icon:hover::after {
+    opacity: 1; /* Pokaż tooltip po najechaniu */
+    visibility: visible;
+    transform: translateY(-50%) translateX(0); /* Anuluj przesunięcie dla animacji */
 }
 
 .nav-icon.active {
@@ -820,6 +846,13 @@ body.dark-mode {
 .dark-mode .nav-icon {
     color: #f1f1f1;
 }
+
+body.dark-mode .nav-icon::after {
+    background-color: #f1f1f1; /* Jasne tło w dark mode */
+    color: #333; /* Ciemny tekst w dark mode */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2); /* Cień w dark mode */
+}
+
 .dark-mode .nav-icon:hover {
     background: rgba(255, 255, 255, 0.1);
 }
