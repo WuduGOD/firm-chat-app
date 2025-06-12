@@ -46,13 +46,6 @@ body {
     100% { transform: scaleY(1); }
 }
 
-/* Nowa animacja dla licznika nieprzeczytanych */
-@keyframes bounceIn {
-    0% { transform: scale(0); opacity: 0; }
-    50% { transform: scale(1.2); opacity: 1; }
-    100% { transform: scale(1); opacity: 1; }
-}
-
 /* --- Kontener aplikacji --- */
 .app-container {
     display: flex; /* Zmieniono na flex */
@@ -282,11 +275,6 @@ body {
     overflow-y: auto;
     padding: 20px 20px;
     background: #fcfdfe;
-    /* --- ZMIANY DLA ANIMACJI KONWERSACJI --- */
-    display: flex;
-    flex-direction: column; /* Ustawienie domyślne dla pionowej listy */
-    gap: 10px; /* Odstęp między elementami */
-    /* Zostało usunięte transition dla samego conversation-list, bo animacja jest na convo-item */
 }
 
 .convo-item {
@@ -296,17 +284,12 @@ body {
     padding: 12px 15px;
     background: #ffffff;
     border-radius: 18px; /* Bardziej zaokrąglony */
-    /* margin-bottom: 12px; -- Usunięte, bo używamy gap w .conversation-list */
+    margin-bottom: 12px;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.05); /* Miękki cień */
     cursor: pointer;
-    /* --- ZMIANY DLA ANIMACJI KONWERSACJI --- */
-    /* transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease; */
-    /* Zmieniono na: */
-    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease; /* Animacja pozycji i inne */
-    position: relative; /* Ważne dla płynnego pozycjonowania (FLIP) i unread-count/time */
-    z-index: 1; /* Upewnij się, że elementy nie nachodzą na siebie podczas animacji */
-    /* --- Koniec zmian dla animacji konwersacji --- */
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
     border: 2px solid transparent; /* Dla efektu active */
+    position: relative;
 }
 .convo-item:hover {
     transform: translateY(-3px);
@@ -376,27 +359,11 @@ body {
     bottom: 10px;
     right: 10px;
     box-shadow: 0 2px 5px rgba(255,107,107,0.3);
-    /* --- ZMIANY DLA ANIMACJI LICZNIKA --- */
-    transition: transform 0.3s ease, opacity 0.3s ease;
-    animation: bounceIn 0.5s ease-out; /* Domyślna animacja pojawiania się */
-    /* --- Koniec zmian dla animacji licznika --- */
+    transition: transform 0.3s ease; /* Dodaj transition */
 }
-
-/* Klasa dodawana przez JS do animacji pulsu po aktywności */
 .unread-count.animate-activity {
-    animation: pulse 0.5s infinite alternate; /* Opcjonalna animacja pulsu */
+    animation: elasticExpand 0.5s ease-out; /* Elastyczny efekt */
 }
-@keyframes pulse {
-    from { transform: scale(1); }
-    to { transform: scale(1.1); }
-}
-
-/* Ukrycie licznika, gdy jest 0 */
-.unread-count.hidden {
-    opacity: 0;
-    pointer-events: none; /* Upewnij się, że nie można kliknąć ukrytego */
-}
-
 
 /* Kiedy czat jest otwarty, przesuń daty i liczniki nieprzeczytanych */
 .app-container.chat-open .convo-time {
@@ -581,7 +548,7 @@ body {
 
 .message-wave {
     max-width: 60%; /* ZMNIEJSZONA SZEROKOŚĆ FAL */
-    overflow-wrap: break-word;
+	overflow-wrap: break-word;
     padding: 12px 18px;
     font-size: 0.95rem;
     line-height: 1.4;
@@ -953,9 +920,9 @@ body {
 }
 
 /* WAŻNE: Usunęliśmy `display: none;` z .account-panel.hidden w CSS,
-    ponieważ chcemy używać opacity/visibility/transform do płynnych animacji.
-    Klasa 'hidden' na starcie HTML nadal będzie potrzebna w JS,
-    aby ustawić początkowy stan, ale później JS będzie nią manipulował.*/
+   ponieważ chcemy używać opacity/visibility/transform do płynnych animacji.
+   Klasa 'hidden' na starcie HTML nadal będzie potrzebna w JS,
+   aby ustawić początkowy stan, ale później JS będzie nią manipulował.*/
 /* .account-panel.hidden {
     display: none; // Usuń tę regułę lub upewnij się, że nie jest aktywna dla account-panel
 } */
@@ -1136,7 +1103,7 @@ body {
     .convo-item {
         padding: 10px 12px;
         border-radius: 15px;
-        /* margin-bottom: 10px;  - Usuń jeśli używasz gap */
+        margin-bottom: 10px;
     }
     .convo-avatar {
         width: 50px;
@@ -1220,7 +1187,7 @@ body {
         padding: 10px 15px;
         font-size: 0.85rem;
         border-radius: 15px;
-        /* margin-bottom: 12px; -- Możesz usunąć jeśli wolisz gap */
+        margin-bottom: 12px; /* Możesz usunąć jeśli wolisz gap */
     }
     .message-time {
         font-size: 0.65rem;
@@ -1300,14 +1267,15 @@ body {
         font-size: 1.3rem;
     }
     .profile-avatar {
-        width: 80px; /* Zmniejszony avatar na mobile */
+        width: 80px;
         height: 80px;
+        border-width: 3px;
     }
     .profile-info h3 {
         font-size: 1.1rem;
     }
     .profile-info p {
-        font-size: 0.8rem;
+        font-size: 0.85rem;
     }
     .account-nav a {
         font-size: 0.9rem;
