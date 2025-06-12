@@ -1,126 +1,120 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flow - Komunikator</title>
-    <link rel="stylesheet" href="./src/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-
-    <script type="module" src="./src/chat-entry.js" defer></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Komunikator</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="./src/style.css" />
 </head>
 <body>
 
-    <div class="app-container">
-
-        <aside class="sidebar">
-            <div class="app-logo-wrapper">
-                <span class="app-logo">Flow</span>
-                <button class="add-btn" title="Nowa konwersacja"><i class="fas fa-plus"></i></button>
-            </div>
-
-            <nav class="main-nav">
-                <button class="nav-icon active" data-tooltip="Czat"><i class="fas fa-comment-alt"></i></button>
-                <button class="nav-icon" data-tooltip="Pliki"><i class="fas fa-folder"></i></button>
-                <button class="nav-icon" data-tooltip="Połączenia"><i class="fas fa-phone-alt"></i></button>
-                <button class="nav-icon" data-tooltip="Statystyki"><i class="fas fa-chart-line"></i></button>
-                <button class="nav-icon" data-tooltip="Ustawienia"><i class="fas fa-cog"></i></button>
-            </nav>
-
-            <div class="sidebar-account">
-                <button class="account-icon" data-tooltip="Moje konto"><i class="fas fa-user-circle"></i></button>
-            </div>
-        </aside>
-
-        <main class="content-area">
-            <header class="main-header">
-                <h1 class="header-title">Konwersacje</h1>
-                <div class="search-container">
-                    <input type="text" class="search-input" placeholder="Szukaj...">
-                    <button class="filter-btn hidden"><i class="fas fa-filter"></i></button>
-                </div>
-            </header>
-
-            <div class="conversation-list">
-                </div>
-        </main>
-
-        <section class="active-chat-panel">
-            <header class="chat-panel-header">
-                <button class="back-to-list-btn" title="Powrót do listy"><i class="fas fa-arrow-left"></i></button>
-                <div class="chat-header-info">
-                    <img src="" alt="Avatar" class="chat-header-avatar">
-                    <div class="name-status">
-                        <div class="chat-header-name"></div> <div class="chat-status"></div> </div>
-                </div>
-                <div class="flow-bar" title="Otwórz kapsułę kontekstu"></div>
-                <div class="header-right-controls">
-                    <button class="header-icon-btn" title="Szczegóły konwersacji"><i class="fas fa-info-circle"></i></button>
-                    <button class="header-icon-btn" title="Wyszukaj w czacie"><i class="fas fa-search"></i></button>
-                </div>
-            </header>
-
-            <div class="chat-content-view">
-                </div>
-
-			<div class="typing-indicator hidden">
-				<span class="dot"></span>
-				<span class="dot"></span>
-				<span class="dot"></span>
-			</div>
-
-            <div class="chat-input-area">
-                <button class="input-action-btn"><i class="fas fa-plus-circle"></i></button>
-                <input type="text" class="message-input" placeholder="Napisz wiadomość...">
-                <button class="send-message-btn">Wyślij</button>
-                <button class="whisper-mode-btn"><i class="fas fa-microphone"></i></button>
-            </div>
-        </section>
-
+  <header class="main-header">
+    <h1 class="app-title">🐒 Komunikator</h1>
+    <div class="user-menu">
+      <button id="menuButton" aria-haspopup="true" aria-expanded="false">
+        <i class="fas fa-bars"></i>
+      </button>
+      <div id="dropdownMenu" class="dropdown hidden">
+        <button id="themeToggle" title="Tryb dzień/noc">
+          <i class="fas fa-moon"></i> Tryb ciemny
+        </button>
+        <button id="logoutButton">Wyloguj się</button>
+      </div>
     </div>
+  </header>
 
-    <div class="context-capsule">
-        <button class="close-capsule-btn"><i class="fas fa-times"></i></button>
-        <h3>Kapsuła Kontekstu</h3>
+  <div class="container">
+    <aside class="sidebar-wrapper">
+      <div class="main-nav-icons">
+        <button class="nav-icon active" title="Rozmowy"><i class="fas fa-comments"></i></button>
+        <button class="nav-icon" title="Grupy"><i class="fas fa-users"></i></button>
+        <button class="nav-icon" title="Praca"><i class="fa fa-suitcase" aria-hidden="true"></i></button>
+        <button class="nav-icon add-new-button" title="Dodaj nowy kontakt/grupę"><i class="fas fa-plus"></i></button>
+      </div>
+      <div id="sidebar" class="conversations-list">
+        <h2>Konwersacje</h2>
+        <div class="search-bar">
+            <input type="text" placeholder="Szukaj..." />
+            <i class="fas fa-search"></i>
+        </div>
 
-        <div class="capsule-section">
-            <h4>Węzły kluczowe</h4>
-            <div class="key-nodes-grid">
+        <ul id="contactsList">
+        </ul>
+      </div>
+    </aside>
+
+    <main class="chat-layout">
+      <section id="logoScreen" class="logo-screen">
+        <h2>Witaj w Komunikatorze</h2>
+        <p>Wybierz kontakt z listy po lewej, aby rozpocząć rozmowę.</p>
+      </section>
+
+      <section id="chatArea" class="chat-area">
+        <header class="chat-header">
+          <button id="backButton" class="back-button"><i class="fas fa-arrow-left"></i></button>
+          <div class="user-info">
+            <span id="chatUserName"></span>
+            <span id="userStatus" class="status"></span>
+          </div>
+          <div class="chat-header-actions right-aligned">
+            <button><i class="fas fa-video"></i></button>
+            <button><i class="fas fa-phone"></i></button>
+            <button id="chatSettingsButton"><i class="fas fa-ellipsis-v"></i></button>
+            <div id="chatSettingsDropdown" class="dropdown hidden chat-settings-dropdown">
+                <h3>Ustawienia czatu</h3>
+                <div class="setting-group">
+                    <h4>Motyw wiadomości:</h4>
+                    <div class="color-options">
+                        <span class="color-box default-theme active" data-color="default"></span>
+                        <span class="color-box blue-theme" data-color="blue"></span>
+                        <span class="color-box green-theme" data-color="green"></span>
+                        <span class="color-box red-theme" data-color="red"></span>
+                    </div>
                 </div>
-        </div>
-
-        <div class="capsule-section">
-            <h4>Podsumowania</h4>
-            <ul>
-                </ul>
-        </div>
-
-        <div class="capsule-section">
-            <h4>Pętle Tematyczne</h4>
-            <div class="topic-loops">
+                <div class="setting-group">
+                    <h4>Tło czatu:</h4>
+                    <div class="background-options">
+                        <span class="bg-box default-bg active" data-bg="default"></span>
+                        <span class="bg-box dark-bg" data-bg="dark"></span>
+                        <span class="bg-box pattern-bg" data-bg="pattern"></span>
+                    </div>
                 </div>
-        </div>
-    </div>
-
-    <div class="account-panel hidden">
-        <header>
-            <h2>Moje Konto</h2>
-            <button class="close-account-btn"><i class="fas fa-times"></i></button>
+                <div class="setting-group">
+                    <h4>Własny nick:</h4>
+                    <input type="text" id="nicknameInput" placeholder="Nadaj nick..." />
+                    <button id="setNicknameButton">Ustaw</button>
+                </div>
+                <div class="setting-group">
+                    <h4>Wyszukaj wiadomości:</h4>
+                    <input type="text" id="messageSearchInput" placeholder="Wyszukaj w czacie..." />
+                    <button id="searchMessagesButton">Szukaj</button>
+                </div>
+            </div>
+          </div>
+          <div id="typingStatus" class="typing-status"></div>
         </header>
 
-        <div class="profile-info">
-            <img src="" alt="Twój Avatar" class="profile-avatar">
-            <h3></h3> <p></p> </div>
+        <div id="messageContainer" class="messages">
+        </div>
 
-        <nav class="account-nav">
-            <a href="#">Edytuj Profil</a>
-            <a href="#">Powiadomienia</a>
-            <a href="#">Prywatność</a>
-            <a href="#">Wyloguj</a>
-        </nav>
-    </div>
+        <div class="typing-indicator hidden" id="typingIndicator">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
 
-    <div class="tooltip"></div>
+        <div class="chat-footer">
+          <button class="attach-button"><i class="fas fa-paperclip"></i></button>
+          <input id="messageInput" type="text" placeholder="Wpisz wiadomość..." disabled />
+          <button class="emoji-button"><i class="fas fa-smile"></i></button>
+          <button id="sendButton" disabled>Wyślij</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="./src/chat-entry.js"></script>
 
 </body>
 </html>
