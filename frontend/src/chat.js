@@ -1,11 +1,10 @@
 // Importy z Twojego oryginalnego chat.js
-// WAŻNE: Upewnij się, że te pliki są dostępne w Twoim projekcie w odpowiednich ścieżkach
 import { loadAllProfiles, getUserLabelById } from './profiles.js';
 import { supabase } from './supabaseClient.js';
 
-// Globalne zmienne UI i czatu - zadeklarowane na początku, aby były dostępne wszędzie
+// Globalne zmienne UI i czatu
 let appContainer;
-let conversationListEl; // Zmieniona nazwa, aby uniknąć kolizji z lokalną zmienną `conversationList` w `initChatApp`
+let conversationListEl;
 let messagesDiv;
 let messageInput;
 let sendMessageBtn;
@@ -32,16 +31,19 @@ let currentChatUser = null;
 let currentRoom = null;
 let socket = null;
 let reconnectAttempts = 0;
-let typingTimeout; // Dla wskaźnika pisania
-let currentActiveConvoItem = null; // Aby śledzić aktywny element listy konwersacji do usuwania klasy 'active'
+let typingTimeout;
+let currentActiveConvoItem = null;
 let whisperModeActive = false;
 
+// *** NOWA ZMIENNA GLOBALNA: Do przechowywania obiektów konwersacji ***
+let allConversations = [];
 
-// Funkcja resetująca widok czatu (odpowiednik U() w Twoim zminifikowanym kodzie)
+
+// Funkcja resetująca widok czatu
 function resetChatView() {
     console.log("Resetting chat view...");
     if (messagesDiv) {
-        messagesDiv.innerHTML = ""; // Clear chat content
+        messagesDiv.innerHTML = "";
     }
     if (messageInput) {
         messageInput.disabled = true;
@@ -60,13 +62,12 @@ function resetChatView() {
         chatStatusSpan.textContent = "";
     }
     if (typingIndicatorDiv) {
-        typingIndicatorDiv.classList.add('hidden'); // Ukryj wskaźnik pisania
+        typingIndicatorDiv.classList.add('hidden');
     }
 
     currentChatUser = null;
     currentRoom = null;
 
-    // Upewnij się, że panel czatu jest ukryty, jeśli nie ma wybranej konwersacji
     if (appContainer && appContainer.classList.contains('chat-open')) {
         appContainer.classList.remove('chat-open');
     }
@@ -76,7 +77,6 @@ function resetChatView() {
         currentActiveConvoItem = null;
     }
 
-    // Wyłącz tryb szeptu po powrocie do listy
     if (whisperModeActive && chatContentView && chatInputArea && whisperModeBtn) {
         chatContentView.classList.remove('blurred-focus');
         chatInputArea.classList.remove('blurred-focus-input');
@@ -85,9 +85,6 @@ function resetChatView() {
     }
 }
 
-
-// --- Funkcje z chat.js zaadaptowane do nowej struktury ---
-
 /**
  * Generuje unikalną nazwę pokoju czatu na podstawie dwóch ID użytkowników, posortowanych alfabetycznie.
  * @param {string} user1Id - ID pierwszego użytkownika.
@@ -95,7 +92,7 @@ function resetChatView() {
  * @returns {string} Nazwa pokoju czatu.
  */
 function getRoomName(user1Id, user2Id) {
-    return [user1Id, user2Id].sort().join('_');
+    return [String(user1Id), String(user2Id)].sort().join('_'); // Upewnij się, że są stringami przed sortowaniem
 }
 
 /**
@@ -104,29 +101,143 @@ function getRoomName(user1Id, user2Id) {
  * @returns {Promise<Object|null>} Obiekt ostatniej wiadomości lub null, jeśli brak wiadomości.
  */
 async function getLastMessageForRoom(roomId) {
-    // Zakładamy, że twoja tabela z wiadomościami nazywa się 'messages'
     const { data, error } = await supabase
         .from('messages')
-        .select('text, username, inserted_at') // Pobieramy tekst, ID nadawcy i czas
+        .select('text, username, inserted_at')
         .eq('room', roomId)
-        .order('inserted_at', { ascending: false }) // Sortujemy od najnowszej
-        .limit(1); // Ograniczamy do jednej (najnowszej) wiadomości
+        .order('inserted_at', { ascending: false })
+        .limit(1);
 
     if (error) {
         console.error('Błąd podczas pobierania ostatniej wiadomości:', error);
         return null;
     }
-    // Zwróć pierwszą (najnowszą) wiadomość, lub null, jeśli nie ma wiadomości
     return data && data.length > 0 ? data[0] : null;
 }
 
-// *** NOWA FUNKCJA: Sortowanie konwersacji ***
+// *** NOWA FUNKCJA: Sortowanie konwersacji (używa obiektu convo.lastMessage) ***
 function sortConversations(conversations) {
     return [...conversations].sort((a, b) => {
-        const timeA = a.lastMessage ? new Date(a.lastMessage.inserted_at) : new Date(0); // Starsze wiadomości na dole
+        // Jeśli konwersacja nie ma ostatniej wiadomości, potraktuj ją jako bardzo starą (na końcu listy)
+        const timeA = a.lastMessage ? new Date(a.lastMessage.inserted_at) : new Date(0);
         const timeB = b.lastMessage ? new Date(b.lastMessage.inserted_at) : new Date(0);
-        return timeB.getTime() - timeA.getTime(); // Sortuj od najnowszej
+        // Sortowanie malejąco: najnowsze na górze
+        return timeB.getTime() - timeA.getTime();
     });
+}
+
+// *** NOWA FUNKCJA: Główna funkcja do renderowania i animowania listy konwersacji ***
+function renderConversationList() {
+    if (!conversationListEl) {
+        console.error("conversationListEl not found for rendering.");
+        return;
+    }
+
+    const sortedConversations = sortConversations(allConversations);
+
+    // 1. First: Zapisz aktualne pozycje elementów DOM przed ich zmianą
+    const oldPositions = new Map();
+    Array.from(conversationListEl.children).forEach(item => {
+        oldPositions.set(item.dataset.roomId, item.getBoundingClientRect());
+    });
+
+    const fragment = document.createDocumentFragment();
+    const currentActiveRoomId = currentActiveConvoItem ? currentActiveConvoItem.dataset.roomId : null;
+
+    sortedConversations.forEach(convo => {
+        let convoItem = conversationListEl.querySelector(`.convo-item[data-room-id="${convo.roomId}"]`);
+
+        if (!convoItem) {
+            // Jeśli element nie istnieje (np. nowa konwersacja), utwórz go
+            convoItem = document.createElement('div');
+            convoItem.classList.add('convo-item');
+            convoItem.dataset.convoId = convo.id; // ID kontaktu
+            convoItem.dataset.email = convo.email; // Email kontaktu
+            convoItem.dataset.roomId = convo.roomId; // Room ID dla łatwego dostępu
+            
+            // Dodaj listener tylko raz przy tworzeniu elementu
+            convoItem.addEventListener('click', () => {
+                // Znajdź pełny obiekt użytkownika na podstawie ID
+                const userObject = allConversations.find(c => String(c.id) === String(convo.id))?.user;
+                if (userObject) {
+                    handleConversationClick(userObject, convoItem);
+                } else {
+                    console.error("Could not find full user object for clicked conversation:", convo.id);
+                }
+            });
+        }
+
+        // Zaktualizuj klasę 'active' i 'currentActiveConvoItem'
+        if (convo.roomId === currentActiveRoomId) {
+            convoItem.classList.add('active');
+            currentActiveConvoItem = convoItem; // Upewnij się, że referencja jest aktualna
+        } else {
+            convoItem.classList.remove('active');
+        }
+
+        // Zaktualizuj zawartość elementu DOM
+        const avatarSrc = `https://i.pravatar.cc/150?img=${convo.id % 70 + 1}`;
+        let previewText = "Brak wiadomości";
+        let timeText = "";
+
+        if (convo.lastMessage) {
+            const senderName = String(convo.lastMessage.username) === String(currentUser.id) ? "Ja" : (getUserLabelById(convo.lastMessage.username) || convo.lastMessage.username);
+            previewText = `${senderName}: ${convo.lastMessage.text}`;
+            const lastMessageTime = new Date(convo.lastMessage.inserted_at);
+            timeText = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+        }
+
+        convoItem.innerHTML = `
+            <img src="${avatarSrc}" alt="Avatar" class="convo-avatar">
+            <div class="convo-info">
+                <div class="convo-name">${convo.name}</div>
+                <div class="convo-preview">${previewText}</div>
+            </div>
+            <span class="convo-time">${timeText}</span>
+            <span class="unread-count ${ (convo.unreadCount || 0) > 0 ? '' : 'hidden' }">${convo.unreadCount || '0'}</span>
+        `;
+        
+        fragment.appendChild(convoItem);
+    });
+
+    // Usuń elementy, które nie są już w sortedConversations (np. jeśli kontakty zniknęły)
+    Array.from(conversationListEl.children).forEach(item => {
+        if (!sortedConversations.some(convo => convo.roomId === item.dataset.roomId)) {
+            item.remove();
+        }
+    });
+
+    // Wyczyść listę i dodaj wszystkie elementy z fragmentu w nowej kolejności
+    // Najpierw usuń istniejące, a potem dodaj z fragmentu - to jest klucz do animacji FLIP
+    while(conversationListEl.firstChild) {
+        conversationListEl.removeChild(conversationListEl.firstChild);
+    }
+    conversationListEl.appendChild(fragment);
+
+
+    // 2. Last, Invert, Play: Animuj elementy do ich nowych pozycji
+    Array.from(conversationListEl.children).forEach(item => {
+        const newRect = item.getBoundingClientRect();
+        const oldRect = oldPositions.get(item.dataset.roomId);
+
+        if (oldRect) {
+            const deltaY = oldRect.top - newRect.top;
+
+            if (deltaY !== 0) {
+                // Invert: Przesuń element do jego starej pozycji
+                item.style.transform = `translateY(${deltaY}px)`;
+                item.style.transition = 'transform 0s'; // Wyłącz transition na chwilę
+
+                // Play: Wymuś reflow, a następnie włącz transition i animuj do nowej pozycji
+                requestAnimationFrame(() => {
+                    item.style.transition = 'transform 0.5s ease-out'; // Ustaw transition
+                    item.style.transform = ''; // Zresetuj transform, aby element wrócił do naturalnej pozycji
+                });
+            }
+        }
+    });
+
+    console.log("Conversation list rendered and animated.");
 }
 
 
@@ -138,73 +249,46 @@ async function loadContacts() {
         return;
     }
 
-    if (conversationListEl) {
-        conversationListEl.innerHTML = ''; // Wyczyść listę konwersacji
-    } else {
-        console.error("conversationListEl element not found!");
-        return;
-    }
-
-    // Używamy Promise.all, aby jednocześnie pobrać ostatnie wiadomości dla wszystkich kontaktów
-    const contactsWithLastMessage = await Promise.all(users.map(async user => {
-        // Upewnij się, że currentUser.id jest stringiem, bo sort() może inaczej działać z różnymi typami
+    const contactsPromises = users.map(async user => {
         const roomId = getRoomName(String(currentUser.id), String(user.id));
         const lastMessage = await getLastMessageForRoom(roomId);
-        return { user, lastMessage, roomId };
-    }));
-
-    // *** SORTOWANIE KONWERSACJI ***
-    const sortedContacts = sortConversations(contactsWithLastMessage);
-
-    sortedContacts.forEach(({ user, lastMessage, roomId }) => {
-        const convoItem = document.createElement('div');
-        convoItem.classList.add('convo-item');
-        convoItem.dataset.convoId = user.id;
-        convoItem.dataset.email = user.email;
-        convoItem.dataset.roomId = roomId; // Przechowuj roomId na elemencie dla łatwej aktualizacji
-
-        const avatarSrc = `https://i.pravatar.cc/150?img=${user.id % 70 + 1}`; // Tymczasowy losowy avatar
-
-        let previewText = "Brak wiadomości";
-        let timeText = "";
-
-        if (lastMessage) {
-            // Sprawdzamy, czy nadawcą jestem ja, czy inny użytkownik
-            const senderName = String(lastMessage.username) === String(currentUser.id) ? "Ja" : (getUserLabelById(lastMessage.username) || lastMessage.username);
-            previewText = `${senderName}: ${lastMessage.text}`;
-
-            const lastMessageTime = new Date(lastMessage.inserted_at);
-            timeText = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
-        }
-
-        convoItem.innerHTML = `
-            <img src="${avatarSrc}" alt="Avatar" class="convo-avatar">
-            <div class="convo-info">
-                <div class="convo-name">${getUserLabelById(user.id) || user.email}</div>
-                <div class="convo-preview">${previewText}</div>
-            </div>
-            <span class="convo-time">${timeText}</span>
-            <span class="unread-count hidden">0</span>
-        `;
-
-        convoItem.addEventListener('click', () => {
-            handleConversationClick(user, convoItem);
-        });
-
-        conversationListEl.appendChild(convoItem);
+        return {
+            id: user.id, // ID użytkownika (kontakt)
+            user: user, // Przechowaj pełny obiekt użytkownika do handleConversationClick
+            name: getUserLabelById(user.id) || user.email,
+            avatar: `https://i.pravatar.cc/150?img=${user.id % 70 + 1}`,
+            roomId: roomId,
+            lastMessage: lastMessage, // Przechowujemy cały obiekt ostatniej wiadomości
+            unreadCount: 0 // Inicjalizuj licznik nieprzeczytanych wiadomości
+        };
     });
-    console.log("Contacts loaded and rendered with last messages (and sorted).");
+
+    // Poczekaj na wszystkie promise i przypisz do globalnej tablicy
+    allConversations = await Promise.all(contactsPromises);
+
+    // Initialne renderowanie posortowanej listy
+    renderConversationList();
+    console.log("Contacts loaded and initialized.");
 }
 
 
 async function handleConversationClick(user, clickedConvoItemElement) {
     console.log('Conversation item clicked, user:', user);
 
+    // Resetuj licznik nieprzeczytanych dla tej konwersacji w danych
+    const convoIndex = allConversations.findIndex(c => String(c.id) === String(user.id));
+    if (convoIndex !== -1) {
+        allConversations[convoIndex].unreadCount = 0;
+        // Ponowne renderowanie, aby zaktualizować licznik w UI (i ewentualnie przesunąć, jeśli kliknięto starą wiadomość)
+        renderConversationList();
+    }
+
+    // Aktualizuj klasę 'active' dla elementu DOM
     if (currentActiveConvoItem) {
         currentActiveConvoItem.classList.remove('active');
     }
     clickedConvoItemElement.classList.add('active');
-    currentActiveConvoItem = clickedConvoItemElement;
+    currentActiveConvoItem = clickedConvoItemElement; // Aktualizuj referencję do aktywnego elementu
 
     resetChatView(); // Resetuje widok przed załadowaniem nowej rozmowy
 
@@ -213,15 +297,14 @@ async function handleConversationClick(user, clickedConvoItemElement) {
         username: getUserLabelById(user.id) || user.email,
         email: user.email,
     };
-    // Upewnij się, że currentUser.id jest dostępne (ustawiane w initializeApp)
-    currentRoom = getRoomName(String(currentUser.id), String(currentChatUser.id)); // Upewnij się, że ID są stringami
+    currentRoom = getRoomName(String(currentUser.id), String(currentChatUser.id));
     console.log(`Starting chat with ${currentChatUser.username}, room ID: ${currentRoom}`);
 
     if (chatHeaderName && chatHeaderAvatar && messageInput && sendMessageBtn) {
         chatHeaderName.textContent = currentChatUser.username;
         chatHeaderAvatar.src = `https://i.pravatar.cc/150?img=${user.id % 70 + 1}`;
-        messageInput.disabled = false; // Aktywuj pole wiadomości
-        sendMessageBtn.disabled = false; // Aktywuj przycisk wysyłania
+        messageInput.disabled = false;
+        sendMessageBtn.disabled = false;
         messageInput.focus();
     }
 
@@ -232,28 +315,14 @@ async function handleConversationClick(user, clickedConvoItemElement) {
         console.error('appContainer not found to add chat-open class.');
     }
 
-    // Usunięcie animacji (lub nieprzeczytanych) po kliknięciu
-    const unreadCount = clickedConvoItemElement.querySelector('.unread-count');
-    if (unreadCount) {
-        unreadCount.classList.add('animate-activity'); // To była animacja, nie reset
-        setTimeout(() => {
-            unreadCount.classList.remove('animate-activity');
-            unreadCount.textContent = '0'; // Resetuj licznik nieprzeczytanych
-            unreadCount.classList.add('hidden'); // Ukryj, jeśli 0
-        }, 500);
-    }
-
-    // WAŻNE: Wyślij wiadomość 'join' do WebSocket
     if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({
             type: 'join',
-            name: currentUser.id, // Upewnij się, że to jest ID użytkownika
+            name: currentUser.id,
             room: currentRoom,
         }));
         console.log(`Sent join message to WebSocket for room: ${currentRoom}`);
     } else {
-        // Jeśli WebSocket nie jest otwarty, spróbuj go zainicjować
-        // i wiadomość 'join' zostanie wysłana po otwarciu w socket.onopen
         console.warn("WebSocket not open, attempting to re-initialize and join on open.");
         initWebSocket();
     }
@@ -266,14 +335,12 @@ function setupSendMessage() {
     }
 
     messageInput.addEventListener('input', () => {
-        // Wysyłaj sygnał pisania tylko jeśli jest aktywny pokój czatu
         if (currentRoom && socket && socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify({
                 type: 'typing',
-                username: currentUser.id, // Kto pisze
-                room: currentRoom, // W którym pokoju pisze
+                username: currentUser.id,
+                room: currentRoom,
             }));
-            // console.log(`Sent typing signal for room: ${currentRoom}`); // Możesz odkomentować dla debugowania
         }
     });
 
@@ -289,7 +356,7 @@ function setupSendMessage() {
             username: currentUser.id,
             text,
             room: currentRoom,
-            inserted_at: new Date().toISOString() // Dodaj znacznik czasu dla wiadomości wysyłanej
+            inserted_at: new Date().toISOString()
         };
 
         console.log("Sending message via WS:", msgData);
@@ -307,44 +374,42 @@ function setupSendMessage() {
 }
 
 /**
- * Dodaje wiadomość do widoku czatu i aktualizuje podgląd konwersacji na liście.
+ * Dodaje wiadomość do widoku czatu i aktualizuje podgląd konwersacji na liście, sortując ją.
  * @param {Object} msg - Obiekt wiadomości.
  */
 function addMessageToChat(msg) {
     console.log("Adding message to UI:", msg);
     console.log("Porównanie pokoi: msg.room =", msg.room, ", currentRoom =", currentRoom);
 
-    // 1. Aktualizacja podglądu konwersacji na liście (convo-item)
-    // Znajdź odpowiedni element convo-item używając data-room-id
-    const convoItemToUpdate = conversationListEl.querySelector(`.convo-item[data-room-id="${msg.room}"]`);
+    // 1. Zaktualizuj globalną tablicę allConversations
+    const convoToUpdateIndex = allConversations.findIndex(c => c.roomId === msg.room);
 
-    if (convoItemToUpdate) {
-        const previewEl = convoItemToUpdate.querySelector('.convo-preview');
-        const timeEl = convoItemToUpdate.querySelector('.convo-time');
+    if (convoToUpdateIndex !== -1) {
+        // Aktualizuj istniejący obiekt konwersacji
+        allConversations[convoToUpdateIndex].lastMessage = {
+            text: msg.text,
+            username: msg.username,
+            inserted_at: msg.inserted_at
+        };
 
-        if (previewEl && timeEl) {
-            // Sprawdzamy, czy nadawcą jestem ja, czy inny użytkownik
-            const senderName = String(msg.username) === String(currentUser.id) ? "Ja" : (getUserLabelById(msg.username) || msg.username);
-            previewEl.textContent = `${senderName}: ${msg.text}`;
-
-            const timestamp = new Date(msg.inserted_at || Date.now());
-            timeEl.textContent = timestamp.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+        // Zwiększ licznik nieprzeczytanych, jeśli wiadomość nie jest dla aktywnie otwartego pokoju
+        // I nie jest to wiadomość wysłana przez bieżącego użytkownika (bo wtedy ją widzi)
+        if (msg.room !== currentRoom && String(msg.username) !== String(currentUser.id)) {
+            allConversations[convoToUpdateIndex].unreadCount = (allConversations[convoToUpdateIndex].unreadCount || 0) + 1;
+        } else if (msg.room === currentRoom && String(msg.username) === String(currentUser.id)) {
+             // Jeśli to moja wiadomość w aktywnym czacie, zresetuj unreadCount dla tej konwersacji
+            allConversations[convoToUpdateIndex].unreadCount = 0;
         }
+        
+        // WAŻNE: Po aktualizacji danych, ponownie renderuj całą listę.
+        // renderConversationList zajmie się sortowaniem i animacją.
+        renderConversationList();
 
-        // Jeśli wiadomość nie jest dla aktywnie otwartego pokoju, przenieś ją na górę i zwiększ licznik nieprzeczytanych
-        if (msg.room !== currentRoom) {
-            conversationListEl.prepend(convoItemToUpdate); // Przenieś element na początek listy
-
-            const unreadCountEl = convoItemToUpdate.querySelector('.unread-count');
-            if (unreadCountEl) {
-                let currentUnread = parseInt(unreadCountEl.textContent, 10);
-                if (isNaN(currentUnread)) currentUnread = 0; // Upewnij się, że to liczba
-                unreadCountEl.textContent = currentUnread + 1;
-                unreadCountEl.classList.remove('hidden'); // Pokaż licznik
-                unreadCountEl.classList.add('animate-activity'); // Dodaj animację
-                setTimeout(() => unreadCountEl.classList.remove('animate-activity'), 500); // Usuń animację po chwili
-            }
-        }
+    } else {
+        console.warn("Received message for unknown room, cannot update conversation list:", msg.room);
+        // Możesz tu pomyśleć o ponownym załadowaniu wszystkich kontaktów,
+        // jeśli to nowa konwersacja, której wcześniej nie było
+        loadContacts();
     }
 
 
@@ -355,7 +420,6 @@ function addMessageToChat(msg) {
     }
 
     const div = document.createElement('div');
-    // Klasa 'sent' jeśli wysłana przez bieżącego użytkownika, 'received' w przeciwnym razie
     div.classList.add('message-wave', String(msg.username) === String(currentUser.id) ? 'sent' : 'received', 'animate-in');
 
     const timestamp = new Date(msg.inserted_at || Date.now());
@@ -367,7 +431,6 @@ function addMessageToChat(msg) {
     `;
     if (messagesDiv) {
         messagesDiv.appendChild(div);
-        // Przewiń do najnowszej wiadomości
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     } else {
         console.error("messagesDiv is null when trying to add message.");
@@ -389,7 +452,7 @@ function showTypingIndicator(usernameId) {
         clearTimeout(typingTimeout);
         typingTimeout = setTimeout(() => {
             typingIndicatorDiv.classList.add('hidden');
-        }, 3000); // Ukryj po 3 sekundach braku aktywności
+        }, 3000);
         console.log(`${getUserLabelById(usernameId)} is typing...`);
     }
 }
@@ -438,7 +501,7 @@ function initWebSocket() {
             case 'history':
                 console.log("Loading message history. History room:", data.room, "Current room:", currentRoom);
                 if (messagesDiv) {
-                    messagesDiv.innerHTML = ''; // Wyczyść istniejące wiadomości przed załadowaniem historii
+                    messagesDiv.innerHTML = '';
                     data.messages.forEach((msg) => addMessageToChat(msg));
                 }
                 break;
@@ -452,16 +515,14 @@ function initWebSocket() {
 
     socket.onclose = (event) => {
         console.log('WebSocket disconnected. Code:', event.code, 'Reason:', event.reason);
-        if (event.code !== 1000) { // Sprawdź, czy zamknięcie nie jest normalne
+        if (event.code !== 1000) {
             console.log('Attempting to reconnect...');
-            // Stopniowo zwiększaj opóźnienie ponownego łączenia, do max 10 sekund
             setTimeout(initWebSocket, Math.min(1000 * ++reconnectAttempts, 10000));
         }
     };
 
     socket.onerror = (error) => {
         console.error('Błąd WebSocket:', error);
-        // Jeśli wystąpi błąd, zamknij połączenie, aby onclose mogło spróbować ponownie
         if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
             socket.close();
         }
@@ -469,11 +530,9 @@ function initWebSocket() {
 }
 
 
-// GŁÓWNA FUNKCJA INICJALIZUJĄCA CAŁĄ APLIKACJĘ
-async function initializeApp() { // Usunięto 'export'
+async function initializeApp() {
     console.log("Initializing Flow chat application...");
 
-    // 1. Pobieranie referencji do wszystkich elementów DOM
     appContainer = document.querySelector('.app-container');
     conversationListEl = document.querySelector('.conversation-list');
     messagesDiv = document.querySelector('.chat-content-view');
@@ -498,13 +557,11 @@ async function initializeApp() { // Usunięto 'export'
     chatStatusSpan = document.querySelector('.chat-status');
     typingIndicatorDiv = document.querySelector('.typing-indicator');
 
-    // 2. Walidacja, czy kluczowe elementy UI zostały znalezione
     if (!appContainer || !conversationListEl || !messagesDiv || !messageInput || !sendMessageBtn || !chatHeaderName || !chatHeaderAvatar || !chatStatusSpan) {
         console.error('Error: One or more critical UI elements not found. Please check your HTML selectors.');
         return;
     }
 
-    // 3. Sprawdzenie sesji użytkownika Supabase
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) {
         console.log('No active Supabase session found. Redirecting to login.html');
@@ -514,28 +571,20 @@ async function initializeApp() { // Usunięto 'export'
     currentUser = session.user;
     console.log('Current authenticated user:', currentUser.id);
 
-    // 4. Ładowanie profili i kontaktów
-    await loadAllProfiles(); // Zakładamy, że to ładuje dane potrzebne getUserLabelById
-    await loadContacts();
+    await loadAllProfiles();
+    await loadContacts(); // Ta funkcja teraz sortuje i renderuje
 
-    // 5. Inicjalizacja WebSocket
-    // WebSocket zostanie zainicjowany, ale do pokoju dołączy dopiero po kliknięciu konwersacji
     initWebSocket();
-
-    // 6. Ustawienie obsługi wysyłania wiadomości
     setupSendMessage();
 
-    // 7. Ustawienie domyślnego stanu UI po załadowaniu
     appContainer.classList.remove('chat-open');
     messageInput.disabled = true;
     sendMessageBtn.disabled = true;
 
-    // 8. Dodatkowe event listenery dla całej aplikacji
     if (backToListBtn) {
         backToListBtn.addEventListener('click', () => {
             console.log('Back to list button clicked (UI)');
             resetChatView();
-            // Po powrocie do listy, jeśli WebSocket jest otwarty, możesz opuścić pokój
             if (socket && socket.readyState === WebSocket.OPEN && currentRoom) {
                 socket.send(JSON.stringify({
                     type: 'leave',
@@ -550,7 +599,7 @@ async function initializeApp() { // Usunięto 'export'
     if (accountIcon && accountPanel && closeAccountBtn) {
         accountIcon.addEventListener('click', () => {
             console.log('Account icon clicked (UI)');
-            accountPanel.style.visibility = 'visible'; // Upewnij się, że ten styl jest ustawiany
+            accountPanel.style.visibility = 'visible';
             accountPanel.classList.remove('hidden');
             accountPanel.classList.add('active');
         });
@@ -595,7 +644,7 @@ async function initializeApp() { // Usunięto 'export'
                 icon.classList.add('active');
             });
         });
-        const defaultActiveIcon = document.querySelector('.nav-icon[data-tooltip="Czat"]'); // Upewnij się, że jest to właściwy tooltip dla czatu
+        const defaultActiveIcon = document.querySelector('.nav-icon[data-tooltip="Czat"]');
         if (defaultActiveIcon) {
             defaultActiveIcon.classList.add('active');
         }
@@ -638,7 +687,7 @@ async function initializeApp() { // Usunięto 'export'
             console.log('Search input focused.');
             searchInput.style.width = '180px';
             filterBtn.style.opacity = '1';
-            filterBtn.classList.remove('hidden'); // Upewnij się, że przycisk się pojawia
+            filterBtn.classList.remove('hidden');
         });
 
         searchInput.addEventListener('blur', () => {
@@ -646,15 +695,12 @@ async function initializeApp() { // Usunięto 'export'
                 console.log('Search input blurred and empty.');
                 searchInput.style.width = '120px';
                 filterBtn.style.opacity = '0';
-                setTimeout(() => { filterBtn.classList.add('hidden'); }, 300); // Ukryj po animacji
+                setTimeout(() => { filterBtn.classList.add('hidden'); }, 300);
             }
         });
     }
 
     console.log("Flow chat application initialization complete. Ready!");
-} // <-- Upewnij się, że ten nawias jest, zamyka initializeApp
+}
 
-
-// WAŻNE: Dodaj tę linię na samym końcu pliku,
-// aby initializeApp uruchomiła się automatycznie po załadowaniu DOM.
 document.addEventListener("DOMContentLoaded", initializeApp);
