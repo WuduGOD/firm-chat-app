@@ -1064,17 +1064,21 @@ body {
     color: var(--text-color-medium); /* Zakładając, że masz zmienne CSS dla kolorów */
     font-size: 0.9em;
     margin-top: 10px;
-    /* Początkowo widoczny, JS go ukryje, jeśli są aktywni użytkownicy */
+    /* Domyślnie jest widoczny, JS go ukryje, jeśli są aktywni użytkownicy */
 }
 
-/* Klasa do całkowitego ukrycia elementu */
+/* KLASA DO CAŁKOWITEGO UKRYCIA ELEMENTU */
 .hidden-element {
-    display: none !important; /* Całkowicie usuwa element z przepływu */
-    height: 0 !important;     /* Zapewnia zerową wysokość */
-    overflow: hidden !important; /* Ukrywa wszelkie przepełnienia */
-    padding: 0 !important;    /* Usuwa wszelkie paddingi */
-    margin: 0 !important;     /* Usuwa wszelkie marginesy */
-    border: 0 !important;     /* Usuwa wszelkie obramowania */
+    display: none !important;     /* Całkowicie usuwa element z przepływu dokumentu */
+    height: 0 !important;         /* Zapewnia zerową wysokość */
+    min-height: 0 !important;     /* Usuwa ewentualne minimalne wysokości */
+    max-height: 0 !important;     /* Usuwa ewentualne maksymalne wysokości */
+    overflow: hidden !important;  /* Ukrywa wszelkie przepełnienia zawartości */
+    padding: 0 !important;        /* Usuwa wszelkie paddingi */
+    margin: 0 !important;         /* Usuwa wszelkie marginesy */
+    border: 0 !important;         /* Usuwa wszelkie obramowania */
+    opacity: 0 !important;        /* Dodatkowo ustawia przezroczystość na 0 */
+    visibility: hidden !important; /* Sprawia, że element jest niewidoczny dla czytników ekranu itp. */
 }
 
 /* Dark mode overrides */
