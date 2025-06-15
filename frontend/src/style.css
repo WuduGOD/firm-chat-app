@@ -586,20 +586,26 @@ body {
 .chat-settings-dropdown {
     right: 0;
     top: 100%;
-    width: 180px; /* ZMODYFIKOWANE: Ustawienie konkretnej szerokości */
-    padding: 0.6rem; /* Zmniejszony padding */
+    /* ZMODYFIKOWANE: Bardziej agresywne ustawienie szerokości minimalnej i maksymalnej */
+    min-width: 160px; /* Dodatkowo zmniejsz minimum */
+    width: 180px; /* Spróbuj sztywną szerokość, aby wymusić zawijanie */
+    max-width: 200px; /* Lekko zwiększ maksimum, jeśli 180px jest zbyt mało */
+    padding: 0.5rem; /* Lekko zmniejszony padding */
     border-top-right-radius: 0;
     z-index: 101;
-    box-sizing: border-box; /* Ważne, aby padding nie powiększał szerokości */
+    box-sizing: border-box;
+    display: flex; /* Upewnij się, że jest flex container */
+    flex-direction: column; /* Utrzymaj układ pionowy dla głównych sekcji */
+    gap: 0.4rem; /* Zmniejszony odstęp między sekcjami w dropdownie */
 }
 .chat-settings-dropdown h3 {
-    font-size: 1rem; /* Zmniejszona czcionka */
-    margin-bottom: 0.5rem; /* Zmniejszony margines */
+    font-size: 0.95rem; /* Nieznacznie zmniejszona czcionka */
+    margin-bottom: 0.4rem; /* Zmniejszony margines */
     color: var(--text-color-dark);
 }
 .chat-settings-dropdown .setting-group {
-    margin-bottom: 0.5rem; /* Zmniejszony margines */
-    padding-bottom: 0.5rem; /* Zmniejszony padding */
+    margin-bottom: 0.4rem; /* Zmniejszony margines */
+    padding-bottom: 0.4rem; /* Zmniejszony padding */
     border-bottom: 1px solid var(--border-color-light);
 }
 .chat-settings-dropdown .setting-group:last-child {
@@ -608,17 +614,17 @@ body {
     padding-bottom: 0;
 }
 .chat-settings-dropdown h4 {
-    font-size: 0.85rem; /* Zmniejszona czcionka */
+    font-size: 0.8rem; /* Zmniejszona czcionka */
     color: var(--text-color-medium);
     margin-bottom: 0.2rem; /* Zmniejszony margines */
 }
 .chat-settings-dropdown input[type="text"] {
     width: 100%;
-    padding: 0.4rem; /* Zmniejszony padding */
+    padding: 0.3rem; /* Zmniejszony padding */
     border: 1px solid var(--border-color-medium);
     border-radius: 6px;
     margin-bottom: 0.2rem; /* Zmniejszony margines */
-    font-size: 0.85rem; /* Zmniejszona czcionka */
+    font-size: 0.8rem; /* Zmniejszona czcionka */
     background-color: var(--bg-color-search-input);
     color: var(--text-color-dark);
 }
@@ -627,8 +633,8 @@ body {
 }
 .chat-settings-dropdown button {
     width: auto;
-    padding: 0.4rem 0.8rem; /* Zmniejszony padding */
-    font-size: 0.85rem; /* Zmniejszona czcionka */
+    padding: 0.3rem 0.6rem; /* Zmniejszony padding */
+    font-size: 0.8rem; /* Zmniejszona czcionka */
     display: block;
     margin-top: 0.2rem; /* Zmniejszony margines */
     background: var(--primary-color);
@@ -645,19 +651,23 @@ body {
 /* Opcje kolorów/tła */
 .color-options, .background-options {
     display: flex;
-    flex-wrap: wrap; /* Sprawia, że elementy zawijają się do nowej linii */
-    gap: 0.3rem; /* Zmniejszony gap */
-    margin-top: 0.3rem; /* Zmniejszony margines */
+    flex-wrap: wrap; /* Upewnij się, że jest włączone zawijanie */
+    gap: 0.2rem; /* ZMODYFIKOWANE: Jeszcze bardziej zmniejszony odstęp */
+    margin-top: 0.2rem; /* Zmniejszony margines */
     justify-content: flex-start; /* Wyrównaj do lewej */
+    /* NOWE: Opcjonalnie, jeśli elementy nadal się nie zawijają, możesz dodać */
+    /* max-width: 100%; */
+    /* box-sizing: border-box; */
 }
 .color-box, .bg-box {
-    width: 25px; /* ZMODYFIKOWANE: Zmniejszona szerokość */
-    height: 25px; /* ZMODYFIKOWANE: Zmniejszona wysokość */
+    width: 22px; /* ZMODYFIKOWANE: Dalej zmniejszona szerokość */
+    height: 22px; /* ZMODYFIKOWANE: Dalej zmniejszona wysokość */
     border-radius: 50%;
     cursor: pointer;
     border: 2px solid transparent;
     transition: border-color 0.2s;
     flex-shrink: 0; /* Zapobiega kurczeniu się */
+    flex-basis: auto; /* Upewnij się, że nie ma stałej podstawy flex */
 }
 .color-box.active, .bg-box.active {
     border-color: var(--primary-color);
@@ -1550,14 +1560,4 @@ body.auth-body {
     margin-top: 1.5rem; /* Odstęp od formularza */
     font-size: 0.9rem; /* Rozmiar czcionki */
     color: var(--text-color-dark); /* Kolor tekstu */
-}
-
-.switch-link a {
-    color: var(--primary-color); /* Kolor główny dla linku */
-    text-decoration: none; /* Brak podkreślenia */
-    font-weight: bold; /* Pogrubiony tekst */
-    transition: color 0.2s; /* Płynne przejście koloru */
-}
-.switch-link a:hover {
-    color: var(--primary-color-dark); /* Ciemniejszy kolor na hover */
 }
