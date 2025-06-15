@@ -586,22 +586,20 @@ body {
 .chat-settings-dropdown {
     right: 0;
     top: 100%;
-    min-width: 200px; /* Zmniejszony min-width */
-    padding: 0.8rem; /* Zmniejszony padding */
+    width: 180px; /* ZMODYFIKOWANE: Ustawienie konkretnej szerokości */
+    padding: 0.6rem; /* Zmniejszony padding */
     border-top-right-radius: 0;
     z-index: 101;
-    /* NOWE: Ograniczenie maksymalnej szerokości dropdowna dla lepszego wyglądu */
-    max-width: 220px; /* Zmniejszony max-width, dostosuj w razie potrzeby */
     box-sizing: border-box; /* Ważne, aby padding nie powiększał szerokości */
 }
 .chat-settings-dropdown h3 {
-    font-size: 1.1rem;
-    margin-bottom: 0.6rem; /* Zmniejszony margines */
+    font-size: 1rem; /* Zmniejszona czcionka */
+    margin-bottom: 0.5rem; /* Zmniejszony margines */
     color: var(--text-color-dark);
 }
 .chat-settings-dropdown .setting-group {
-    margin-bottom: 0.6rem; /* Zmniejszony margines */
-    padding-bottom: 0.6rem; /* Zmniejszony padding */
+    margin-bottom: 0.5rem; /* Zmniejszony margines */
+    padding-bottom: 0.5rem; /* Zmniejszony padding */
     border-bottom: 1px solid var(--border-color-light);
 }
 .chat-settings-dropdown .setting-group:last-child {
@@ -610,17 +608,17 @@ body {
     padding-bottom: 0;
 }
 .chat-settings-dropdown h4 {
-    font-size: 0.9rem;
+    font-size: 0.85rem; /* Zmniejszona czcionka */
     color: var(--text-color-medium);
-    margin-bottom: 0.3rem; /* Zmniejszony margines */
+    margin-bottom: 0.2rem; /* Zmniejszony margines */
 }
 .chat-settings-dropdown input[type="text"] {
     width: 100%;
-    padding: 0.5rem;
+    padding: 0.4rem; /* Zmniejszony padding */
     border: 1px solid var(--border-color-medium);
     border-radius: 6px;
-    margin-bottom: 0.3rem; /* Zmniejszony margines */
-    font-size: 0.9rem;
+    margin-bottom: 0.2rem; /* Zmniejszony margines */
+    font-size: 0.85rem; /* Zmniejszona czcionka */
     background-color: var(--bg-color-search-input);
     color: var(--text-color-dark);
 }
@@ -629,10 +627,10 @@ body {
 }
 .chat-settings-dropdown button {
     width: auto;
-    padding: 0.5rem 1rem;
-    font-size: 0.9rem;
+    padding: 0.4rem 0.8rem; /* Zmniejszony padding */
+    font-size: 0.85rem; /* Zmniejszona czcionka */
     display: block;
-    margin-top: 0.3rem; /* Zmniejszony margines */
+    margin-top: 0.2rem; /* Zmniejszony margines */
     background: var(--primary-color);
     color: var(--text-color-light);
     border: none;
@@ -648,13 +646,13 @@ body {
 .color-options, .background-options {
     display: flex;
     flex-wrap: wrap; /* Sprawia, że elementy zawijają się do nowej linii */
-    gap: 0.4rem; /* Zmniejszony gap */
-    margin-top: 0.4rem; /* Zmniejszony margines */
+    gap: 0.3rem; /* Zmniejszony gap */
+    margin-top: 0.3rem; /* Zmniejszony margines */
     justify-content: flex-start; /* Wyrównaj do lewej */
 }
 .color-box, .bg-box {
-    width: 28px; /* Zmniejszona szerokość */
-    height: 28px; /* Zmniejszona wysokość */
+    width: 25px; /* ZMODYFIKOWANE: Zmniejszona szerokość */
+    height: 25px; /* ZMODYFIKOWANE: Zmniejszona wysokość */
     border-radius: 50%;
     cursor: pointer;
     border: 2px solid transparent;
