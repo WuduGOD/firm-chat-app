@@ -470,7 +470,6 @@ body {
     gap: 1rem;
     box-shadow: var(--shadow-light);
     position: relative;
-    flex-shrink: 0;
 }
 
 .back-button {
@@ -494,19 +493,12 @@ body {
     gap: 2px;
     font-weight: bold;
     flex-grow: 1;
-    min-width: 0;
-}
-.user-info .username {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .chat-header-actions.right-aligned {
     display: flex;
     gap: 0.8rem;
     margin-left: auto;
-    flex-shrink: 0;
 }
 .chat-header-actions button {
     background: none;
