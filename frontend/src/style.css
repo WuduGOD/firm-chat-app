@@ -471,7 +471,8 @@ body {
     flex-direction: column; /* KLUCZOWA ZMIANA: Upewnij się, że jest to kolumna flex */
     position: relative;
     background: var(--bg-color-chat-messages);
-    /* Usunięto height: 100%; - Polegamy na flex: 1 dla zarządzania wysokością */
+    /* NOWA ZMIANA: Upewnij się, że chat-area ma pełną wysokość, gdy jest aktywne */
+    height: 100%; /* Force it to take full height of its flex parent */
 }
 .chat-area.active {
     display: flex;
@@ -772,6 +773,8 @@ body {
     background: var(--bg-color-chat-messages);
     /* Usunięto: display: flex; i flex-direction: column; */
     min-height: 0; /* Ważne dla elastycznych kontenerów z overflow */
+    /* NOWA ZMIANA: Dodajemy height: 0; dla lepszego zachowania w flexboxie z overflow */
+    height: 0; /* Crucial for scrolling flex items */
 }
 
 /* Stylowanie wiadomości w zależności od motywu */
