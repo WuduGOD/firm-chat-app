@@ -586,27 +586,27 @@ body {
 .chat-settings-dropdown {
     right: 0;
     top: 100%;
-    /* ZMIANA: Zwiększamy szerokość, aby dać więcej miejsca na elementy siatki */
-    width: 360px; /* Zwiększona szerokość, aby pomieścić 4 kółka z większym gapem */
-    padding: 0.8rem; 
+    /* ZMIANA: Zmniejszamy szerokość, aby zminimalizować puste przestrzenie */
+    width: 250px; /* Nowa, bardziej kompaktowa szerokość */
+    padding: 0.6rem; /* Delikatne zmniejszenie paddingu */
     border-top-right-radius: 0;
     z-index: 101;
     box-sizing: border-box;
     display: flex;
     flex-direction: column; 
     /* ZMIANA: Zmniejszamy globalny odstęp między sekcjami w dropdownie */
-    gap: 0.3rem; /* JESZCZE MNIEJSZY odstęp */
-    overflow-y: hidden; /* ZMIANA: Usuwamy overflow-y, aby wymusić dopasowanie */
-    max-height: none; /* ZMIANA: Usuwamy max-height, aby pozwolić na naturalne dopasowanie */
+    gap: 0.2rem; /* Jeszcze mniejszy odstęp */
+    overflow-y: hidden; /* Upewniamy się, że nie ma scrolla */
+    max-height: none; /* Pozwalamy na naturalną wysokość */
 }
 .chat-settings-dropdown h3 {
-    font-size: 0.95rem; /* JESZCZE MNIEJSZA czcionka */
-    margin-bottom: 0.3rem; /* JESZCZE MNIEJSZY margines */
+    font-size: 0.9rem; /* Lekko mniejsza czcionka */
+    margin-bottom: 0.2rem; /* Zmniejszony margines */
     color: var(--text-color-dark);
 }
 .chat-settings-dropdown .setting-group {
-    margin-bottom: 0.3rem; /* JESZCZE MNIEJSZY margines */
-    padding-bottom: 0.3rem; /* JESZCZE MNIEJSZY padding */
+    margin-bottom: 0.2rem; /* Zmniejszony margines */
+    padding-bottom: 0.2rem; /* Zmniejszony padding */
     border-bottom: 1px solid var(--border-color-light);
 }
 .chat-settings-dropdown .setting-group:last-child {
@@ -615,17 +615,17 @@ body {
     padding-bottom: 0;
 }
 .chat-settings-dropdown h4 {
-    font-size: 0.85rem; /* JESZCZE MNIEJSZA czcionka */
+    font-size: 0.8rem; /* Lekko mniejsza czcionka */
     color: var(--text-color-medium);
-    margin-bottom: 0.1rem; /* JESZCZE MNIEJSZY margines */
+    margin-bottom: 0.1rem; /* Zmniejszony margines */
 }
 .chat-settings-dropdown input[type="text"] {
     width: 100%;
-    padding: 0.4rem; /* JESZCZE MNIEJSZY padding */ 
+    padding: 0.3rem; /* Zmniejszony padding */ 
     border: 1px solid var(--border-color-medium);
     border-radius: 6px;
-    margin-bottom: 0.2rem; /* JESZCZE MNIEJSZY margines */
-    font-size: 0.8rem; /* JESZCZE MNIEJSZA czcionka */
+    margin-bottom: 0.1rem; /* Zmniejszony margines */
+    font-size: 0.75rem; /* Zmniejszona czcionka */
     background-color: var(--bg-color-search-input);
     color: var(--text-color-dark);
 }
@@ -634,10 +634,10 @@ body {
 }
 .chat-settings-dropdown button {
     width: auto;
-    padding: 0.4rem 0.8rem; /* JESZCZE MNIEJSZY padding */ 
-    font-size: 0.85rem; /* JESZCZE MNIEJSZA czcionka */
+    padding: 0.3rem 0.6rem; /* Zmniejszony padding */ 
+    font-size: 0.8rem; /* Zmniejszona czcionka */
     display: block;
-    margin-top: 0.2rem; /* JESZCZE MNIEJSZY margines */
+    margin-top: 0.1rem; /* Zmniejszony margines */
     background: var(--primary-color);
     color: var(--text-color-light);
     border: none;
@@ -652,15 +652,17 @@ body {
 /* Opcje kolorów/tła */
 .color-options, .background-options {
     display: grid; 
-    grid-template-columns: repeat(4, minmax(0, 1fr)); 
-    gap: 8px; /* ZMIANA: Lekko zmniejszony odstęp między kółkami, aby zyskać miejsce */
-    margin: 0.2rem 0; /* ZMIANA: Zmniejszony margines */
-    width: 100%; 
+    /* KLUCZOWA ZMIANA: Używamy stałej szerokości dla każdej kolumny, aby zapewnić, że się zmieszczą */
+    grid-template-columns: repeat(4, 35px); /* 4 kolumny, każda po 35px szerokości */
+    gap: 5px; /* Zmniejszony odstęp między kółkami */
+    margin: 0.1rem 0; /* Zmniejszony margines */
+    width: auto; /* Pozwalamy gridowi na dopasowanie do zawartości, ale z ustalonymi kolumnami */
     box-sizing: border-box; 
+    justify-content: space-around; /* Rozłóż równomiernie kółka w linii */
 }
 .color-box, .bg-box {
-    width: 28px; /* ZMIANA: ZMNIEJSZONE KÓŁKA */
-    height: 28px; /* ZMIANA: ZMNIEJSZONE KÓŁKA */
+    width: 30px; /* ZMIANA: Zmniejszone kółka */
+    height: 30px; /* ZMIANA: Zmniejszone kółka */
     border-radius: 50%;
     cursor: pointer;
     border: 2px solid transparent;
