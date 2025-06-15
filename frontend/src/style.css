@@ -5,6 +5,10 @@
     box-sizing: border-box;
 }
 
+html, body { /* ZMODYFIKOWANE: Dodano html, aby zapewnić pełną wysokość */
+    height: 100%; /* Upewnij się, że html i body zajmują całą wysokość viewportu */
+}
+
 :root {
     /* Kolory bazowe */
     --primary-color: #6a5acd;
@@ -158,8 +162,8 @@ body {
 .container {
     flex: 1;
     display: flex;
-    overflow: hidden;
-    /* ZMODYFIKOWANE: Przywrócenie border-radius i box-shadow na kontenerze głównym */
+    /* ZMODYFIKOWANE: Usunięcie overflow: hidden; tutaj, aby kontenery wewnątrz mogły zarządzać własnym overflow */
+    /* overflow: hidden; */ 
     border-radius: 12px; /* Zaokrąglenie całego bloku */
     box-shadow: var(--shadow-medium); /* Cień całego bloku */
     align-items: stretch;
@@ -181,6 +185,8 @@ body {
     /* ZMODYFIKOWANE: Usunięcie zaokrągleń, będą one obsługiwane przez .container */
     border-top-left-radius: 0; 
     border-bottom-left-radius: 0; /* Choć border-radius na .container i tak to obejmie */
+    /* ZMODYFIKOWANE: Dodano height: 100% dla poprawnych obliczeń wysokości w flex container */
+    height: 100%;
 }
 
 /* Main Nav Icons (pionowy pasek ikon) */
@@ -249,7 +255,7 @@ body {
 }
 
 .nav-icon.add-new-button {
-    margin-top: auto;
+    margin-top: auto; /* KLUCZOWA ZMIANA: Popycha go na sam dół w kolumnie flex */
     margin-bottom: 0;
     background: var(--secondary-color);
     border-radius: 50%;
@@ -268,6 +274,8 @@ body {
     padding: 0.5rem 1rem 1rem 1rem;
     overflow-y: auto;
     flex-shrink: 1;
+    /* ZMODYFIKOWANE: Dodano min-height: 0; aby działało przewijanie */
+    min-height: 0; 
 }
 
 #sidebar.conversations-list h2 {
@@ -447,6 +455,8 @@ body {
     /* NOWE: Upewnienie się, że również lewy górny róg jest prosty, aby pasował do .container */
     border-top-left-radius: 0;
     flex-shrink: 0;
+    /* ZMODYFIKOWANE: Dodano height: 100% dla poprawnych obliczeń wysokości w flex container */
+    height: 100%;
 }
 
 .logo-screen {
@@ -1005,6 +1015,8 @@ body {
     border-bottom-right-radius: 0;
     flex-shrink: 0;
     display: flex !important; /* Użycie !important dla pewności, ale staraj się unikać, jeśli to możliwe */
+    /* ZMODYFIKOWANE: Dodano height: 100% dla poprawnych obliczeń wysokości w flex container */
+    height: 100%;
 }
 
 .right-sidebar h4 {
@@ -1019,6 +1031,10 @@ body {
     list-style: none;
     padding: 0;
     margin: 0;
+    /* ZMODYFIKOWANE: Dodano flex-grow i min-height dla przewijania */
+    flex-grow: 1;
+    min-height: 0;
+    overflow-y: auto;
 }
 
 .active-users-list li {
