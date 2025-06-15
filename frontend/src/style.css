@@ -773,6 +773,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 0.7rem;
+    min-height: 0; /* KLUCZOWA ZMIANA: Pozwala na prawidłowe przewijanie w flexboxie */
 }
 
 /* Stylowanie wiadomości w zależności od motywu */
@@ -986,9 +987,9 @@ body {
 
 /* PRAWY SIDEBAR (AKTYWNI UŻYTKOWNICY) */
 .right-sidebar-wrapper {
-    min-width: 250px; /* Zwiększono z 200px */
-    width: 25%;      /* Zwiększono z 20% */
-    max-width: 350px; /* Zwiększono z 300px */
+    min-width: 300px; /* Zwiększono z 250px */
+    width: 28%;      /* Zwiększono z 25% */
+    max-width: 400px; /* Zwiększono z 350px */
     border-left: 1px solid var(--border-color-light);
     background-color: var(--bg-color-sidebar-wrapper);
     display: flex; /* ZMODYFIKOWANE: Zawsze display: flex; na desktopie */
@@ -1344,9 +1345,9 @@ body.dark-mode .nav-icon::after {
     }
 
     .right-sidebar-wrapper {
-        min-width: 200px; /* Dostosowano dla mniejszych widoków desktopowych/tabletowych */
-        width: 22%;      /* Dostosowano dla mniejszych widoków desktopowych/tabletowych */
-        max-width: 300px; /* Dostosowano dla mniejszych widoków desktopowych/tabletowych */
+        min-width: 220px; /* Dostosowano dla mniejszych widoków desktopowych/tabletowych */
+        width: 25%;      /* Dostosowano dla mniejszych widoków desktopowych/tabletowych */
+        max-width: 350px; /* Dostosowano dla mniejszych widoków desktopowych/tabletowych */
         display: flex !important;
     }
 }
