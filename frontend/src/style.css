@@ -460,16 +460,17 @@ body {
 }
 
 .chat-header {
-    padding: 1rem 1.5rem;
+    padding: 0.8rem 1.2rem; /* Zmniejszony padding od krawędzi, ale wciąż widoczny */
     background: var(--bg-color-chat-header);
     border-bottom: 1px solid var(--border-color-light);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: nowrap;
-    gap: 1rem;
+    display: flex; /* Aktywuje Flexbox */
+    justify-content: space-between; /* Rozrzuca zawartość na skrajne strony */
+    align-items: center; /* Wyśrodkowuje elementy w pionie (nick/ikony w jednej linii) */
+    flex-wrap: nowrap; /* Zapobiega zawijaniu się elementów */
+    gap: 1rem; /* Odstęp między grupą użytkownika a grupą ikon */
     box-shadow: var(--shadow-light);
     position: relative;
+    flex-shrink: 0; /* Nagłówek nie będzie się kurczył */
 }
 
 .back-button {
@@ -488,18 +489,31 @@ body {
 
 .user-info {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
+    flex-direction: column; /* Ustawia nick i status jeden pod drugim */
+    align-items: flex-start; /* Wyrównuje tekst do lewej */
+    gap: 2px; /* Bardzo mały odstęp między nickiem a statusem */
     font-weight: bold;
-    flex-grow: 1;
+    flex-grow: 1; /* Pozwala temu elementowi na rozciąganie się i zajmowanie dostępnej przestrzeni */
+    min-width: 0; /* Umożliwia kurczenie się tekstu z elipsą, jeśli jest za długi */
+}
+
+.user-info .username {
+    white-space: nowrap; /* Zapobiega zawijaniu nazwy użytkownika */
+    overflow: hidden; /* Ukrywa wychodzący tekst */
+    text-overflow: ellipsis; /* Dodaje trzy kropki (...) dla uciętego tekstu */
+    /* Rozmiar fontu pozostaje, jak masz, np. 1.1rem, jeśli go ustawiasz */
+    /* font-size: 1.1rem; */
+    color: var(--text-color-dark);
 }
 
 .chat-header-actions.right-aligned {
     display: flex;
-    gap: 0.8rem;
-    margin-left: auto;
+    gap: 0.8rem; /* Odstęp między ikonami (kamera, telefon, menu) */
+    margin-left: auto; /* Wypycha tę grupę maksymalnie na prawą stronę */
+    flex-shrink: 1; /* Pozwala tej grupie się kurczyć, jeśli brakuje miejsca */
+    min-width: 0; /* Ważne, aby ikony nie "rozpychały" kontenera */
 }
+
 .chat-header-actions button {
     background: none;
     border: none;
@@ -508,8 +522,24 @@ body {
     color: var(--text-color-medium);
     transition: color 0.2s;
 }
+
+.chat-header-actions button {
+    background: none;
+    border: none;
+    font-size: 1.3rem; /* Rozmiar ikon, jak masz obecnie */
+    cursor: pointer;
+    color: var(--text-color-medium);
+    transition: color 0.2s;
+    display: flex; /* Pomaga w centrowaniu ikony w przycisku */
+    justify-content: center;
+    align-items: center;
+    padding: 0.4rem; /* Delikatny padding dla większego obszaru kliknięcia */
+    border-radius: 50%; /* Opcjonalnie: zaokrąglone tło po najechaniu */
+}
+
 .chat-header-actions button:hover {
     color: var(--primary-color);
+	background-color: var(--bg-color-search-input);
 }
 
 /* Dropdown ustawień czatu */
@@ -1276,6 +1306,18 @@ body.dark-mode .nav-icon::after {
 
     .back-button {
         display: block;
+    }
+	.chat-header {
+        padding: 0.6rem 0.8rem; /* Mniejszy padding na mobile */
+        gap: 0.6rem; /* Mniejszy odstęp między grupami na mobile */
+    }
+
+    .chat-header-actions.right-aligned {
+        gap: 0.5rem; /* Mniejszy odstęp między ikonami na mobile */
+    }
+
+    .chat-header-actions button {
+        padding: 0.3rem; /* Delikatnie mniejszy padding ikon na mobile */
     }
     .chat-header .user-info {
         flex-grow: 1;
