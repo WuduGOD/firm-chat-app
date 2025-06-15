@@ -587,9 +587,10 @@ body {
     right: 0;
     top: 100%;
     /* ZNACZĄCO ZWIĘKSZAMY SZEROKOŚĆ, aby zapewnić miejsce na poziome ułożenie 4 elementów */
-    width: 280px !important; /* Bardzo szerokie, żeby na pewno się zmieściło */
-    min-width: 280px !important;
-    max-width: 300px !important; /* Lekkie ograniczenie */
+    /* ZMIANA: Zamiast sztywnych wartości, ustawiamy max-content aby dopasowało się do zawartości */
+    width: max-content; /* Dopasuj szerokość do zawartości */
+    min-width: 250px; /* Minimalna szerokość, żeby nie było za wąsko */
+    max-width: 350px; /* Maksymalna szerokość, żeby nie było zbyt szeroko */
     padding: 0.8rem; /* Zwiększam padding, aby okienko nie było za ciasne */
     border-top-right-radius: 0;
     z-index: 101;
@@ -597,7 +598,8 @@ body {
     display: flex;
     flex-direction: column; /* Układ głównych sekcji (nagłówki, inputy) nadal pionowy */
     gap: 0.6rem; /* Odstęp między głównymi sekcjami */
-    overflow: visible; 
+    overflow-y: auto; /* ZMIANA: Dodajemy scrollbar, jeśli zawartość jest za duża */
+    max-height: 80vh; /* ZMIANA: Ograniczamy maksymalną wysokość, np. 80% wysokości widoku */
 }
 .chat-settings-dropdown h3 {
     font-size: 1.05rem; /* Lekko większa czcionka dla lepszej czytelności */
