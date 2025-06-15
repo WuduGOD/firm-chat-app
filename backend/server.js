@@ -28,46 +28,36 @@ pool.connect()
     .catch(err => {
         console.error("Failed to connect to PostgreSQL on startup:", err.message);
         // Ważne: Jeśli połączenie z bazą danych jest krytyczne, możesz tu zakończyć proces.
-        // process.exit(1); 
+        // process.exit(1);
     });
 
 
 export const wss = new WebSocketServer({ noServer: true });
 
-const clients = new Map(); // Map(ws, { username, room })
+const clients = new Map(); // Map(ws, { username (Supabase ID), room }) - 'username' here is the Supabase user ID
 
 wss.on('connection', (ws) => {
-    let userData = null; // Przechowuje { username, room } dla tego połączenia WS
+    let userData = null; // Stores { username, room } for this WS connection
 
     ws.on('message', async (message) => {
         try {
             const data = JSON.parse(message);
-            console.log('Odebrana wiadomość przez WebSocket:', data);
+            console.log('Received WebSocket message:', data);
 
             if (data.type === 'join') {
-                // Zapisujemy dane użytkownika dla tego połączenia WS
-                userData = { username: data.name, room: data.room };
+                // Save user data for this WS connection
+                userData = { username: data.name, room: data.room }; // data.name is currentUser.id from frontend
                 clients.set(ws, userData);
 
-                // 1. Zaktualizuj status w bazie danych na online
+                // 1. Update status in the database to online
                 await updateProfileStatus(userData.username, true);
-                console.log(`Użytkownik ${userData.username} dołączył do pokoju ${userData.room}. Zaktualizowano status w DB.`);
+                console.log(`User ${userData.username} joined room ${userData.room}. Database status updated to online.`);
 
-                // 2. Pobierz aktualne statusy WS od WSów lub z bazy (teraz z bazy)
-                const currentStatuses = await getOnlineStatusesFromDb(); // Pobierz z bazy
-                
-                // 3. Wysyłanie początkowych statusów do NOWO POŁĄCZONEGO klienta
-                currentStatuses.forEach(user => {
-                    if (user.id !== userData.username) { // Nie wysyłaj sobie własnego statusu
-                        ws.send(JSON.stringify({
-                            type: 'status',
-                            user: user.id,
-                            online: user.is_online,
-                        }));
-                    }
-                });
+                // 2. BROADCAST that this user is now online to ALL other connected clients
+                // This will trigger 'status' message on other clients, updating their active lists
+                broadcastUserStatus(userData.username, true);
 
-                // 4. Następnie wyślij historię wiadomości
+                // 3. Send message history to the newly connected client for their current room
                 const history = await getLastMessages(data.room);
                 ws.send(JSON.stringify({
                     type: 'history',
@@ -79,12 +69,9 @@ wss.on('connection', (ws) => {
                         room: data.room
                     })),
                 }));
-                console.log(`Wysłano historię do pokoju ${data.room}:`, history.length, 'wiadomości.');
+                console.log(`Sent history to room ${data.room}:`, history.length, 'messages.');
 
-                // 5. Rozgłoś, że ten użytkownik jest online
-                broadcastUserStatus(userData.username, true);
             }
-
             else if (data.type === 'message' && userData) {
                 const inserted_at = await saveMessage(userData.username, userData.room, data.text);
                 const msgObj = {
@@ -96,39 +83,45 @@ wss.on('connection', (ws) => {
                 };
                 broadcastToRoom(userData.room, JSON.stringify(msgObj));
             }
-            
-            // Nowa obsługa wiadomości typing
+
+            // Handle typing messages
             else if (data.type === 'typing' && userData) {
-                // Rozsyłaj wiadomość typing tylko do klientów w tym samym pokoju
+                // Broadcast the typing message only to clients in the same room, excluding sender
                 const typingMsg = {
                     type: 'typing',
                     username: userData.username,
-                    room: userData.room // upewnij się, że room jest przekazywany dalej
+                    room: userData.room
                 };
-                broadcastToRoom(userData.room, JSON.stringify(typingMsg)); 
+                // To avoid sending to sender, loop through clients explicitly
+                for (const [client, clientData] of clients.entries()) {
+                    if (client.readyState === WebSocket.OPEN && clientData.room === userData.room && client !== ws) {
+                        client.send(JSON.stringify(typingMsg));
+                    }
+                }
             }
 
-            // Opcjonalnie: Obsługa wiadomości 'leave' (z front-endu)
+            // Optional: Handle 'leave' message (from frontend)
             else if (data.type === 'leave' && userData) {
-                clients.delete(ws); // Usuń połączenie WS
-                // Nie ustawiaj na offline od razu, ponieważ on('close') to zrobi bardziej niezawodnie
-                console.log(`Użytkownik ${userData.username} zgłosił opuszczenie pokoju ${userData.room || 'nieznany'}.`);
+                // Clients are deleted on 'close' event for reliability, but we can log it.
+                console.log(`User ${userData.username} reported leaving room ${userData.room || 'unknown'}.`);
+                // No need to update status to offline here; 'onclose' handles it more reliably.
             }
 
-            // ***** KLUCZOWY DODATEK: Obsługa żądania 'get_active_users' *****
+            // ***** KEY ADDITION: Handle 'get_active_users' request *****
+            // This is triggered by the frontend on WebSocket 'onopen'
             else if (data.type === 'get_active_users' && userData) {
                 console.log(`Received request for active users from ${userData.username}.`);
-                const activeUsers = await getOnlineStatusesFromDb(); 
-                const formattedUsers = activeUsers.map(user => ({
+                const activeUsersFromDb = await getOnlineStatusesFromDb(); // Fetch from DB
+                const formattedUsers = activeUsersFromDb.map(user => ({
                     id: user.id,
-                    username: user.id, // Zakładamy, że ID jest nazwą użytkownika; dostosuj, jeśli masz inną kolumnę (np. user.name)
+                    username: user.username, // Use the 'username' (display name) from the profiles table
                     online: user.is_online
                 }));
                 ws.send(JSON.stringify({
                     type: 'active_users',
                     users: formattedUsers
                 }));
-                console.log(`Sent active users list to ${userData.username}.`);
+                console.log(`Sent active users list to ${userData.username}. List size: ${formattedUsers.length}`);
             }
 
             else {
@@ -136,31 +129,31 @@ wss.on('connection', (ws) => {
             }
 
         } catch (err) {
-            console.error('Błąd przy odbiorze wiadomości przez WebSocket:', err);
+            console.error('Error receiving WebSocket message:', err);
         }
     });
 
     ws.on('close', async () => {
         if (userData) {
             clients.delete(ws);
-            // Zaktualizuj status w bazie danych na offline
+            // Update status in the database to offline
             await updateProfileStatus(userData.username, false);
-            console.log(`Użytkownik ${userData.username} rozłączył się. Zaktualizowano status w DB.`);
+            console.log(`User ${userData.username} disconnected. Database status updated to offline.`);
 
-            // Rozgłoś, że ten użytkownik jest offline
+            // Broadcast that this user is offline to all remaining connected clients
             broadcastUserStatus(userData.username, false);
         }
     });
 
     ws.on('error', (error) => {
-        console.error('Błąd WebSocket dla klienta:', error);
-        // Obsługa błędów, która może również prowadzić do rozłączenia
+        console.error('WebSocket error for client:', error);
+        // Error handling that might also lead to disconnection
     });
 });
 
-// ---------------------- Funkcje pomocnicze --------------------------
+// ---------------------- Helper functions --------------------------
 
-// Funkcja do aktualizacji statusu użytkownika w bazie danych
+// Function to update user status in the database
 async function updateProfileStatus(userId, isOnline) {
     const client = await pool.connect();
     try {
@@ -170,73 +163,81 @@ async function updateProfileStatus(userId, isOnline) {
             WHERE id = $2;
         `;
         await client.query(query, [isOnline, userId]);
+        console.log(`DB: User ${userId} status updated to ${isOnline ? 'online' : 'offline'}`);
     } catch (err) {
-        console.error(`Błąd aktualizacji statusu użytkownika ${userId} w DB:`, err);
+        console.error(`DB Error: Failed to update user status for ${userId}:`, err);
     } finally {
         client.release();
     }
 }
 
-// Funkcja do pobierania statusów online z bazy danych
+// Function to get online statuses from the database
 async function getOnlineStatusesFromDb() {
     const client = await pool.connect();
     try {
         const query = `
-            SELECT id, is_online, username, email -- Dodaj kolumny, których potrzebujesz na froncie do wyświetlenia nazwy
+            SELECT id, is_online, username, email
             FROM public.profiles
             WHERE is_online = TRUE;
         `;
         const res = await client.query(query);
+        console.log(`DB: Fetched ${res.rows.length} online users.`);
         return res.rows;
     } catch (err) {
-        console.error('Błąd pobierania statusów online z DB:', err);
+        console.error('DB Error: Failed to get online statuses:', err);
         return [];
     } finally {
         client.release();
     }
 }
 
+// Broadcasts message to all clients in a specific room
 function broadcastToRoom(room, msg) {
     for (const [client, data] of clients.entries()) {
         if (client.readyState === WebSocket.OPEN && data.room === room) {
             client.send(msg);
         }
     }
+    console.log(`Broadcasted message to room ${room}.`);
 }
 
+// Broadcasts user status change to ALL connected clients
 function broadcastUserStatus(userId, isOnline) {
     const msg = JSON.stringify({
         type: 'status',
-        user: userId, // Używamy userId
+        user: userId, // Use userId (Supabase ID)
         online: isOnline,
     });
 
-    // Emitujemy status do wszystkich połączonych klientów
+    // Send status to all connected clients
     for (const client of clients.keys()) {
         if (client.readyState === WebSocket.OPEN) {
             client.send(msg);
         }
     }
+    console.log(`Broadcasted user ${userId} status: ${isOnline ? 'online' : 'offline'}.`);
 }
 
 async function saveMessage(username, room, text) {
     const query = 'INSERT INTO messages (username, room, text) VALUES ($1, $2, $3) RETURNING inserted_at';
     try {
         const res = await pool.query(query, [username, room, text]);
+        console.log(`DB: Message saved for user ${username} in room ${room}.`);
         return res.rows[0].inserted_at;
     } catch (err) {
-        console.error('Błąd zapisu wiadomości:', err);
+        console.error('DB Error: Failed to save message:', err);
     }
-    return new Date(); // Zwróć aktualną datę, nawet jeśli zapis się nie powiedzie
+    return new Date(); // Return current date even if save fails
 }
 
 async function getLastMessages(room, limit = 50) {
     const query = 'SELECT username, text, inserted_at FROM messages WHERE room = $1 ORDER BY inserted_at DESC LIMIT $2';
     try {
         const res = await pool.query(query, [room, limit]);
+        console.log(`DB: Fetched ${res.rows.length} messages for room ${room}.`);
         return res.rows.reverse();
     } catch (err) {
-        console.error('Błąd pobierania historii:', err);
+        console.error('DB Error: Failed to get message history:', err);
         return [];
     }
 }
