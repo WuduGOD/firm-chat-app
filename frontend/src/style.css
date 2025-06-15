@@ -587,9 +587,9 @@ body {
     right: 0;
     top: 100%;
     /* ZNACZĄCO ZWIĘKSZAMY SZEROKOŚĆ, aby zapewnić miejsce na poziome ułożenie 4 elementów */
-    width: 220px; /* Teraz powinno być wystarczająco szeroko */
-    min-width: 220px;
-    max-width: 250px; /* Zwiększam max-width dla większej elastyczności */
+    width: 250px; /* Zwiększona szerokość */
+    min-width: 250px;
+    max-width: 280px; /* Zwiększam max-width dla większej elastyczności */
     padding: 0.8rem; /* Zwiększam padding, aby okienko nie było za ciasne */
     border-top-right-radius: 0;
     z-index: 101;
@@ -651,36 +651,23 @@ body {
 
 /* Opcje kolorów/tła */
 .color-options, .background-options {
-    display: flex;
-    flex-direction: row; /* KLUCZOWE: Wymuszamy układ poziomy */
-    flex-wrap: wrap; /* KLUCZOWE: Pozwalamy na zawijanie, jeśli zabraknie miejsca */
-    /* ZASTĘPUJEMY 'gap' TRADYCYJNYM MARGINESEM DLA LEPSZEJ KONTROLI */
-    margin: 0.4rem 0; /* Mały margines góra/dół */
+    display: grid; /* Używamy grid zamiast flex, aby być bardziej precyzyjnym */
+    grid-template-columns: repeat(auto-fit, minmax(32px, 1fr)); /* 4 kolumny, każda min 32px */
+    gap: 8px; /* Odstęp między elementami siatki */
+    margin: 0.4rem 0; 
     justify-content: flex-start; /* Wyrównanie do lewej */
-    width: 100%; /* Zapewniamy, że kontener wypełnia dostępną szerokość */
+    width: 100%; 
     box-sizing: border-box; 
 }
 .color-box, .bg-box {
-    width: 32px; /* Zwiększam rozmiar kółek, żeby były bardziej widoczne */
+    width: 32px; 
     height: 32px;
     border-radius: 50%;
     cursor: pointer;
     border: 2px solid transparent;
     transition: border-color 0.2s;
-    flex-shrink: 0; 
-    flex-grow: 0; 
-    margin-right: 8px; /* ODSTĘP MIĘDZY KÓŁKAMI - WYNOSI 8px */
-    margin-bottom: 8px; /* ODSTĘP PIONOWY PRZY ZAWINIĘCIU - WYNOSI 8px */
+    /* Usunięto flex-shrink, flex-grow, margin-right, margin-bottom */
 }
-.color-box:last-child, .bg-box:last-child {
-    margin-right: 0; /* Usuwamy margines z ostatniego elementu w rzędzie */
-}
-/* Selektor dla ostatniego elementu w rzędzie, jeśli znamy ich liczbę (np. 4) */
-.color-options .color-box:nth-child(4n),
-.background-options .bg-box:nth-child(4n) {
-    margin-right: 0; /* Resetuj margin-right dla 4. elementu w rzędzie, jeśli chcemy 4 na linię */
-}
-
 
 .color-box.active, .bg-box.active {
     border-color: var(--primary-color);
