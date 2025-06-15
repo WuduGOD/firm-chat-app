@@ -587,7 +587,7 @@ body {
     right: 0;
     top: 100%;
     /* ZMIANA: Zwiększamy szerokość, aby dać więcej miejsca na elementy siatki */
-    width: 320px; /* Zwiększona szerokość */
+    width: 350px; /* Zwiększona szerokość, aby pomieścić 4 kółka z większym gapem */
     padding: 0.8rem; 
     border-top-right-radius: 0;
     z-index: 101;
@@ -652,15 +652,15 @@ body {
 /* Opcje kolorów/tła */
 .color-options, .background-options {
     display: grid; 
-    grid-template-columns: repeat(4, 1fr); /* 4 równe kolumny, aby zmieściły 4 kółka */
-    gap: 6px; /* ZMIANA: Lekko zmniejszony odstęp między kółkami */
-    margin: 0.3rem 0; /* Zmniejszony margines */
+    grid-template-columns: repeat(4, minmax(0, 1fr)); /* ZMIANA: Użycie minmax(0, 1fr) dla lepszego rozłożenia */
+    gap: 10px; /* ZMIANA: Lekko zwiększony odstęp między kółkami, aby były bardziej oddalone */
+    margin: 0.3rem 0; 
     width: 100%; 
     box-sizing: border-box; 
 }
 .color-box, .bg-box {
-    width: 30px; /* ZMIANA: Lekko zmniejszone kółka */
-    height: 30px; /* ZMIANA: Lekko zmniejszone kółka */
+    width: 32px; /* ZMIANA: Przywrócone kółka do rozmiaru 32px, bo mamy więcej miejsca */
+    height: 32px; /* ZMIANA: Przywrócone kółka do rozmiaru 32px */
     border-radius: 50%;
     cursor: pointer;
     border: 2px solid transparent;
