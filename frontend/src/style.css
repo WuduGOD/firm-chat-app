@@ -5,7 +5,7 @@
     box-sizing: border-box;
 }
 
-html, body { /* ZMODYFIKOWANE: Dodano html, aby zapewnić pełną wysokość */
+html, body { /* ZMODYFIKOWANE: Dodano html, aby zapewnić pełną wysokość dla dziedziczenia */
     height: 100%; /* Upewnij się, że html i body zajmują całą wysokość viewportu */
 }
 
@@ -62,7 +62,7 @@ body {
     font-family: 'Segoe UI', sans-serif;
     background: var(--bg-color-light);
     color: var(--text-color-dark);
-    height: 100vh;
+    height: 100vh; /* Zapewnia, że body zajmuje całą wysokość viewportu */
     display: flex;
     flex-direction: column;
     overflow: hidden; /* Zapobiega przewijaniu się całej strony */
@@ -77,8 +77,7 @@ body {
     align-items: center;
     border-bottom: 1px solid var(--border-color-medium);
     box-shadow: var(--shadow-light);
-    flex-shrink: 0;
-    /* usunięto height: var(--header-height); - lepiej pozwolić, by padding i zawartość określały wysokość */
+    flex-shrink: 0; /* KLUCZOWE: Nagłówek nie powinien się kurczyć */
 }
 
 .app-title {
@@ -160,33 +159,29 @@ body {
 
 /* Układ główny - KONTEJNER DLA 3 KOLUMN */
 .container {
-    flex: 1;
-    display: flex;
-    /* ZMODYFIKOWANE: Usunięcie overflow: hidden; tutaj, aby kontenery wewnątrz mogły zarządzać własnym overflow */
-    /* overflow: hidden; */ 
+    flex: 1; /* KLUCZOWE: Zajmuje całą pozostałą wysokość pionowo */
+    display: flex; /* Kontener wierszowy dla trzech głównych kolumn */
+    align-items: stretch; /* Domyślnie rozciąga dzieci w pionie */
+    overflow: hidden; /* KLUCZOWE: Zapobiega przewijaniu całego kontenera, przewijanie wewnątrz kolumn */
     border-radius: 12px; /* Zaokrąglenie całego bloku */
     box-shadow: var(--shadow-medium); /* Cień całego bloku */
-    align-items: stretch;
     width: 100%; /* Upewnia się, że kontener zajmuje całą dostępną szerokość */
     margin: 0; /* Usuwa marginesy, aby przylegał do krawędzi okna */
-    /* Usunięto: max-width i auto-margins, aby rozciągał się na całą szerokość */
 }
 
 /* Sidebar Wrapper (lewy pasek - rozmowy + ikony) */
 .sidebar-wrapper {
-    display: flex;
-    flex-direction: row;
+    display: flex; /* KLUCZOWE: Włącz Flexbox dla wewnętrznego układu */
+    flex-direction: row; /* KLUCZOWE: Ikony i lista obok siebie */
+    height: 100%; /* KLUCZOWE: Rozciąga się na pełną wysokość .container */
     min-width: 280px; /* Minimalna szerokość, aby nie był zbyt mały */
-    flex: 0 0 25%; /* ZMODYFIKOWANE: Zajmuje około 25% szerokości, ale nie rośnie i nie kurczy się swobodnie */
+    flex: 0 0 25%; /* Zajmuje około 25% szerokości, ale nie rośnie i nie kurczy się swobodnie */
     max-width: 350px; /* Maksymalna szerokość, aby nie był zbyt szeroki */
     background: var(--bg-color-sidebar-wrapper);
     border-right: 1px solid var(--border-color-light);
     flex-shrink: 0; /* Zapobiega kurczeniu się poniżej flex-basis */
-    /* ZMODYFIKOWANE: Usunięcie zaokrągleń, będą one obsługiwane przez .container */
     border-top-left-radius: 0; 
     border-bottom-left-radius: 0; /* Choć border-radius na .container i tak to obejmie */
-    /* ZMODYFIKOWANE: Dodano height: 100% dla poprawnych obliczeń wysokości w flex container */
-    height: 100%;
 }
 
 /* Main Nav Icons (pionowy pasek ikon) */
@@ -194,15 +189,15 @@ body {
     width: 60px;
     background: var(--primary-color);
     display: flex;
-    flex-direction: column;
+    flex-direction: column; /* KLUCZOWE: Aby plusik był na dole */
     align-items: center;
     padding-top: 1rem;
     padding-bottom: 0.5rem;
-    /* ZMODYFIKOWANE: Usunięcie zaokrągleń, będą one obsługiwane przez .container na poziomie rodzica */
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-    flex-shrink: 0;
+    flex-shrink: 0; /* KLUCZOWE: Nie powinien się kurczyć */
+    height: 100%; /* KLUCZOWE: Rozciąga się na pełną wysokość sidebar-wrapper */
     gap: 0.8rem;
+    border-top-left-radius: 0; /* Przeniesiono */
+    border-bottom-left-radius: 0; /* Przeniesiono */
 }
 
 .nav-icon {
@@ -255,7 +250,7 @@ body {
 }
 
 .nav-icon.add-new-button {
-    margin-top: auto; /* KLUCZOWA ZMIANA: Popycha go na sam dół w kolumnie flex */
+    margin-top: auto; /* KLUCZOWE: Popycha ten element na sam dół dostępnej przestrzeni */
     margin-bottom: 0;
     background: var(--secondary-color);
     border-radius: 50%;
@@ -269,13 +264,12 @@ body {
 
 /* Sidebar (lista konwersacji) */
 #sidebar.conversations-list {
-    flex-grow: 1;
+    flex-grow: 1; /* KLUCZOWE: Zajmuje pozostałą szerokość */
     background: var(--bg-color-sidebar);
     padding: 0.5rem 1rem 1rem 1rem;
-    overflow-y: auto;
+    overflow-y: auto; /* KLUCZOWE: Włącza przewijanie pionowe */
     flex-shrink: 1;
-    /* ZMODYFIKOWANE: Dodano min-height: 0; aby działało przewijanie */
-    min-height: 0; 
+    min-height: 0; /* KLUCZOWE: Pozwala się skurczyć poniżej zawartości, aby overflow działało */
 }
 
 #sidebar.conversations-list h2 {
@@ -444,23 +438,20 @@ body {
 
 /* Chat Area Wrapper - nowy kontener dla logo-screen i chat-area */
 .chat-area-wrapper {
-    flex-grow: 1; /* Pozwala mu zająć całą dostępną przestrzeń */
+    flex-grow: 1; /* Pozwala mu zająć całą dostępną przestrzeń w poziomie */
     display: flex;
-    flex-direction: column;
+    flex-direction: column; /* KLUCZOWE: Ułożenie elementów pionowo w czacie */
+    height: 100%; /* KLUCZOWE: Rozciąga się na pełną wysokość .container */
     position: relative;
     background: var(--bg-color-lighter);
-    /* ZMODYFIKOWANE: Usunięcie zaokrągleń, będą one obsługiwane przez .container */
     border-top-right-radius: 0; 
     border-bottom-right-radius: 0;
-    /* NOWE: Upewnienie się, że również lewy górny róg jest prosty, aby pasował do .container */
     border-top-left-radius: 0;
     flex-shrink: 0;
-    /* ZMODYFIKOWANE: Dodano height: 100% dla poprawnych obliczeń wysokości w flex container */
-    height: 100%;
 }
 
 .logo-screen {
-    flex: 1;
+    flex: 1; /* Zajmuje całą dostępną przestrzeń, gdy czat jest ukryty */
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -476,13 +467,12 @@ body {
 }
 
 .chat-area {
-    flex: 1;
+    flex: 1; /* KLUCZOWE: Zajmuje całą dostępną przestrzeń, gdy jest aktywny */
     display: none; /* Domyślnie ukryty, pokazywany przez JS */
-    flex-direction: column; /* KLUCZOWA ZMIANA: Upewnij się, że jest to kolumna flex */
+    flex-direction: column; /* KLUCZOWE: Upewnij się, że jest to kolumna flex */
     position: relative;
     background: var(--bg-color-chat-messages);
-    /* NOWA ZMIANA: Upewnij się, że chat-area ma pełną wysokość, gdy jest aktywne */
-    height: 100%; /* Force it to take full height of its flex parent */
+    height: 100%; /* KLUCZOWE: Zapewnia, że chat-area ma pełną wysokość swojego rodzica */
 }
 .chat-area.active {
     display: flex;
@@ -500,10 +490,9 @@ body {
     gap: 1rem; /* Pozostawiamy gap dla odstępów wewnętrznych */
     box-shadow: var(--shadow-light);
     position: relative;
-    flex-shrink: 0; /* KLUCZOWA ZMIANA: Zapobiega kurczeniu się nagłówka */
+    flex-shrink: 0; /* KLUCZOWE: Nagłówek nie powinien się kurczyć */
     z-index: 50;
-    /* NOWE: Minimalna wysokość nagłówka dla lepszego wyglądu */
-    min-height: 60px; /* Dostosuj wg potrzeb */
+    min-height: 60px; /* Minimalna wysokość nagłówka dla lepszego wyglądu */
 }
 
 /* ZMODYFIKOWANE: Przycisk wstecz */
@@ -514,7 +503,6 @@ body {
     font-size: 1.3rem; /* Rozmiar ikony */
     color: var(--text-color-medium);
     cursor: pointer;
-    /* margin-right: 0.5rem; */ /* Ten margines będzie teraz obsługiwany przez gap w user-info-wrapper */
     padding: 0.4rem; /* Delikatny padding dla obszaru kliknięcia */
     border-radius: 50%; /* Zaokrąglony kształt */
     transition: color 0.2s, background-color 0.2s;
@@ -549,9 +537,7 @@ body {
     flex-direction: column; /* Nick i status jeden pod drugim */
     align-items: flex-start; /* Wyrównuje tekst do lewej */
     gap: 2px;
-    /* font-weight: bold; */ /* Przeniesiono do #chatUserName */
     min-width: 0; /* Umożliwia ellipsis */
-    /* flex-grow: 1; */ /* Niepotrzebne tutaj, flex-grow jest na user-info-wrapper */
 }
 
 /* ZMODYFIKOWANE: Poprawka selektora dla nazwy użytkownika (przez ID) */
@@ -595,9 +581,9 @@ body {
 
 /* Dropdown ustawień czatu */
 .chat-settings-dropdown {
+    position: absolute;
     right: 0;
     top: 100%;
-    /* KLUCZOWA ZMIANA: Szerokość 400px i dodanie !important */
     width: 400px !important; 
     padding: 0.8rem; 
     border-top-right-radius: 0;
@@ -608,9 +594,6 @@ body {
     gap: 0.6rem;
     overflow-y: hidden;
     max-height: none; 
-
-    /* DODANE: Tymczasowa wizualna weryfikacja rozmiaru */
-    /* border: 2px dashed red; */ 
 }
 .chat-settings-dropdown h3 {
     font-size: 1rem; 
@@ -664,10 +647,9 @@ body {
 
 /* Opcje kolorów/tła */
 .color-options, .background-options {
-    display: grid !important; /* Wymuszamy grid layout */
-    /* KLUCZOWA ZMIANA: Rozłożenie na 4 kolumny o równej szerokości, z lekkim zapasem */
+    display: grid !important; 
     grid-template-columns: repeat(4, 1fr) !important; 
-    gap: 20px; /* Zwiększony odstęp między kółkami */
+    gap: 20px; 
     margin: 0.4rem 0; 
     width: auto; 
     box-sizing: border-box;
@@ -699,7 +681,7 @@ body {
 .bg-box.dark-bg { background-color: #333; }
 .bg-box.pattern-bg { background-image: url('data:image/svg+xml;utf8,<svg width="10" height="10" viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"><circle cx="2.5" cy="2.5" r="1.5" fill="%23e0e0e0"/></svg>'); background-size: 10px 10px; }
 
-/* Animacja ładowania (typing indicator) - ZMODYFIKOWANE POZYCJONOWANIE */
+/* Animacja ładowania (typing indicator) */
 .typing-indicator {
     display: flex;
     align-items: center;
@@ -734,7 +716,7 @@ body {
     40% { transform: scale(1.0); }
 }
 
-/* ZMODYFIKOWANE: Prawidłowe pozycjonowanie dla statusu pisania w nagłówku */
+/* Prawidłowe pozycjonowanie dla statusu pisania w nagłówku */
 .typing-status {
     position: absolute;
     bottom: 0; /* Przykleja do dolnej krawędzi nagłówka */
@@ -755,7 +737,6 @@ body {
 .typing-status.visible {
     opacity: 1; /* Pokaż, gdy jest aktywny */
 }
-/* Możesz dodać animację kropek do tego statusu, jeśli chcesz */
 .typing-status .dot {
     display: inline-block;
     width: 6px;
@@ -777,14 +758,12 @@ body {
 
 
 .messages {
-    flex: 1;
+    flex: 1; /* KLUCZOWE: Rozciąga się, aby zająć dostępną przestrzeń */
     padding: 1.5rem;
-    overflow-y: auto; /* KLUCZOWA ZMIANA: Przewijanie tylko pionowo */
+    overflow-y: auto; /* KLUCZOWE: Włącza przewijanie pionowe */
     background: var(--bg-color-chat-messages);
-    /* Usunięto: display: flex; i flex-direction: column; */
-    min-height: 0; /* Ważne dla elastycznych kontenerów z overflow */
-    /* NOWA ZMIANA: Dodajemy height: 0; dla lepszego zachowania w flexboxie z overflow */
-    height: 0; /* Crucial for scrolling flex items */
+    min-height: 0; /* KLUCZOWE: Pozwala się skurczyć, aby overflow działało */
+    height: 0; /* KLUCZOWE: Dodane, aby pomóc przeglądarce w obliczeniach wysokości */
 }
 
 /* Stylowanie wiadomości w zależności od motywu */
@@ -829,7 +808,7 @@ body {
     width: fit-content;
     min-width: 60px;
     color: var(--text-color-dark);
-    margin-bottom: 0.7rem; /* KLUCZOWA ZMIANA: Aby zachować odstępy między wiadomościami */
+    margin-bottom: 0.7rem; /* KLUCZOWE: Aby zachować odstępy między wiadomościami */
 }
 .message:last-child {
     margin-bottom: 0; /* Usuwa margines z ostatniej wiadomości */
@@ -859,14 +838,12 @@ body {
 .message.sent::before {
     right: -8px;
     border-left-color: var(--primary-color);
-    /* ZMODYFIKOWANE: Zaokrąglanie rogu dymka wiadomości wysłanych */
     border-top-right-radius: 0;
 }
 
 .message.received::before {
     left: -8px;
     border-right-color: var(--bg-color-message-received);
-    /* ZMODYFIKOWANE: Zaokrąglanie rogu dymka wiadomości odebranych */
     border-top-left-radius: 0;
 }
 
@@ -946,7 +923,7 @@ body {
     border-top: 1px solid var(--border-color-light);
     align-items: center;
     box-shadow: 0 -2px 5px rgba(0,0,0,0.03);
-    flex-shrink: 0; /* KLUCZOWA ZMIANA: Zapobiega kurczeniu się stopki */
+    flex-shrink: 0; /* KLUCZOWE: Stopka nie powinna się kurczyć */
 }
 
 .chat-footer input {
@@ -1007,16 +984,15 @@ body {
     max-width: 400px; /* Zwiększono z 350px */
     border-left: 1px solid var(--border-color-light);
     background-color: var(--bg-color-sidebar-wrapper);
-    display: flex; /* ZMODYFIKOWANE: Zawsze display: flex; na desktopie */
-    flex-direction: column;
+    display: flex; /* KLUCZOWE: Włącz Flexbox dla wewnętrznego układu */
+    flex-direction: column; /* KLUCZOWE: Ułożenie elementów pionowo */
+    height: 100%; /* KLUCZOWE: Rozciąga się na pełną wysokość .container */
     padding: 1rem;
     overflow-y: auto;
     border-top-right-radius: 0;
     border-bottom-right-radius: 0;
     flex-shrink: 0;
     display: flex !important; /* Użycie !important dla pewności, ale staraj się unikać, jeśli to możliwe */
-    /* ZMODYFIKOWANE: Dodano height: 100% dla poprawnych obliczeń wysokości w flex container */
-    height: 100%;
 }
 
 .right-sidebar h4 {
@@ -1031,10 +1007,9 @@ body {
     list-style: none;
     padding: 0;
     margin: 0;
-    /* ZMODYFIKOWANE: Dodano flex-grow i min-height dla przewijania */
-    flex-grow: 1;
-    min-height: 0;
-    overflow-y: auto;
+    flex-grow: 1; /* KLUCZOWE: Zajmuje pozostałą przestrzeń w pionie */
+    min-height: 0; /* KLUCZOWE: Pozwala się skurczyć, aby overflow działało */
+    overflow-y: auto; /* KLUCZOWE: Włącza przewijanie pionowe */
 }
 
 .active-users-list li {
@@ -1345,19 +1320,16 @@ body.dark-mode .nav-icon::after {
 @media (max-width: 1024px) {
     .container {
         margin: 0.5rem;
-        /* ZMODYFIKOWANE: Przywrócenie zaokrągleń i cienia dla całego kontenera, gdy nie jest pełna szerokość */
         border-radius: 12px;
         box-shadow: var(--shadow-medium);
     }
-    /* ZMODYFIKOWANE: Usunięcie zaokrągleń z wewnętrznych elementów */
     .sidebar-wrapper, .chat-area-wrapper, .right-sidebar-wrapper {
-        border-radius: 0 !important; /* Ważne: usuń wszelkie zaokrąglenia, aby kontener nadrzędny je zdefiniował */
+        border-radius: 0 !important; 
     }
     .main-nav-icons {
         border-top-left-radius: 0;
         border-bottom-left-radius: 0;
     }
-
 
     .sidebar-wrapper {
         min-width: 250px;
@@ -1366,15 +1338,14 @@ body.dark-mode .nav-icon::after {
     }
 
     .right-sidebar-wrapper {
-        min-width: 220px; /* Dostosowano dla mniejszych widoków desktopowych/tabletowych */
-        width: 25%;      /* Dostosowano dla mniejszych widoków desktopowych/tabletowych */
-        max-width: 350px; /* Dostosowano dla mniejszych widoków desktopowych/tabletowych */
+        min-width: 220px; 
+        width: 25%;      
+        max-width: 350px; 
         display: flex !important;
     }
 }
 
 @media (max-width: 768px) {
-    /* ZMODYFIKOWANE: Nagłówek główny na mobile */
     .main-header {
         padding: 0.8rem 1rem;
     }
@@ -1386,51 +1357,54 @@ body.dark-mode .nav-icon::after {
     }
 
     .container {
-        flex-direction: column; /* Ułóż elementy pionowo */
-        margin: 0; /* ZMODYFIKOWANE: Usuń marginesy dla pełnej szerokości */
-        border-radius: 0; /* ZMODYFIKOWANE: Usuń zaokrąglenia */
-        box-shadow: none; /* ZMODYFIKOWANE: Usuń cień */
+        flex-direction: column; /* KLUCZOWE: Ułóż kolumny pionowo na mobile */
+        margin: 0; 
+        border-radius: 0; 
+        box-shadow: none; 
     }
 
     .sidebar-wrapper {
-        min-width: unset; /* ZMODYFIKOWANE: Usuń minimalną szerokość */
+        min-width: unset; 
         width: 100%; /* Pasek boczny na całą szerokość */
-        flex-direction: column;
-        height: auto;
-        border-right: none; /* ZMODYFIKOWANE: Usuń prawą ramkę */
+        flex-direction: column; /* KLUCZOWE: Aby ikony i lista były jeden pod drugim */
+        height: auto; /* KLUCZOWE: Pozwala na auto-wysokość */
+        border-right: none; 
     }
 
     .main-nav-icons {
-        flex-direction: row; /* Ikonki nawigacyjne w poziomie */
+        flex-direction: row; /* KLUCZOWE: Ikonki nawigacyjne w poziomie na mobile */
         padding: 0.5rem;
         gap: 1rem;
         border-right: none;
         border-bottom: 1px solid var(--primary-color-light);
         width: 100%;
-        justify-content: space-around; /* Rozłóż równomiernie */
-        border-top-left-radius: 0; /* ZMODYFIKOWANE: Usuń zaokrąglenia */
-        border-bottom-left-radius: 0; /* ZMODYFIKOWANE: Usuń zaokrąglenia */
+        justify-content: space-around; 
+        border-top-left-radius: 0; 
+        border-bottom-left-radius: 0; 
+        height: auto; /* KLUCZOWE: Pozwala na auto-wysokość */
     }
     .main-nav-icons .add-new-button {
-        margin-top: 0; /* Usuń auto-margines */
+        margin-top: 0; /* Usuń auto-margines na mobile, bo układ jest wierszowy */
     }
 
     #sidebar {
-        width: 100%; /* Lista konwersacji na całą szerokość */
+        width: 100%; 
         border-right: none;
         border-bottom: 1px solid var(--border-color-light);
         padding-top: 0.5rem;
+        flex-grow: 1; /* KLUCZOWE: Wypełnia dostępną przestrzeń na mobile */
+        min-height: 0; /* KLUCZOWE: Umożliwia przewijanie na mobile */
     }
 
     .chat-area {
         display: none; /* Domyślnie ukryj obszar czatu na mobile */
         /* ZMODYFIKOWANE: Obliczenie wysokości na mobile (header + nav-icons + footer) */
         height: calc(100vh - (1.6rem + 2rem) - (50px + 1rem) - (1rem + 3rem)); /* Przybliżone wartości */
-        border-top-right-radius: 0; /* ZMODYFIKOWANE: Usuń zaokrąglenia */
-        border-bottom-right-radius: 0; /* ZMODYFIKOWANE: Usuń zaokrąglenia */
+        border-top-right-radius: 0; 
+        border-bottom-right-radius: 0; 
     }
 
-    /* ZMODYFIKOWANE: Pokaż przycisk wstecz na mobile */
+    /* Pokaż przycisk wstecz na mobile */
     .chat-header .back-button {
         display: block;
     }
@@ -1449,7 +1423,7 @@ body.dark-mode .nav-icon::after {
     }
 
     .right-sidebar-wrapper {
-        display: none !important; /* ZMODYFIKOWANE: Ukryj prawy pasek boczny na mobile, wymuś to */
+        display: none !important; /* Ukryj prawy pasek boczny na mobile */
     }
 
     /* Dostosowanie wielkości czcionek i paddingów dla mobile */
@@ -1464,7 +1438,6 @@ body.dark-mode .nav-icon::after {
         padding: 0.6rem 1rem 0.6rem 2.5rem;
         font-size: 0.85rem;
     }
-    /* contact-item nie ma w HTML, używamy .contact */
     .contact {
         padding: 0.6rem;
     }
@@ -1489,108 +1462,108 @@ body.dark-mode .nav-icon::after {
 }
 
 body.auth-body {
-    display: flex; /* Użyj flexbox do centrowania zawartości */
-    justify-content: center; /* Centruj poziomo */
-    align-items: center; /* Centruj pionowo */
-    min-height: 100vh; /* Upewnij się, że body ma przynajmniej wysokość widokową */
-    background: var(--bg-color-light); /* Jasne tło dla całej strony, zdefiniowane w :root */
-    font-family: 'Segoe UI', sans-serif; /* Spójna czcionka */
-    margin: 0; /* Usuń domyślny margines body */
-    box-sizing: border-box; /* Model pudełkowy dla łatwiejszego rozmiarowania */
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    min-height: 100vh; 
+    background: var(--bg-color-light); 
+    font-family: 'Segoe UI', sans-serif; 
+    margin: 0; 
+    box-sizing: border-box; 
 }
 
 /* Kontener główny formularza (Login/Rejestracja) */
 .auth-container {
-    background: var(--bg-color-container); /* Białe tło dla kontenera formularza */
-    padding: 2.5rem; /* Wewnętrzne odstępy */
-    border-radius: 12px; /* Zaokrąglone rogi */
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1); /* Delikatny cień */
-    text-align: center; /* Centruj tekst wewnątrz kontenera */
-    width: 100%; /* Pełna szerokość */
-    max-width: 400px; /* Ogranicz maksymalną szerokość dla lepszego wyglądu */
-    margin: 20px; /* Margines, aby nie przylegało do krawędzi na mniejszych ekranach */
+    background: var(--bg-color-container); 
+    padding: 2.5rem; 
+    border-radius: 12px; 
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1); 
+    text-align: center; 
+    width: 100%; 
+    max-width: 400px; 
+    margin: 20px; 
 }
 
 /* Nagłówki h2 w kontenerach autoryzacji */
 .auth-container h2 {
-    font-size: 1.8rem; /* Rozmiar czcionki */
-    color: var(--primary-color); /* Kolor główny aplikacji */
-    margin-bottom: 1.5rem; /* Odstęp pod nagłówkiem */
+    font-size: 1.8rem; 
+    color: var(--primary-color); 
+    margin-bottom: 1.5rem; 
 }
 
 /* Formularz autoryzacji (Login/Rejestracja) */
 .auth-form {
-    display: flex; /* Użyj flexbox dla elementów formularza */
-    flex-direction: column; /* Ułóż elementy pionowo */
-    gap: 1rem; /* Odstęp między elementami formularza */
+    display: flex; 
+    flex-direction: column; 
+    gap: 1rem; 
 }
 
 /* Pola input w formularzach autoryzacji */
 .auth-form input {
-    padding: 0.8rem; /* Wewnętrzne odstępy */
-    border-radius: 8px; /* Zaokrąglone rogi */
-    border: 1px solid var(--border-color-medium); /* Kolor ramki */
-    background: var(--bg-color-input); /* Jasne tło inputu */
-    font-size: 0.95rem; /* Rozmiar czcionki */
-    color: var(--text-color-dark); /* Kolor tekstu */
-    outline: none; /* Usuń domyślny focus outline */
-    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out; /* Płynne przejścia */
+    padding: 0.8rem; 
+    border-radius: 8px; 
+    border: 1px solid var(--border-color-medium); 
+    background: var(--bg-color-input); 
+    font-size: 0.95rem; 
+    color: var(--text-color-dark); 
+    outline: none; 
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out; 
 }
 .auth-form input:focus {
-    border-color: var(--primary-color); /* Kolor ramki na focusie */
-    box-shadow: 0 0 0 2px rgba(106, 90, 205, 0.2); /* Delikatny cień na focusie */
+    border-color: var(--primary-color); 
+    box-shadow: 0 0 0 2px rgba(106, 90, 205, 0.2); 
 }
 .auth-form input::placeholder {
-    color: var(--text-color-medium); /* Kolor placeholder'a */
+    color: var(--text-color-medium); 
 }
 
 /* Wrapper dla pola hasła (dla ikonki oka) */
 .password-wrapper {
-    position: relative; /* Ważne dla pozycjonowania ikonki oka */
+    position: relative; 
 }
 
 /* Styl ikonki oka w polu hasła */
 .password-wrapper .eye {
-    position: absolute; /* Pozycjonowanie absolutne względem password-wrapper */
-    right: 12px; /* Odległość od prawej krawędzi */
-    top: 50%; /* W połowie wysokości */
-    transform: translateY(-50%); /* Korekta pionowa do środka */
-    cursor: pointer; /* Kursor wskazujący na klikalność */
-    color: var(--text-color-medium); /* Kolor ikonki */
-    font-size: 1.1rem; /* Rozmiar ikonki */
-    transition: color 0.2s; /* Płynne przejście koloru na hover */
+    position: absolute; 
+    right: 12px; 
+    top: 50%; 
+    transform: translateY(-50%); 
+    cursor: pointer; 
+    color: var(--text-color-medium); 
+    font-size: 1.1rem; 
+    transition: color 0.2s; 
 }
 .password-wrapper .eye:hover {
-    color: var(--text-color-dark); /* Ciemniejszy kolor na hover */
+    color: var(--text-color-dark); 
 }
 
 /* Przycisk logowania/rejestracji */
 .login-btn {
-    padding: 0.8rem; /* Wewnętrzne odstępy */
-    background: var(--primary-color); /* Kolor główny aplikacji */
-    border: none; /* Brak ramki */
-    border-radius: 8px; /* Zaokrąglone rogi */
-    color: var(--text-color-light); /* Biały tekst */
-    font-weight: bold; /* Pogrubiony tekst */
-    cursor: pointer; /* Kursor wskazujący na klikalność */
-    transition: background 0.3s ease-in-out; /* Płynne przejście tła */
+    padding: 0.8rem; 
+    background: var(--primary-color); 
+    border: none; 
+    border-radius: 8px; 
+    color: var(--text-color-light); 
+    font-weight: bold; 
+    cursor: pointer; 
+    transition: background 0.3s ease-in-out; 
 }
 .login-btn:hover {
-    background: var(--primary-color-dark); /* Ciemniejszy kolor na hover */
+    background: var(--primary-color-dark); 
 }
 
 /* Link do przełączania między logowaniem a rejestracją */
 .switch-link {
-    margin-top: 1.5rem; /* Odstęp od formularza */
-    font-size: 0.9rem; /* Rozmiar czcionki */
-    color: var(--text-color-dark); /* Kolor tekstu */
+    margin-top: 1.5rem; 
+    font-size: 0.9rem; 
+    color: var(--text-color-dark); 
 }
 .switch-link a {
-    color: var(--primary-color); /* Kolor główny dla linku */
-    text-decoration: none; /* Brak podkreślenia */
-    font-weight: bold; /* Pogrubiony tekst */
-    transition: color 0.2s; /* Płynne przejście koloru */
+    color: var(--primary-color); 
+    text-decoration: none; 
+    font-weight: bold; 
+    transition: color 0.2s; 
 }
 .switch-link a:hover {
-    color: var(--primary-color-dark); /* Ciemniejszy kolor na hover */
+    color: var(--primary-color-dark); 
 }
