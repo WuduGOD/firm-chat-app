@@ -376,7 +376,7 @@ function addMessageToChat(msg) {
 
         if (previewEl && timeEl) {
             const senderName = String(msg.username) === String(currentUser.id) ? "Ja" : (getUserLabelById(msg.username) || msg.username);
-            previewEl.textContent = `${senderName}: ${msg.text}`; // Użyj textContent, nie innerHTML dla bezpieczeństwa
+            previewText = `${senderName}: ${msg.text}`; // Użyj textContent, nie innerHTML dla bezpieczeństwa
 
             const lastMessageTime = new Date(msg.inserted_at);
             timeEl.textContent = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
@@ -427,12 +427,21 @@ function addMessageToChat(msg) {
  * @param {boolean} isOnline - True if the user is online, false otherwise.
  */
 function updateUserStatusIndicator(userId, isOnline) {
+    console.log(`[Status Update Debug] Function called for userId: ${userId}, isOnline: ${isOnline}`);
+
     // Update status in the active chat header
-    if (currentChatUser && String(currentChatUser.id) === String(userId) && userStatusSpan) {
-        userStatusSpan.textContent = isOnline ? 'Online' : 'Offline';
-        userStatusSpan.classList.toggle('online', isOnline);
-        userStatusSpan.classList.toggle('offline', !isOnline);
-        console.log(`Status for ${getUserLabelById(userId)} changed to: ${isOnline ? 'Online' : 'Offline'}`);
+    if (currentChatUser && userStatusSpan) {
+        console.log(`[Status Update Debug] currentChatUser.id: ${currentChatUser.id}, userId from WS: ${userId}`);
+        if (String(currentChatUser.id) === String(userId)) {
+            userStatusSpan.textContent = isOnline ? 'Online' : 'Offline';
+            userStatusSpan.classList.toggle('online', isOnline);
+            userStatusSpan.classList.toggle('offline', !isOnline);
+            console.log(`[Status Update Debug] Chat header status updated for ${getUserLabelById(userId)} to: ${isOnline ? 'Online' : 'Offline'}`);
+        } else {
+            console.log(`[Status Update Debug] userId ${userId} does not match currentChatUser.id ${currentChatUser.id}. Header not updated.`);
+        }
+    } else {
+        console.log("[Status Update Debug] currentChatUser or userStatusSpan is null/undefined. Cannot update header.");
     }
 
     // Update status in the active users list (right sidebar)
