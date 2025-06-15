@@ -215,6 +215,7 @@ async function loadContacts() {
             <div class="contact-info">
                 <span class="contact-name">${getUserLabelById(user.id) || user.email}</span>
                 <span class="last-message">${previewText}</span>
+				<span class="contact-status ${user.is_online ? 'online' : 'offline'}">${user.is_online ? 'Online' : 'Offline'}</span>
             </div>
             <div class="contact-meta">
                 <span class="message-time">${timeText}</span>
@@ -474,7 +475,21 @@ function initWebSocket() {
                 }
                 break;
             case 'status':
+                console.log(`Received status update for user ${data.user}: ${data.online ? 'Online' : 'Offline'}`);
+                // 1. Aktualizuj status w nagłówku aktywnego czatu (jeśli ten użytkownik jest aktywny)
                 updateUserStatusIndicator(data.user, data.online);
+
+                // 2. Znajdź i zaktualizuj status na LIŚCIE KONTAKTÓW (dla wszystkich użytkowników)
+                const contactItemToUpdate = contactsListEl.querySelector(`.contact[data-convo-id="${data.user}"]`);
+                if (contactItemToUpdate) {
+                    const statusSpan = contactItemToUpdate.querySelector('.contact-status');
+                    if (statusSpan) {
+                        statusSpan.textContent = data.online ? 'Online' : 'Offline';
+                        statusSpan.classList.toggle('online', data.online);
+                        statusSpan.classList.toggle('offline', !data.online);
+                        console.log(`Updated status on contact list for user ${data.user}.`);
+                    }
+                }
                 break;
             default:
                 console.warn("Unknown WS message type:", data.type, data);
@@ -651,6 +666,19 @@ async function initializeApp() {
     }
     currentUser = session.user;
     console.log('Current authenticated user:', currentUser.id);
+	
+	    // Dodatkowa obsługa statusu offline przy zamykaniu zakładki/przeglądarki
+    window.addEventListener('beforeunload', () => {
+        if (socket && socket.readyState === WebSocket.OPEN && currentUser) {
+            console.log(`Sending 'leave' signal for user ${currentUser.id} before unload.`);
+            // Wysyłamy wiadomość leave
+            socket.send(JSON.stringify({
+                type: 'leave',
+                name: currentUser.id,
+                room: currentRoom || 'global' // Użyj 'global' lub pustego stringa, jeśli nie ma aktywnego pokoju
+            }));
+        }
+    });
 
     // 4. Ładowanie profili i kontaktów
     await loadAllProfiles();
