@@ -468,10 +468,10 @@ body {
 .chat-area {
     flex: 1;
     display: none; /* Domyślnie ukryty, pokazywany przez JS */
-    flex-direction: column;
-    /* Usunięto height: 100%; - Polegamy na flex: 1 dla zarządzania wysokością */
+    flex-direction: column; /* KLUCZOWA ZMIANA: Upewnij się, że jest to kolumna flex */
     position: relative;
     background: var(--bg-color-chat-messages);
+    /* Usunięto height: 100%; - Polegamy na flex: 1 dla zarządzania wysokością */
 }
 .chat-area.active {
     display: flex;
@@ -489,7 +489,7 @@ body {
     gap: 1rem; /* Pozostawiamy gap dla odstępów wewnętrznych */
     box-shadow: var(--shadow-light);
     position: relative;
-    flex-shrink: 0;
+    flex-shrink: 0; /* KLUCZOWA ZMIANA: Zapobiega kurczeniu się nagłówka */
     z-index: 50;
     /* NOWE: Minimalna wysokość nagłówka dla lepszego wyglądu */
     min-height: 60px; /* Dostosuj wg potrzeb */
@@ -931,7 +931,7 @@ body {
     border-top: 1px solid var(--border-color-light);
     align-items: center;
     box-shadow: 0 -2px 5px rgba(0,0,0,0.03);
-    flex-shrink: 0;
+    flex-shrink: 0; /* KLUCZOWA ZMIANA: Zapobiega kurczeniu się stopki */
 }
 
 .chat-footer input {
