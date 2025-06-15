@@ -586,27 +586,27 @@ body {
 .chat-settings-dropdown {
     right: 0;
     top: 100%;
-    /* ZMIANA: Zwiększona szerokość dropdownu */
-    width: 300px; 
-    padding: 0.6rem; /* Minimalny padding */
+    /* KLUCZOWA ZMIANA: Maksymalna szerokość do 400px, zgodnie z życzeniem */
+    width: 400px;
+    padding: 0.8rem; /* Większy padding, aby było więcej przestrzeni */
     border-top-right-radius: 0;
     z-index: 101;
     box-sizing: border-box;
     display: flex;
-    flex-direction: column; 
-    /* ZMIANA: Mniejszy odstęp między sekcjami */
-    gap: 0.4rem; 
-    overflow-y: hidden; /* Upewniamy się, że nie ma scrolla */
+    flex-direction: column;
+    /* ZMIANA: Zwiększony odstęp między sekcjami dla lepszej czytelności */
+    gap: 0.6rem;
+    overflow-y: hidden; /* Upewniamy się, że nie ma scrolla w tym menu */
     max-height: none; /* Pozwalamy na naturalną wysokość */
 }
 .chat-settings-dropdown h3 {
-    font-size: 0.95rem; /* Mniejsza czcionka, ale czytelna */
-    margin-bottom: 0.2rem; 
+    font-size: 1rem; /* Czytelna czcionka */
+    margin-bottom: 0.3rem;
     color: var(--text-color-dark);
 }
 .chat-settings-dropdown .setting-group {
-    margin-bottom: 0.2rem; 
-    padding-bottom: 0.2rem; 
+    margin-bottom: 0.3rem;
+    padding-bottom: 0.3rem;
     border-bottom: 1px solid var(--border-color-light);
 }
 .chat-settings-dropdown .setting-group:last-child {
@@ -615,17 +615,17 @@ body {
     padding-bottom: 0;
 }
 .chat-settings-dropdown h4 {
-    font-size: 0.85rem; 
+    font-size: 0.9rem;
     color: var(--text-color-medium);
-    margin-bottom: 0.1rem; 
+    margin-bottom: 0.15rem; /* Odpowiedni margines */
 }
 .chat-settings-dropdown input[type="text"] {
     width: 100%;
-    padding: 0.4rem; 
+    padding: 0.5rem; /* Większy padding */
     border: 1px solid var(--border-color-medium);
     border-radius: 6px;
-    margin-bottom: 0.2rem; 
-    font-size: 0.85rem; 
+    margin-bottom: 0.25rem;
+    font-size: 0.9rem; /* Większa czcionka */
     background-color: var(--bg-color-search-input);
     color: var(--text-color-dark);
 }
@@ -634,10 +634,10 @@ body {
 }
 .chat-settings-dropdown button {
     width: auto;
-    padding: 0.4rem 0.8rem; 
-    font-size: 0.9rem; 
+    padding: 0.5rem 1rem;
+    font-size: 0.95rem; /* Większa czcionka */
     display: block;
-    margin-top: 0.2rem; 
+    margin-top: 0.25rem;
     background: var(--primary-color);
     color: var(--text-color-light);
     border: none;
@@ -651,22 +651,24 @@ body {
 
 /* Opcje kolorów/tła */
 .color-options, .background-options {
-    display: grid; 
-    /* KLUCZOWA ZMIANA: Stała szerokość kolumn dla kółek */
-    grid-template-columns: repeat(4, 45px); /* 4 kolumny, każda po 45px szerokości */
-    gap: 15px; /* ZWIĘKSZONY ODSTĘP między kółkami, aby lepiej wyglądały */
-    margin: 0.3rem 0; /* Odstęp od góry/dołu */
+    display: grid;
+    /* KLUCZOWA ZMIANA: Dynamiczne kolumny z minimalną szerokością i maksymalną elastycznością */
+    grid-template-columns: repeat(4, minmax(60px, 1fr)); /* 4 kolumny, minimum 60px, rozciągają się elastycznie */
+    gap: 15px; /* Odstęp między kółkami */
+    margin: 0.4rem 0; /* Odstęp od góry/dołu */
     width: auto; /* Pozwalamy gridowi na dopasowanie do zawartości */
-    box-sizing: border-box; 
-    justify-content: space-around; /* Równomierne rozłożenie kółek w linii */
+    box-sizing: border-box;
+    justify-content: space-between; /* Rozłożenie kółek na całej dostępnej szerokości */
+    align-items: center; /* Wyśrodkowanie w pionie */
 }
 .color-box, .bg-box {
-    width: 40px; /* ZWIĘKSZONE KÓŁKA */
-    height: 40px; /* ZWIĘKSZONE KÓŁKA */
+    width: 45px; /* ZWIĘKSZONE KÓŁKA (większe niż ostatnio) */
+    height: 45px; /* ZWIĘKSZONE KÓŁKA */
     border-radius: 50%;
     cursor: pointer;
-    border: 2px solid transparent;
+    border: 3px solid transparent; /* Nieco grubsza ramka */
     transition: border-color 0.2s;
+    flex-shrink: 0; /* Zapobiega kurczeniu się */
 }
 
 .color-box.active, .bg-box.active {
@@ -1346,7 +1348,7 @@ body.dark-mode .nav-icon::after {
         width: 20%;
         max-width: 300px;
         /* Upewnia się, że prawy sidebar jest widoczny, jeśli jest to widok 3-kolumnowy */
-        display: flex !important; 
+        display: flex !important;
     }
 }
 
