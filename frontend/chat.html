@@ -4,23 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Komunikator</title>
-    <!-- Link do Font Awesome dla ikon -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <!-- Link do czcionki Inter z Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- ZAKTUALIZOWANA ŚCIEŻKA DO PLIKU CSS -->
     <link rel="stylesheet" href="./src/style.css">
 </head>
 <body>
     <div class="container">
-        <!-- Główny nagłówek -->
         <header class="main-header">
             <div class="header-left">
                 <button id="menuButton" class="menu-button" title="Menu"><i class="fas fa-bars"></i></button>
                 <h1>Komunikator</h1>
             </div>
             <div class="header-right">
-                <!-- Dropdown menu -->
                 <div id="dropdownMenu" class="dropdown-menu hidden">
                     <button id="themeToggle"><i class="fas fa-moon"></i> Tryb ciemny</button>
                     <button id="logoutButton"><i class="fas fa-sign-out-alt"></i> Wyloguj</button>
@@ -28,28 +23,23 @@
             </div>
         </header>
 
-        <!-- Sidebar i główna zawartość czatu -->
         <div class="main-content-wrapper">
-            <!-- Lewy Sidebar (Kontakty) -->
             <aside class="sidebar-wrapper visible">
                 <div class="sidebar" id="sidebar">
                     <div class="search-bar">
                         <input type="text" id="searchInput" placeholder="Szukaj kontaktów...">
                     </div>
                     <ul class="contacts-list" id="contactsList">
-                        <!-- Kontakty będą ładowane dynamicznie tutaj -->
-                    </ul>
+                        </ul>
                 </div>
             </aside>
 
-            <!-- Główna nawigacja z ikonami (Dodano) -->
             <div class="main-nav-icons" id="mainNavIcons">
                 <button class="nav-icon active" title="Czaty"><i class="fas fa-comments"></i></button>
                 <button class="nav-icon" title="Połączenia"><i class="fas fa-phone"></i></button>
                 <button class="nav-icon" title="Ustawienia"><i class="fas fa-cog"></i></button>
             </div>
 
-            <!-- Główny obszar czatu -->
             <main class="chat-area" id="chatArea">
                 <div id="logoScreen" class="logo-screen">
                     <img src="https://placehold.co/200x200/cccccc/ffffff?text=Komunikator" alt="Logo Komunikatora">
@@ -105,8 +95,7 @@
                         <span class="dot"></span>
                     </div>
                     <div class="message-container" id="messageContainer">
-                        <!-- Wiadomości będą ładowane dynamicznie tutaj -->
-                    </div>
+                        </div>
                     <div class="chat-footer" id="chatFooterMain">
                         <button id="attachButton" class="attach-button" title="Załącz plik"><i class="fas fa-paperclip"></i></button>
                         <input type="text" id="messageInput" placeholder="Napisz wiadomość...">
@@ -116,16 +105,12 @@
                 </div>
             </main>
 
-            <!-- Prawy Sidebar (Aktywni Użytkownicy) -->
             <aside class="right-sidebar-wrapper">
                 <div class="right-sidebar" id="rightSidebar">
                     <h4>Aktywni użytkownicy</h4>
-                    <!-- Kontener dla listy i komunikatu -->
                     <div id="activeUsersContent">
                         <ul class="active-users-list" id="activeUsersList">
-                            <!-- Aktywni użytkownicy będą ładowani dynamicznie tutaj -->
-                        </ul>
-                        <!-- Komunikat o braku aktywnych użytkowników - początkowo ukryty -->
+                            </ul>
                         <div id="noActiveUsersText" style="display: none; text-align: center; color: var(--text-color-medium); font-size: 0.9em; margin-top: 10px;">Brak aktywnych użytkowników.</div>
                     </div>
                 </div>
@@ -133,7 +118,6 @@
         </div>
     </div>
     
-    <!-- Moduły JavaScript -->
     <script type="module" src="./src/supabaseClient.js"></script>
     <script type="module" src="./src/profiles.js"></script>
     <script type="module" src="./src/chat-entry.js"></script>
