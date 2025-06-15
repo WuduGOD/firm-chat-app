@@ -339,7 +339,7 @@ function addMessageToChat(msg) {
 
         if (previewEl && timeEl) {
             const senderName = String(msg.username) === String(currentUser.id) ? "Ja" : (getUserLabelById(msg.username) || msg.username);
-            previewEl.textContent = `${senderName}: ${msg.text}`;
+            previewText = `${senderName}: ${msg.text}`;
 
             const lastMessageTime = new Date(msg.inserted_at || Date.now());
             timeEl.textContent = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
@@ -404,6 +404,11 @@ function updateUserStatusIndicator(userId, isOnline) {
         } else {
              // Jeśli użytkownika nie ma jeszcze na liście aktywnych, dodaj go
             if (isOnline) {
+                // Dodaj tylko jeśli nie jest to bieżący użytkownik
+                if (String(userId) === String(currentUser.id)) {
+                    console.log(`Filtering out current user ${getUserLabelById(userId)} from active users list.`);
+                    return;
+                }
                 const li = document.createElement('li');
                 li.classList.add('active-user-item');
                 li.dataset.userId = userId;
@@ -468,7 +473,7 @@ function initWebSocket() {
             }));
             console.log(`Sent 'online' status for user ${currentUser.id}`);
         }
-        loadActiveUsers(); // Załaduj aktywnych użytkowników po połączeniu
+        // Usunięto: loadActiveUsers() jest teraz wywoływane bezpośrednio w initializeApp()
     };
 
     socket.onmessage = (event) => {
@@ -565,7 +570,10 @@ function displayActiveUsers(activeUsersData) {
     }
 
     activeUsersData.forEach(user => {
-        if (String(user.id) === String(currentUser.id)) return; // Nie wyświetlaj samego siebie
+        if (String(user.id) === String(currentUser.id)) {
+            console.log(`Filtering out current user ${getUserLabelById(user.id)} from active users list.`);
+            return; // Nie wyświetlaj samego siebie
+        }
 
         const li = document.createElement('li');
         li.classList.add('active-user-item');
@@ -780,22 +788,58 @@ async function initializeApp() {
     // 4. Ładowanie profili i kontaktów
     await loadAllProfiles();
     await loadContacts();
-    // loadActiveUsers() jest wywoływane w onopen WebSocket
-
+    
     // 5. Inicjalizacja WebSocket
     initWebSocket();
 
-    // 6. Ustawienie obsługi wysyłania wiadomości
+    // 6. NOWO DODANE: Załaduj aktywnych użytkowników od razu po inicjalizacji WebSocket
+    // Poczekaj chwilę, aby WebSocket miał szansę się otworzyć
+    // lub wywołaj loadActiveUsers w onopen WebSocket (co już jest)
+    // Bezpośrednie wywołanie tutaj zapewni, że żądanie zostanie wysłane
+    // niezależnie od tego, czy użytkownik kliknie w czat.
+    // Upewnij się, że loadActiveUsers() jest wywoływane dopiero po `socket.onopen`
+    // dla pierwszej inicjalizacji, a potem dla każdej zmiany statusu.
+    // Usuwamy loadActiveUsers z socket.onopen i zostawiamy tylko to jedno wywołanie po
+    // zainicjalizowaniu socketa.
+    socket.onopen = () => { // Sprawdź, czy ta sekcja jest wyżej, czy tu musi być powtórka
+      console.log('WebSocket połączony');
+      reconnectAttempts = 0;
+      if (currentRoom && currentUser) {
+          socket.send(JSON.stringify({
+              type: 'join',
+              name: currentUser.id,
+              room: currentRoom,
+          }));
+          console.log(`Joined room ${currentRoom} on WebSocket open.`);
+      } else {
+          console.warn("WebSocket opened but currentRoom or currentUser is not set. Cannot join room yet.");
+      }
+      if (currentUser) {
+          socket.send(JSON.stringify({
+              type: 'status',
+              user: currentUser.id,
+              online: true
+          }));
+          console.log(`Sent 'online' status for user ${currentUser.id}`);
+      }
+      // WAŻNE: To wywołanie powinno być tylko tutaj w onopen,
+      // aby poprawnie zażądać listy od backendu po udanym połączeniu.
+      // Dalsze aktualizacje będą pochodzić z wiadomości 'active_users'.
+      loadActiveUsers(); 
+    };
+
+
+    // 7. Ustawienie obsługi wysyłania wiadomości
     setupSendMessage();
 
-    // 7. Ustawienie domyślnego stanu UI po załadowaniu
+    // 8. Ustawienie domyślnego stanu UI po załadowaniu
     logoScreen.classList.remove('hidden');
     chatArea.classList.remove('active');
 
     messageInput.disabled = true;
     sendButton.disabled = true;
 
-    // 8. Dodatkowe event listenery dla całej aplikacji
+    // 9. Dodatkowe event listenery dla całej aplikacji
     backButton.addEventListener('click', () => {
         console.log('Back button clicked (UI)');
         resetChatView();
