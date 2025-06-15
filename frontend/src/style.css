@@ -10,6 +10,7 @@
     --primary-color: #6a5acd;
     --primary-color-dark: #5a4bbf;
     --secondary-color: #4caf50; /* dla przycisku dodawania */
+    --secondary-color-dark: #388e3c; /* DODANE: Ciemniejszy odcień dla secondary-color */
 
     /* Kolory tekstu */
     --text-color-dark: #333;
@@ -41,6 +42,10 @@
     /* Nowe zmienne dla trybu autoryzacji */
     --bg-color-container: #ffffff; /* Tło kontenera logowania */
     --bg-color-input: #f1f2f3; /* Tło inputów logowania */
+
+    /* DODANE: zmienne dla border-radius */
+    --border-radius-default: 8px;
+    --border-radius-message: 15px;
 }
 
 body {
@@ -148,7 +153,6 @@ body {
     display: flex;
     overflow: hidden;
     border-radius: 12px;
-    /* Zmniejszony górny margines, reszta bez zmian */
     margin: 0.5rem 1rem 1rem 1rem;
     box-shadow: var(--shadow-medium);
 }
@@ -172,12 +176,13 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    /* DOPASOWANIE: Zmniejszenie paddingu i gapu dla mniejszych przerw między ikonami */
-    padding-top: 1rem; /* Zmniejszono z 1.5rem */
-    padding-bottom: 0.5rem; /* Zmniejszono z 1rem */
+    padding-top: 1rem;
+    padding-bottom: 0.5rem;
     border-top-left-radius: 12px;
     border-bottom-left-radius: 12px;
     flex-shrink: 0;
+    /* ZMODYFIKOWANE: Dodany gap dla odstępów między ikonami */
+    gap: 1rem;
 }
 
 .nav-icon {
@@ -243,28 +248,25 @@ body {
     background: var(--secondary-color-dark);
 }
 
-/* Sidebar (lista konwersacji) - teraz zajmuje resztę miejsca w .sidebar-wrapper */
+/* Sidebar (lista konwersacji) */
 #sidebar.conversations-list {
     flex-grow: 1;
     background: var(--bg-color-sidebar);
-    /* DOPASOWANIE: Zmniejszenie paddingu góra/dół dla mniejszych przerw */
-    padding: 0.5rem 1rem 1rem 1rem; /* Zmniejszono górny padding z 1rem na 0.5rem */
+    padding: 0.5rem 1rem 1rem 1rem;
     overflow-y: auto;
     flex-shrink: 1;
 }
 
 #sidebar.conversations-list h2 {
-    /* DOPASOWANIE: Zmniejszenie marginesu i paddingu nagłówka dla mniejszej przerwy */
-    margin-bottom: 0.5rem; /* Zmniejszono z 1rem */
+    margin-bottom: 0.5rem;
     font-size: 1.3rem;
     color: var(--text-color-dark);
-    padding-top: 0.5rem; /* Zmniejszono z 1rem */
+    padding-top: 0.5rem;
 }
 
 .search-bar {
     position: relative;
-    /* DOPASOWANIE: Zmniejszenie marginesu dolnego dla mniejszej przerwy */
-    margin-bottom: 0.5rem; /* Zmniejszono z 1rem */
+    margin-bottom: 0.5rem;
 }
 .search-bar input {
     width: 100%;
@@ -459,59 +461,68 @@ body {
     display: flex;
 }
 
+/* --- ZMODYFIKOWANE SEKCJE DLA NAGŁÓWKA CZATU --- */
 .chat-header {
-    padding: 0.8rem 1.2rem; /* Zmniejszony padding od krawędzi, ale wciąż widoczny */
+    padding: 0.8rem 1.2rem;
     background: var(--bg-color-chat-header);
     border-bottom: 1px solid var(--border-color-light);
-    display: flex; /* Aktywuje Flexbox */
-    justify-content: space-between; /* Rozrzuca zawartość na skrajne strony */
-    align-items: center; /* Wyśrodkowuje elementy w pionie (nick/ikony w jednej linii) */
-    flex-wrap: nowrap; /* Zapobiega zawijaniu się elementów */
-    gap: 1rem; /* Odstęp między grupą użytkownika a grupą ikon */
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* ZMODYFIKOWANE: Wyśrodkowuje elementy w pionie */
+    flex-wrap: nowrap;
+    gap: 1rem; /* ZMODYFIKOWANE: Odstęp między grupami */
     box-shadow: var(--shadow-light);
     position: relative;
-    flex-shrink: 0; /* Nagłówek nie będzie się kurczył */
+    flex-shrink: 0;
+    z-index: 50;
 }
 
+/* ZMODYFIKOWANE: Przycisk wstecz */
 .back-button {
-    display: none;
-    padding: 0.6rem 0.8rem;
-    background: var(--bg-color-search-input);
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    font-size: 1.1rem;
+    display: none; /* Domyślnie ukryty na desktopie */
+    background: none; /* Usuń tło */
+    border: none; /* Usuń obramowanie */
+    font-size: 1.3rem; /* Rozmiar ikony */
     color: var(--text-color-medium);
-}
-.back-button.show-on-mobile {
-    display: block;
+    cursor: pointer;
+    margin-right: 0.5rem; /* Odstęp od user-info */
+    padding: 0.4rem; /* Delikatny padding dla obszaru kliknięcia */
+    border-radius: 50%; /* Zaokrąglony kształt */
+    transition: color 0.2s, background-color 0.2s;
 }
 
+.back-button:hover {
+    color: var(--primary-color);
+    background-color: var(--bg-color-search-input);
+}
+
+/* ZMODYFIKOWANE: user-info */
 .user-info {
     display: flex;
-    flex-direction: column; /* Ustawia nick i status jeden pod drugim */
+    flex-direction: column; /* Nick i status jeden pod drugim */
     align-items: flex-start; /* Wyrównuje tekst do lewej */
-    gap: 2px; /* Bardzo mały odstęp między nickiem a statusem */
+    gap: 2px;
     font-weight: bold;
-    flex-grow: 1; /* Pozwala temu elementowi na rozciąganie się i zajmowanie dostępnej przestrzeni */
-    min-width: 0; /* Umożliwia kurczenie się tekstu z elipsą, jeśli jest za długi */
+    flex-grow: 1; /* Pozwala na zajmowanie dostępnej przestrzeni */
+    min-width: 0; /* Umożliwia ellipsis */
 }
 
-.user-info .username {
-    white-space: nowrap; /* Zapobiega zawijaniu nazwy użytkownika */
-    overflow: hidden; /* Ukrywa wychodzący tekst */
-    text-overflow: ellipsis; /* Dodaje trzy kropki (...) dla uciętego tekstu */
-    /* Rozmiar fontu pozostaje, jak masz, np. 1.1rem, jeśli go ustawiasz */
-    /* font-size: 1.1rem; */
+/* ZMODYFIKOWANE: Poprawka selektora dla nazwy użytkownika (przez ID) */
+#chatUserName {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 1.1rem; /* Zachowaj lub dostosuj, jeśli chcesz inny */
     color: var(--text-color-dark);
 }
 
+/* ZMODYFIKOWANE: chat-header-actions */
 .chat-header-actions.right-aligned {
     display: flex;
-    gap: 0.8rem; /* Odstęp między ikonami (kamera, telefon, menu) */
-    margin-left: auto; /* Wypycha tę grupę maksymalnie na prawą stronę */
-    flex-shrink: 1; /* Pozwala tej grupie się kurczyć, jeśli brakuje miejsca */
-    min-width: 0; /* Ważne, aby ikony nie "rozpychały" kontenera */
+    gap: 0.8rem;
+    margin-left: auto; /* Wypycha maksymalnie na prawo */
+    flex-shrink: 0; /* Ważne: Nie pozwalamy tej grupie się kurczyć */
+    min-width: fit-content; /* ZMODYFIKOWANE: Zapewnia, że grupa będzie miała minimalną szerokość swoich dzieci */
 }
 
 .chat-header-actions button {
@@ -521,25 +532,16 @@ body {
     cursor: pointer;
     color: var(--text-color-medium);
     transition: color 0.2s;
-}
-
-.chat-header-actions button {
-    background: none;
-    border: none;
-    font-size: 1.3rem; /* Rozmiar ikon, jak masz obecnie */
-    cursor: pointer;
-    color: var(--text-color-medium);
-    transition: color 0.2s;
-    display: flex; /* Pomaga w centrowaniu ikony w przycisku */
+    display: flex;
     justify-content: center;
     align-items: center;
-    padding: 0.4rem; /* Delikatny padding dla większego obszaru kliknięcia */
-    border-radius: 50%; /* Opcjonalnie: zaokrąglone tło po najechaniu */
+    padding: 0.4rem;
+    border-radius: 50%;
 }
 
 .chat-header-actions button:hover {
     color: var(--primary-color);
-	background-color: var(--bg-color-search-input);
+    background-color: var(--bg-color-search-input);
 }
 
 /* Dropdown ustawień czatu */
@@ -630,14 +632,14 @@ body {
 .bg-box.dark-bg { background-color: #333; }
 .bg-box.pattern-bg { background-image: url('data:image/svg+xml;utf8,<svg width="10" height="10" viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"><circle cx="2.5" cy="2.5" r="1.5" fill="%23e0e0e0"/></svg>'); background-size: 10px 10px; }
 
-/* Animacja ładowania (typing indicator) */
+/* Animacja ładowania (typing indicator) - ZMODYFIKOWANE POZYCJONOWANIE */
 .typing-indicator {
     display: flex;
     align-items: center;
     gap: 5px;
     padding: 10px 20px;
     position: absolute;
-    bottom: 80px;
+    bottom: 80px; /* Nadal w stosunku do dołu czatu */
     left: 15px;
     background: var(--bg-color-message-received);
     border-radius: 15px;
@@ -665,13 +667,47 @@ body {
     40% { transform: scale(1.0); }
 }
 
+/* ZMODYFIKOWANE: Prawidłowe pozycjonowanie dla statusu pisania w nagłówku */
 .typing-status {
-    font-size: 0.8rem;
+    position: absolute;
+    bottom: 0; /* Przykleja do dolnej krawędzi nagłówka */
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.75rem;
     color: var(--text-color-medium);
-    margin-left: auto;
-    min-width: 100px;
-    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 60%; /* Ogranicza szerokość */
+    padding-bottom: 3px;
+    pointer-events: none; /* Zapobiega blokowaniu kliknięć */
+    opacity: 0; /* Domyślnie ukryty */
+    transition: opacity 0.3s ease-in-out;
+    z-index: 60;
 }
+.typing-status.visible {
+    opacity: 1; /* Pokaż, gdy jest aktywny */
+}
+/* Możesz dodać animację kropek do tego statusu, jeśli chcesz */
+.typing-status .dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background-color: var(--text-color-medium);
+    border-radius: 50%;
+    margin: 0 1px;
+    animation: bounceHeader 1.4s infinite ease-in-out both;
+}
+
+.typing-status .dot:nth-child(1) { animation-delay: -0.32s; }
+.typing-status .dot:nth-child(2) { animation-delay: -0.16s; }
+.typing-status .dot:nth-child(3) { animation-delay: 0s; }
+
+@keyframes bounceHeader {
+    0%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-3px); } /* Mniejszy skok dla mniejszych kropek */
+}
+
 
 .messages {
     flex: 1;
@@ -718,7 +754,7 @@ body {
 .message {
     max-width: 65%;
     padding: 0.8rem 1rem;
-    border-radius: 15px;
+    border-radius: var(--border-radius-message); /* Użycie zmiennej */
     background: var(--bg-color-message-received);
     position: relative;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
@@ -751,11 +787,15 @@ body {
 .message.sent::before {
     right: -8px;
     border-left-color: var(--primary-color);
+    /* ZMODYFIKOWANE: Zaokrąglanie rogu dymka wiadomości wysłanych */
+    border-top-right-radius: 0;
 }
 
 .message.received::before {
     left: -8px;
     border-right-color: var(--bg-color-message-received);
+    /* ZMODYFIKOWANE: Zaokrąglanie rogu dymka wiadomości odebranych */
+    border-top-left-radius: 0;
 }
 
 .timestamp {
@@ -1233,189 +1273,121 @@ body.dark-mode .nav-icon::after {
     .right-sidebar-wrapper {
         min-width: 180px;
         width: 20%;
-        max-width: 250px;
-        padding: 0.8rem;
-    }
-
-    .chat-header, .chat-footer {
-        padding: 0.8rem 1rem;
-    }
-
-    .messages {
-        padding: 1rem;
+        max-width: 300px; /* ZMODYFIKOWANE: Wartość max-width, była ucięta */
     }
 }
 
 @media (max-width: 768px) {
-    body {
-        overflow-y: auto;
-    }
-    .container {
-        flex-direction: column;
-        margin: 0;
-        border-radius: 0;
-        box-shadow: none;
-        height: auto;
-    }
-
+    /* ZMODYFIKOWANE: Nagłówek główny na mobile */
     .main-header {
         padding: 0.8rem 1rem;
     }
-
-    .sidebar-wrapper {
-        width: 100%;
-        min-width: unset;
-        max-width: unset;
-        border-right: none;
-        border-bottom: 1px solid var(--border-color-light);
-        flex-direction: row;
-        height: auto;
-        border-top-left-radius: 0;
-        border-bottom-left-radius: 0;
-        padding: 0;
-    }
-
-    .main-nav-icons {
-        width: 55px;
-        padding-top: 1rem;
-        padding-bottom: 0.5rem;
-        border-top-left-radius: 0;
-        border-bottom-left-radius: 0;
-        gap: 0.8rem;
-    }
-
-    #sidebar.conversations-list {
-        flex-grow: 1;
-        padding: 0.8rem;
-        overflow-y: auto;
-        height: 100%;
-    }
-
-    .chat-area-wrapper {
-        width: 100%;
-        border-top-left-radius: 0;
-        border-bottom-left-radius: 0;
-        border-top-right-radius: 0;
-        border-bottom-right-radius: 0;
-        min-height: calc(100vh - 60px);
-    }
-
-    .right-sidebar-wrapper {
-        display: none;
-    }
-
-    .back-button {
-        display: block;
-    }
-	.chat-header {
-        padding: 0.6rem 0.8rem; /* Mniejszy padding na mobile */
-        gap: 0.6rem; /* Mniejszy odstęp między grupami na mobile */
-    }
-
-    .chat-header-actions.right-aligned {
-        gap: 0.5rem; /* Mniejszy odstęp między ikonami na mobile */
-    }
-
-    .chat-header-actions button {
-        padding: 0.3rem; /* Delikatnie mniejszy padding ikon na mobile */
-    }
-    .chat-header .user-info {
-        flex-grow: 1;
-        text-align: left;
-    }
-    .chat-header-actions.right-aligned {
-        margin-left: 0;
-        gap: 0.5rem;
-    }
-
-    .message {
-        max-width: 85%;
-    }
-}
-
-@media (max-width: 480px) {
-    .main-header {
-        padding: 0.6rem 0.8rem;
-    }
     .app-title {
-        font-size: 1.1rem;
+        font-size: 1.2rem;
     }
     .user-menu button {
         font-size: 1.1rem;
     }
 
-    .main-nav-icons {
-        width: 50px;
-        padding-top: 0.8rem;
-        gap: 0.6rem;
-    }
-    .nav-icon {
-        font-size: 1.3rem;
-        width: 40px;
-        height: 40px;
-    }
-    .nav-icon.add-new-button {
-        font-size: 1.5rem;
+    .container {
+        flex-direction: column; /* Ułóż elementy pionowo */
+        margin: 0; /* ZMODYFIKOWANE: Usuń marginesy dla pełnej szerokości */
+        border-radius: 0; /* ZMODYFIKOWANE: Usuń zaokrąglenia */
+        box-shadow: none; /* ZMODYFIKOWANE: Usuń cień */
     }
 
-    #sidebar.conversations-list {
-        padding: 0.6rem;
+    .sidebar-wrapper {
+        min-width: unset; /* ZMODYFIKOWANE: Usuń minimalną szerokość */
+        width: 100%; /* Pasek boczny na całą szerokość */
+        flex-direction: column;
+        height: auto;
+        border-right: none; /* ZMODYFIKOWANE: Usuń prawą ramkę */
     }
-    .search-bar input {
-        padding: 0.5rem 0.7rem 0.5rem 2.2rem;
-        font-size: 0.85rem;
+
+    .main-nav-icons {
+        flex-direction: row; /* Ikonki nawigacyjne w poziomie */
+        padding: 0.5rem;
+        gap: 1rem;
+        border-right: none;
+        border-bottom: 1px solid var(--primary-color-light);
+        width: 100%;
+        justify-content: space-around; /* Rozłóż równomiernie */
+        border-top-left-radius: 0; /* ZMODYFIKOWANE: Usuń zaokrąglenia */
+        border-bottom-left-radius: 0; /* ZMODYFIKOWANE: Usuń zaokrąglenia */
     }
-    .search-bar i {
-        left: 0.8rem;
+    .main-nav-icons .add-new-button {
+        margin-top: 0; /* Usuń auto-margines */
     }
-    .contact {
-        padding: 0.6rem;
+
+    #sidebar {
+        width: 100%; /* Lista konwersacji na całą szerokość */
+        border-right: none;
+        border-bottom: 1px solid var(--border-color-light);
+        padding-top: 0.5rem;
     }
-    .contact img.avatar {
-        width: 40px;
-        height: 40px;
-        margin-right: 0.6rem;
+
+    .chat-area {
+        display: none; /* Domyślnie ukryj obszar czatu na mobile */
+        /* ZMODYFIKOWANE: Obliczenie wysokości na mobile (header + nav-icons + footer) */
+        height: calc(100vh - (1.6rem + 2rem) - (50px + 1rem) - (1rem + 3rem)); /* Przybliżone wartości */
+        border-top-right-radius: 0; /* ZMODYFIKOWANE: Usuń zaokrąglenia */
+        border-bottom-right-radius: 0; /* ZMODYFIKOWANE: Usuń zaokrąglenia */
     }
-    .contact .contact-name {
-        font-size: 0.9rem;
-    }
-    .contact .last-message {
-        font-size: 0.75rem;
+
+    /* ZMODYFIKOWANE: Pokaż przycisk wstecz na mobile */
+    .chat-header .back-button {
+        display: block;
     }
 
     .chat-header {
         padding: 0.6rem 0.8rem;
-    }
-    .chat-header-actions button {
-        font-size: 1.1rem;
+        gap: 0.6rem;
     }
 
+    .chat-header-actions.right-aligned {
+        gap: 0.5rem;
+    }
+
+    .chat-header-actions button {
+        padding: 0.3rem;
+    }
+
+    .right-sidebar-wrapper {
+        display: none; /* Ukryj prawy pasek boczny na mobile */
+    }
+
+    /* Dostosowanie wielkości czcionek i paddingów dla mobile */
+    .app-title {
+        font-size: 1.3rem;
+    }
+    .user-menu button {
+        font-size: 1.3rem;
+        padding: 0.3rem;
+    }
+    .search-bar input {
+        padding: 0.6rem 1rem 0.6rem 2.5rem;
+        font-size: 0.85rem;
+    }
+    .contact-item {
+        padding: 0.6rem;
+    }
+    .contact-name {
+        font-size: 0.95rem;
+    }
+    .last-message {
+        font-size: 0.8rem;
+    }
     .chat-footer {
         padding: 0.6rem 0.8rem;
     }
+    .chat-footer button {
+        font-size: 1.3rem;
+        padding: 0.3rem;
+    }
     .chat-footer input {
         padding: 0.6rem 0.8rem;
-        font-size: 0.85rem;
-    }
-    .chat-footer button {
-        padding: 0.6rem 1rem;
         font-size: 0.9rem;
-    }
-    .chat-footer .attach-button,
-    .chat-footer .emoji-button {
-        font-size: 1.3rem;
-    }
-
-    .messages {
-        padding: 0.8rem;
-    }
-    .message {
-        padding: 0.6rem 0.8rem;
-        min-width: 50px;
-        max-width: 90%;
-    }
-    .timestamp {
-        font-size: 0.65rem;
+        margin: 0 5px;
     }
 }
 
