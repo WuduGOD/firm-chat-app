@@ -586,26 +586,27 @@ body {
 .chat-settings-dropdown {
     right: 0;
     top: 100%;
-    /* ZMODYFIKOWANE: Bardziej agresywne ustawienie szerokości minimalnej i maksymalnej */
-    min-width: 150px; /* ZMNIEJSZAMY JESCZE BARDZIEJ */
-    width: 160px; /* ZMNIEJSZAMY JESCZE BARDZIEJ */
-    max-width: 180px; /* ZMNIEJSZAMY JESCZE BARDZIEJ */
-    padding: 0.4rem; /* ZMNIEJSZAMY JESCZE BARDZIEJ PADDING */
+    /* KLUCZOWA ZMIANA: Sztywna, bardzo wąska szerokość, aby WYMUSIĆ zawijanie */
+    width: 120px; /* To jest bardzo wąsko! Powinno zmusić do zawijania. */
+    min-width: 120px; /* Upewniamy się, że nie jest szerszy, ale też nie za mały */
+    max-width: 120px; /* I że nie urośnie */
+    padding: 0.3rem; /* Zmniejszony padding wewnętrzny dla większej przestrzeni na elementy */
     border-top-right-radius: 0;
     z-index: 101;
     box-sizing: border-box;
     display: flex;
-    flex-direction: column; /* Utrzymaj układ pionowy dla głównych sekcji */
-    gap: 0.3rem; /* ZMNIEJSZAMY JESCZE BARDZIEJ ODSTĘP MIĘDZY SEKCJI */
+    flex-direction: column; /* Główny układ dropdownu nadal pionowy (sekcje Ustawienia, Motywy itd.) */
+    gap: 0.2rem; /* Jeszcze mniejszy odstęp między sekcjami */
+    overflow: visible; /* Zostawiamy visible, żeby paski przewijania się nie pojawiały, jeśli nie ma potrzeby */
 }
 .chat-settings-dropdown h3 {
-    font-size: 0.9rem; /* ZMNIEJSZONA CZCIONKA */
-    margin-bottom: 0.3rem; /* ZMNIEJSZONY MARGINES */
+    font-size: 0.85rem; /* Mniejsza czcionka dla nagłówków sekcji */
+    margin-bottom: 0.2rem; /* Mniejsze marginesy pod nagłówkami */
     color: var(--text-color-dark);
 }
 .chat-settings-dropdown .setting-group {
-    margin-bottom: 0.3rem; /* ZMNIEJSZONY MARGINES */
-    padding-bottom: 0.3rem; /* ZMNIEJSZONY PADDING */
+    margin-bottom: 0.2rem; /* Mniejsze marginesy między grupami ustawień */
+    padding-bottom: 0.2rem; /* Mniejszy padding na dole grup */
     border-bottom: 1px solid var(--border-color-light);
 }
 .chat-settings-dropdown .setting-group:last-child {
@@ -614,17 +615,17 @@ body {
     padding-bottom: 0;
 }
 .chat-settings-dropdown h4 {
-    font-size: 0.8rem; /* ZMNIEJSZONA CZCIONKA */
+    font-size: 0.75rem; /* Mniejsza czcionka dla podnagłówków */
     color: var(--text-color-medium);
-    margin-bottom: 0.1rem; /* ZMNIEJSZONY MARGINES */
+    margin-bottom: 0.1rem; /* Bardzo mały margines pod podnagłówkami */
 }
 .chat-settings-dropdown input[type="text"] {
     width: 100%;
-    padding: 0.2rem; /* ZMNIEJSZONY PADDING */
+    padding: 0.2rem; /* Mniejszy padding w polach tekstowych */
     border: 1px solid var(--border-color-medium);
     border-radius: 6px;
-    margin-bottom: 0.1rem; /* ZMNIEJSZONY MARGINES */
-    font-size: 0.8rem; /* ZMNIEJSZONA CZCIONKA */
+    margin-bottom: 0.1rem; /* Mały margines pod polami tekstowymi */
+    font-size: 0.8rem;
     background-color: var(--bg-color-search-input);
     color: var(--text-color-dark);
 }
@@ -633,10 +634,10 @@ body {
 }
 .chat-settings-dropdown button {
     width: auto;
-    padding: 0.2rem 0.5rem; /* ZMNIEJSZONY PADDING */
-    font-size: 0.8rem; /* ZMNIEJSZONA CZCIONKA */
+    padding: 0.2rem 0.5rem; /* Mniejszy padding dla przycisków */
+    font-size: 0.8rem;
     display: block;
-    margin-top: 0.1rem; /* ZMNIEJSZONY MARGINES */
+    margin-top: 0.1rem; /* Mały margines nad przyciskami */
     background: var(--primary-color);
     color: var(--text-color-light);
     border: none;
@@ -651,20 +652,24 @@ body {
 /* Opcje kolorów/tła */
 .color-options, .background-options {
     display: flex;
-    flex-wrap: wrap; /* Upewnij się, że jest włączone zawijanie */
-    gap: 0.15rem; /* ZMODYFIKOWANE: Jeszcze bardziej zmniejszony odstęp */
-    margin-top: 0.15rem; /* Zmniejszony margines */
+    flex-direction: row; /* EKSPILCYTNIE ustawiamy kierunek na rząd */
+    flex-wrap: wrap; /* ZAWINEJCIE SIĘ! */
+    gap: 0.1rem; /* BARDZO MAŁY odstęp między kółkami */
+    margin-top: 0.1rem; /* BARDZO MAŁY margines górny */
     justify-content: flex-start; /* Wyrównaj do lewej */
+    width: 100%; /* Upewnij się, że zajmuje całą dostępną szerokość w rodzicu */
+    box-sizing: border-box; /* Ważne, aby padding i border nie dodawały do szerokości */
 }
 .color-box, .bg-box {
-    width: 20px; /* ZMODYFIKOWANE: Dalej zmniejszona szerokość */
-    height: 20px; /* ZMODYFIKOWANE: Dalej zmniejszona wysokość */
+    width: 20px; /* Utrzymujemy stałą szerokość */
+    height: 20px; /* Utrzymujemy stałą wysokość */
     border-radius: 50%;
     cursor: pointer;
     border: 2px solid transparent;
     transition: border-color 0.2s;
-    flex-shrink: 0; /* Zapobiega kurczeniu się */
-    flex-basis: auto; /* Upewnij się, że nie ma stałej podstawy flex */
+    flex-shrink: 0; /* Zapobiega kurczeniu się poniżej rozmiaru */
+    flex-grow: 0; /* Zapobiega rozrastaniu się ponad rozmiar */
+    flex-basis: auto; /* Pozwoli na obliczenie podstawowego rozmiaru przed flex-grow/shrink */
 }
 .color-box.active, .bg-box.active {
     border-color: var(--primary-color);
