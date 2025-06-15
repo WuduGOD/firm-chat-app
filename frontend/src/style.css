@@ -55,7 +55,7 @@
 }
 
 body {
-    font-family: 'Segoe UI', sans-serif; /* Twoja oryginalna czcionka */
+    font-family: 'Segoe UI', sans-serif;
     background: var(--bg-color-light);
     color: var(--text-color-dark);
     height: 100vh;
@@ -74,6 +74,7 @@ body {
     border-bottom: 1px solid var(--border-color-medium);
     box-shadow: var(--shadow-light);
     flex-shrink: 0;
+    /* usunięto height: var(--header-height); - lepiej pozwolić, by padding i zawartość określały wysokość */
 }
 
 .app-title {
@@ -101,9 +102,9 @@ body {
 }
 
 /* Dropdown (dla menu głównego i czatu) */
-.dropdown-menu {
+.dropdown {
     position: absolute;
-    right: 0; /* Zmieniono na right: 0 aby drop-down pojawial sie po prawej */
+    right: 0;
     top: var(--dropdown-top-offset);
     background: var(--bg-color-dropdown);
     border: 1px solid var(--border-color-medium);
@@ -116,12 +117,12 @@ body {
     flex-direction: column;
     gap: 0.5rem;
 }
-.dropdown-menu.hidden {
+.dropdown.hidden {
     display: none;
 }
 /* Style dla przycisków w głównym dropdownie */
-.dropdown-menu #themeToggle,
-.dropdown-menu #logoutButton {
+.dropdown #themeToggle,
+.dropdown #logoutButton {
     background: none;
     border: none;
     color: var(--text-color-dark);
@@ -136,19 +137,19 @@ body {
     align-items: center;
     gap: 0.5rem;
 }
-.dropdown-menu #themeToggle i,
-.dropdown-menu #logoutButton i {
+.dropdown #themeToggle i,
+.dropdown #logoutButton i {
     font-size: 1.1rem;
     color: var(--text-color-medium);
 }
 
-.dropdown-menu #themeToggle:hover,
-.dropdown-menu #logoutButton:hover {
+.dropdown #themeToggle:hover,
+.dropdown #logoutButton:hover {
     background: var(--bg-color-search-input);
     color: var(--text-color-dark);
 }
-.dropdown-menu #themeToggle:hover i,
-.dropdown-menu #logoutButton:hover i {
+.dropdown #themeToggle:hover i,
+.dropdown #logoutButton:hover i {
     color: var(--primary-color);
 }
 
@@ -164,22 +165,22 @@ body {
     align-items: stretch;
     width: 100%; /* Upewnia się, że kontener zajmuje całą dostępną szerokość */
     margin: 0; /* Usuwa marginesy, aby przylegał do krawędzi okna */
+    /* Usunięto: max-width i auto-margins, aby rozciągał się na całą szerokość */
 }
 
-/* Sidebar Wrapper (lewy pasek - rozmowy) */
+/* Sidebar Wrapper (lewy pasek - rozmowy + ikony) */
 .sidebar-wrapper {
-    /* Usunięto flex-direction: row, ponieważ jest to element gridu,
-       a jego wewnętrzna zawartość (#sidebar) ma już column. */
-    display: flex; /* Zachowujemy flex, aby #sidebar wypełnił wysokość */
-    flex-direction: column; /* Ustawiamy na column, aby #sidebar był ułożony pionowo wewnątrz */
+    display: flex;
+    flex-direction: row;
     min-width: 280px; /* Minimalna szerokość, aby nie był zbyt mały */
-    flex: 0 0 25%; /* Zajmuje około 25% szerokości, ale nie rośnie i nie kurczy się swobodnie */
+    flex: 0 0 25%; /* ZMODYFIKOWANE: Zajmuje około 25% szerokości, ale nie rośnie i nie kurczy się swobodnie */
     max-width: 350px; /* Maksymalna szerokość, aby nie był zbyt szeroki */
     background: var(--bg-color-sidebar-wrapper);
     border-right: 1px solid var(--border-color-light);
     flex-shrink: 0; /* Zapobiega kurczeniu się poniżej flex-basis */
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
+    /* ZMODYFIKOWANE: Usunięcie zaokrągleń, będą one obsługiwane przez .container */
+    border-top-left-radius: 0; 
+    border-bottom-left-radius: 0; /* Choć border-radius na .container i tak to obejmie */
 }
 
 /* Main Nav Icons (pionowy pasek ikon) */
@@ -191,6 +192,7 @@ body {
     align-items: center;
     padding-top: 1rem;
     padding-bottom: 0.5rem;
+    /* ZMODYFIKOWANE: Usunięcie zaokrągleń, będą one obsługiwane przez .container na poziomie rodzica */
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
     flex-shrink: 0;
@@ -210,7 +212,6 @@ body {
     align-items: center;
     transition: background 0.3s, color 0.3s;
     position: relative;
-    color: var(--text-color-light); /* Ustawienie koloru ikon na jasny */
 }
 
 .nav-icon::after {
@@ -261,17 +262,15 @@ body {
 }
 
 /* Sidebar (lista konwersacji) */
-#sidebar {
+#sidebar.conversations-list {
     flex-grow: 1;
     background: var(--bg-color-sidebar);
     padding: 0.5rem 1rem 1rem 1rem;
     overflow-y: auto;
     flex-shrink: 1;
-    display: flex;
-    flex-direction: column;
 }
 
-#sidebar h2 { /* Ten selektor nie jest używany w `index.html` */
+#sidebar.conversations-list h2 {
     margin-bottom: 0.5rem;
     font-size: 1.3rem;
     color: var(--text-color-dark);
@@ -304,7 +303,7 @@ body {
 }
 
 /* Kategorie sortowania kontaktów */
-.contact-categories { /* Ta klasa nie jest używana w `index.html` */
+.contact-categories {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
@@ -435,22 +434,20 @@ body {
     color: var(--color-offline); /* Użycie zmiennej */
 }
 
-/* Chat Area Wrapper - ten selektor nie istnieje w HTML */
-/* W HTML chat-area jest bezposrednim dzieckiem main-content-wrapper */
-/* Pozostawiam jako komentarz, jesli mialby sie pojawic w przyszlosci */
-/*
+/* Chat Area Wrapper - nowy kontener dla logo-screen i chat-area */
 .chat-area-wrapper {
-    flex-grow: 1;
+    flex-grow: 1; /* Pozwala mu zająć całą dostępną przestrzeń */
     display: flex;
     flex-direction: column;
     position: relative;
     background: var(--bg-color-lighter);
+    /* ZMODYFIKOWANE: Usunięcie zaokrągleń, będą one obsługiwane przez .container */
     border-top-right-radius: 0;
     border-bottom-right-radius: 0;
+    /* NOWE: Upewnienie się, że również lewy górny róg jest prosty, aby pasował do .container */
     border-top-left-radius: 0;
     flex-shrink: 0;
 }
-*/
 
 .logo-screen {
     flex: 1;
@@ -470,7 +467,7 @@ body {
 
 .chat-area {
     flex: 1;
-    display: none; /* Domyślnie ukryty, pokazywany przez JS */
+    display: none;
     flex-direction: column;
     height: 100%;
     position: relative;
@@ -486,27 +483,29 @@ body {
     background: var(--bg-color-chat-header);
     border-bottom: 1px solid var(--border-color-light);
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    justify-content: space-between; /* ZMODYFIKOWANE: Rozkłada elementy na krawędziach */
+    align-items: center; /* Wyśrodkowuje elementy w pionie */
     flex-wrap: nowrap;
-    gap: 1rem;
+    gap: 1rem; /* Pozostawiamy gap dla odstępów wewnętrznych */
     box-shadow: var(--shadow-light);
     position: relative;
     flex-shrink: 0;
     z-index: 50;
-    min-height: 60px;
+    /* NOWE: Minimalna wysokość nagłówka dla lepszego wyglądu */
+    min-height: 60px; /* Dostosuj wg potrzeb */
 }
 
 /* ZMODYFIKOWANE: Przycisk wstecz */
 .back-button {
     display: none; /* Domyślnie ukryty na desktopie */
-    background: none;
-    border: none;
-    font-size: 1.3rem;
+    background: none; /* Usuń tło */
+    border: none; /* Usuń obramowanie */
+    font-size: 1.3rem; /* Rozmiar ikony */
     color: var(--text-color-medium);
     cursor: pointer;
-    padding: 0.4rem;
-    border-radius: 50%;
+    /* margin-right: 0.5rem; */ /* Ten margines będzie teraz obsługiwany przez gap w user-info-wrapper */
+    padding: 0.4rem; /* Delikatny padding dla obszaru kliknięcia */
+    border-radius: 50%; /* Zaokrąglony kształt */
     transition: color 0.2s, background-color 0.2s;
 }
 
@@ -516,55 +515,52 @@ body {
 }
 
 /* NOWE: Wrapper dla avatara, nazwy i statusu */
-/* .user-info-wrapper { /* Ta klasa nie istnieje w HTML */
-/* Zastapiona bezposrednim stylowaniem .chat-header .avatar-small i #chatUserName */
-/*
+.user-info-wrapper {
     display: flex;
     align-items: center;
-    gap: 0.8rem;
-    flex-grow: 1;
-    min-width: 0;
+    gap: 0.8rem; /* Odstęp między avatarem a user-info (tekst) */
+    flex-grow: 1; /* Pozwala mu zająć dostępną przestrzeń */
+    min-width: 0; /* Ważne dla ellipsis */
 }
 
-.user-info-wrapper .avatar {
+.user-info-wrapper .avatar { /* Styl dla obrazka avatara w nagłówku */
     width: 40px;
     height: 40px;
     border-radius: 50%;
     object-fit: cover;
     flex-shrink: 0;
 }
-*/
 
-/* Stylowanie avatara w nagłówku czatu */
-.chat-header .avatar-small {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    object-fit: cover;
-    flex-shrink: 0;
-    margin-right: 15px; /* Dodany margines, aby odsunąć od nazwy użytkownika */
+
+/* ZMODYFIKOWANE: user-info */
+.user-info {
+    display: flex;
+    flex-direction: column; /* Nick i status jeden pod drugim */
+    align-items: flex-start; /* Wyrównuje tekst do lewej */
+    gap: 2px;
+    /* font-weight: bold; */ /* Przeniesiono do #chatUserName */
+    min-width: 0; /* Umożliwia ellipsis */
+    /* flex-grow: 1; */ /* Niepotrzebne tutaj, flex-grow jest na user-info-wrapper */
 }
-
 
 /* ZMODYFIKOWANE: Poprawka selektora dla nazwy użytkownika (przez ID) */
 #chatUserName {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 100%;
-    font-weight: bold;
-    font-size: 1.1rem;
-    color: var(--text-color-dark);
-    flex-grow: 1; /* Pozwala mu zająć dostępną przestrzeń */
+    max-width: 100%; /* Ważne, aby tekst nie wychodził poza kontener */
+    font-weight: bold; /* Przeniesiono tutaj */
+    font-size: 1.1rem; /* Zachowaj lub dostosuj, jeśli chcesz inny */
+    color: var(--text-color-dark); /* Upewnij się, że kolor jest poprawny */
 }
 
 /* ZMODYFIKOWANE: chat-header-actions */
-.chat-header-actions {
+.chat-header-actions.right-aligned {
     display: flex;
     gap: 0.8rem;
-    margin-left: auto;
-    flex-shrink: 0;
-    align-items: center;
+    margin-left: auto; /* Wypycha maksymalnie na prawo */
+    flex-shrink: 0; /* Ważne: Nie pozwalamy tej grupie się kurczyć */
+    align-items: center; /* Wyśrodkowanie ikon, jeśli mają różne rozmiary */
 }
 
 .chat-header-actions button {
@@ -572,26 +568,27 @@ body {
     border: none;
     font-size: 1.3rem;
     cursor: pointer;
-    color: var(--text-color-medium);
-    transition: color 0.2s, background-color 0.2s;
-    padding: 0.5rem;
-    border-radius: 50%;
-    display: flex;
+    color: var(--text-color-medium); /* Użyj zmiennej dla spójności */
+    transition: color 0.2s, background-color 0.2s; /* Dodano transition dla tła */
+    padding: 0.5rem; /* Zwiększony padding dla lepszej klikalności */
+    border-radius: 50%; /* Aby były okrągłe */
+    display: flex; /* Dodano, aby wyśrodkować ikonę w przycisku */
     justify-content: center;
     align-items: center;
 }
 
 .chat-header-actions button:hover {
     color: var(--primary-color);
-    background-color: var(--bg-color-hover);
+    background-color: var(--bg-color-hover); /* Użycie zmiennej z :root */
 }
 
 /* Dropdown ustawień czatu */
 .chat-settings-dropdown {
     right: 0;
     top: 100%;
-    width: 400px !important; /* KLUCZOWA ZMIANA: Szerokość 400px i dodanie !important */
-    padding: 0.8rem;
+    /* KLUCZOWA ZMIANA: Szerokość 400px i dodanie !important */
+    width: 400px !important; 
+    padding: 0.8rem; 
     border-top-right-radius: 0;
     z-index: 101;
     box-sizing: border-box;
@@ -599,10 +596,13 @@ body {
     flex-direction: column;
     gap: 0.6rem;
     overflow-y: hidden;
-    max-height: none;
+    max-height: none; 
+
+    /* DODANE: Tymczasowa wizualna weryfikacja rozmiaru */
+    /* border: 2px dashed red; */ 
 }
 .chat-settings-dropdown h3 {
-    font-size: 1rem;
+    font-size: 1rem; 
     margin-bottom: 0.3rem;
     color: var(--text-color-dark);
 }
@@ -619,15 +619,15 @@ body {
 .chat-settings-dropdown h4 {
     font-size: 0.9rem;
     color: var(--text-color-medium);
-    margin-bottom: 0.15rem;
+    margin-bottom: 0.15rem; 
 }
 .chat-settings-dropdown input[type="text"] {
     width: 100%;
-    padding: 0.5rem;
+    padding: 0.5rem; 
     border: 1px solid var(--border-color-medium);
     border-radius: 6px;
     margin-bottom: 0.25rem;
-    font-size: 0.9rem;
+    font-size: 0.9rem; 
     background-color: var(--bg-color-search-input);
     color: var(--text-color-dark);
 }
@@ -637,7 +637,7 @@ body {
 .chat-settings-dropdown button {
     width: auto;
     padding: 0.5rem 1rem;
-    font-size: 0.95rem;
+    font-size: 0.95rem; 
     display: block;
     margin-top: 0.25rem;
     background: var(--primary-color);
@@ -652,24 +652,25 @@ body {
 }
 
 /* Opcje kolorów/tła */
-.color-options, .bg-options {
+.color-options, .background-options {
     display: grid !important; /* Wymuszamy grid layout */
-    grid-template-columns: repeat(4, 1fr) !important;
-    gap: 20px;
-    margin: 0.4rem 0;
-    width: auto;
+    /* KLUCZOWA ZMIANA: Rozłożenie na 4 kolumny o równej szerokości, z lekkim zapasem */
+    grid-template-columns: repeat(4, 1fr) !important; 
+    gap: 20px; /* Zwiększony odstęp między kółkami */
+    margin: 0.4rem 0; 
+    width: auto; 
     box-sizing: border-box;
-    justify-content: space-between;
-    align-items: center;
+    justify-content: space-between; 
+    align-items: center; 
 }
 .color-box, .bg-box {
-    width: 35px;
-    height: 35px;
+    width: 35px; 
+    height: 35px; 
     border-radius: 50%;
     cursor: pointer;
-    border: 3px solid transparent;
+    border: 3px solid transparent; 
     transition: border-color 0.2s;
-    flex-shrink: 0;
+    flex-shrink: 0; 
 }
 
 .color-box.active, .bg-box.active {
@@ -687,16 +688,14 @@ body {
 .bg-box.dark-bg { background-color: #333; }
 .bg-box.pattern-bg { background-image: url('data:image/svg+xml;utf8,<svg width="10" height="10" viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"><circle cx="2.5" cy="2.5" r="1.5" fill="%23e0e0e0"/></svg>'); background-size: 10px 10px; }
 
-/* Animacja ładowania (typing indicator) - usunięta klasa .typing-indicator */
-/* Zastąpiona przez .typing-status, ktora jest widoczna w HTML i JS */
-/*
+/* Animacja ładowania (typing indicator) - ZMODYFIKOWANE POZYCJONOWANIE */
 .typing-indicator {
     display: flex;
     align-items: center;
     gap: 5px;
     padding: 10px 20px;
     position: absolute;
-    bottom: 80px;
+    bottom: 80px; /* Nadal w stosunku do dołu czatu */
     left: 15px;
     background: var(--bg-color-message-received);
     border-radius: 15px;
@@ -723,9 +722,8 @@ body {
     0%, 80%, 100% { transform: scale(0); }
     40% { transform: scale(1.0); }
 }
-*/
 
-/* Prawidłowe pozycjonowanie dla statusu pisania w nagłówku */
+/* ZMODYFIKOWANE: Prawidłowe pozycjonowanie dla statusu pisania w nagłówku */
 .typing-status {
     position: absolute;
     bottom: 0; /* Przykleja do dolnej krawędzi nagłówka */
@@ -743,10 +741,10 @@ body {
     transition: opacity 0.3s ease-in-out;
     z-index: 60;
 }
-.typing-status.visible { /* Klasa `visible` nie jest używana w JS, JS używa `remove('hidden')` */
+.typing-status.visible {
     opacity: 1; /* Pokaż, gdy jest aktywny */
 }
-/* Animacja kropek dla statusu pisania */
+/* Możesz dodać animację kropek do tego statusu, jeśli chcesz */
 .typing-status .dot {
     display: inline-block;
     width: 6px;
@@ -767,7 +765,7 @@ body {
 }
 
 
-.message-container {
+.messages {
     flex: 1;
     padding: 1.5rem;
     overflow-y: auto;
@@ -778,32 +776,32 @@ body {
 }
 
 /* Stylowanie wiadomości w zależności od motywu */
-.message-container.blue-theme .message.sent {
+.messages.blue-theme .message.sent {
     background: #3b82f6;
 }
-.message-container.green-theme .message.sent {
+.messages.green-theme .message.sent {
     background: #10b981;
 }
-.message-container.red-theme .message.sent {
+.messages.red-theme .message.sent {
     background: #ef4444;
 }
 
 /* Stylowanie ogonków wiadomości w zależności od motywu */
-.message-container.blue-theme .message.sent::before {
+.messages.blue-theme .message.sent::before {
     border-color: transparent transparent transparent #3b82f6;
 }
-.message-container.green-theme .message.sent::before {
+.messages.green-theme .message.sent::before {
     border-color: transparent transparent transparent #10b981;
 }
-.message-container.red-theme .message.sent::before {
+.messages.red-theme .message.sent::before {
     border-color: transparent transparent transparent #ef4444;
 }
 
 /* Stylowanie tła czatu */
-.message-container.dark-bg {
+.messages.dark-bg {
     background-color: #333;
 }
-.message-container.pattern-bg {
+.messages.pattern-bg {
     background-image: url('data:image/svg+xml;utf8,<svg width="10" height="10" viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"><circle cx="2.5" cy="2.5" r="1.5" fill="%23e0e0e0"/></svg>');
     background-size: 10px 10px;
     background-color: var(--bg-color-chat-messages);
@@ -845,12 +843,14 @@ body {
 .message.sent::before {
     right: -8px;
     border-left-color: var(--primary-color);
+    /* ZMODYFIKOWANE: Zaokrąglanie rogu dymka wiadomości wysłanych */
     border-top-right-radius: 0;
 }
 
 .message.received::before {
     left: -8px;
     border-right-color: var(--bg-color-message-received);
+    /* ZMODYFIKOWANE: Zaokrąglanie rogu dymka wiadomości odebranych */
     border-top-left-radius: 0;
 }
 
@@ -866,8 +866,7 @@ body {
     color: rgba(255, 255, 255, 0.8);
 }
 
-/* Link Preview (selektory nieużywane w HTML) */
-/*
+/* Link Preview */
 .link-preview-message {
     background: var(--bg-color-sidebar);
     border: 1px solid var(--border-color-light);
@@ -921,7 +920,6 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
 }
-*/
 
 /* Dolna belka (Chat Footer) */
 .chat-footer {
@@ -997,9 +995,11 @@ body {
     flex-direction: column;
     padding: 1rem;
     overflow-y: auto;
+    /* ZMODYFIKOWANE: Usunięcie zaokrągleń, będą one obsługiwane przez .container */
     border-top-right-radius: 0;
     border-bottom-right-radius: 0;
     flex-shrink: 0;
+    /* NOWE: Upewnienie się, że prawy sidebar jest widoczny na większych ekranach */
     display: flex !important; /* Użycie !important dla pewności, ale staraj się unikać, jeśli to możliwe */
 }
 
@@ -1032,7 +1032,7 @@ body {
     background-color: var(--bg-color-search-input);
 }
 
-.active-users-list li .avatar-small { /* Uzyto avatar-small aby dopasowac do HTML */
+.active-users-list li .avatar {
     width: 35px;
     height: 35px;
     border-radius: 50%;
@@ -1041,7 +1041,7 @@ body {
     flex-shrink: 0;
 }
 
-.active-users-list li .user-name { /* Uzyto user-name aby dopasowac do HTML */
+.active-users-list li .username {
     font-weight: 500;
     flex-grow: 1;
     white-space: nowrap;
@@ -1050,7 +1050,7 @@ body {
     min-width: 0;
 }
 
-.active-users-list li .status-indicator { /* Uzyto status-indicator aby dopasowac do HTML */
+.active-users-list li .status-dot {
     width: 8px;
     height: 8px;
     border-radius: 50%;
@@ -1059,11 +1059,12 @@ body {
     flex-shrink: 0;
 }
 
-.no-active-users-message { /* Ten selektor nie istnieje w HTML */
+.no-active-users-message {
     text-align: center;
-    color: var(--text-color-medium);
+    color: var(--text-color-medium); /* Zakładając, że masz zmienne CSS dla kolorów */
     font-size: 0.9em;
     margin-top: 10px;
+    /* Domyślnie jest widoczny, JS go ukryje, jeśli są aktywni użytkownicy */
 }
 
 /* Dark mode overrides */
@@ -1104,10 +1105,10 @@ body.dark-mode {
 
 /* Główne sekcje w dark mode */
 .dark-mode .main-header,
-.dark-mode #sidebar,
+.dark-mode #sidebar.conversations-list,
 .dark-mode .chat-header,
 .dark-mode .chat-footer,
-.dark-mode .dropdown-menu,
+.dark-mode .dropdown,
 .dark-mode .right-sidebar-wrapper {
     background-color: var(--bg-color-header);
     border-color: var(--border-color-medium);
@@ -1158,7 +1159,7 @@ body.dark-mode .nav-icon::after {
     color: var(--text-color-dark);
 }
 .dark-mode .contact .last-message,
-.dark-mode .contact .message-time {
+.dark-mode .contact .last-message-time {
     color: var(--text-color-medium);
 }
 .dark-mode .search-bar input {
@@ -1196,13 +1197,13 @@ body.dark-mode .nav-icon::after {
     color: var(--text-color-dark);
 }
 /* Tła czatu w dark mode */
-.dark-mode .message-container {
+.dark-mode .messages {
     background-color: var(--bg-color-chat-messages);
 }
-.dark-mode .message-container.dark-bg {
+.dark-mode .messages.dark-bg {
     background-color: #0d0d1e;
 }
-.dark-mode .message-container.pattern-bg {
+.dark-mode .messages.pattern-bg {
     background-image: url('data:image/svg+xml;utf8,<svg width="10" height="10" viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"><circle cx="2.5" cy="2.5" r="1.5" fill="%23404040"/></svg>');
     background-size: 10px 10px;
     background-color: var(--bg-color-chat-messages);
@@ -1230,31 +1231,59 @@ body.dark-mode .nav-icon::after {
 }
 
 /* Stylowanie wiadomości w zależności od motywu w dark mode */
-.dark-mode .message-container.blue-theme .message.sent {
+.dark-mode .messages.blue-theme .message.sent {
     background: #3b82f6;
 }
-.dark-mode .message-container.green-theme .message.sent {
+.dark-mode .messages.green-theme .message.sent {
     background: #10b981;
 }
-.dark-mode .message-container.red-theme .message.sent {
+.dark-mode .messages.red-theme .message.sent {
     background: #ef4444;
 }
 
-.dark-mode .message-container.blue-theme .message.sent::before {
+.dark-mode .messages.blue-theme .message.sent::before {
     border-color: transparent transparent transparent #3b82f6;
 }
-.dark-mode .message-container.green-theme .message.sent::before {
+.dark-mode .messages.green-theme .message.sent::before {
     border-color: transparent transparent transparent #10b981;
 }
-.dark-mode .message-container.red-theme .message.sent::before {
+.dark-mode .messages.red-theme .message.sent::before {
     border-color: transparent transparent transparent #ef4444;
 }
 
 /* Link Preview w dark mode */
-/* Selektory nieużywane w HTML */
+.dark-mode .link-preview-message {
+    background: var(--bg-color-sidebar);
+    border-color: var(--border-color-medium);
+}
+.dark-mode .link-preview-message::before {
+    border-color: transparent var(--bg-color-sidebar) transparent transparent;
+}
+.dark-mode .link-preview-message.sent {
+    background: var(--bg-color-search-input);
+    border-color: var(--border-color-medium);
+}
+.dark-mode .link-preview-message.sent::before {
+    border-color: transparent transparent transparent var(--bg-color-search-input);
+}
+.dark-mode .link-preview-icon {
+    background: var(--bg-color-search-input);
+    color: var(--primary-color);
+}
+.dark-mode .link-preview-title {
+    color: var(--text-color-dark);
+}
+.dark-mode .link-preview-description {
+    color: var(--text-color-medium);
+}
 
 /* Animacja ładowania w dark mode */
-/* Selektory nieużywane w HTML */
+.dark-mode .typing-indicator {
+    background: var(--bg-color-search-input);
+}
+.dark-mode .typing-indicator .dot {
+    background-color: var(--text-color-medium);
+}
 
 /* Pole wpisywania wiadomości w dark mode */
 .dark-mode .chat-footer input {
@@ -1285,17 +1314,17 @@ body.dark-mode .nav-icon::after {
 }
 
 /* Dropdown w dark mode */
-.dark-mode .dropdown-menu #themeToggle,
-.dark-mode .dropdown-menu #logoutButton {
+.dark-mode .dropdown #themeToggle,
+.dark-mode .dropdown #logoutButton {
     background: none;
     color: var(--text-color-dark);
 }
-.dark-mode .dropdown-menu #themeToggle i,
-.dark-mode .dropdown-menu #logoutButton i {
+.dark-mode .dropdown #themeToggle i,
+.dark-mode .dropdown #logoutButton i {
     color: var(--text-color-medium);
 }
-.dark-mode .dropdown-menu #themeToggle:hover,
-.dark-mode .dropdown-menu #logoutButton:hover {
+.dark-mode .dropdown #themeToggle:hover,
+.dark-mode .dropdown #logoutButton:hover {
     background: var(--bg-color-search-input);
     color: var(--text-color-dark);
 }
@@ -1304,16 +1333,19 @@ body.dark-mode .nav-icon::after {
 @media (max-width: 1024px) {
     .container {
         margin: 0.5rem;
+        /* ZMODYFIKOWANE: Przywrócenie zaokrągleń i cienia dla całego kontenera, gdy nie jest pełna szerokość */
         border-radius: 12px;
         box-shadow: var(--shadow-medium);
     }
-    .sidebar-wrapper, .chat-area, .right-sidebar-wrapper {
-        border-radius: 0 !important;
+    /* ZMODYFIKOWANE: Usunięcie zaokrągleń z wewnętrznych elementów */
+    .sidebar-wrapper, .chat-area-wrapper, .right-sidebar-wrapper {
+        border-radius: 0 !important; /* Ważne: usuń wszelkie zaokrąglenia, aby kontener nadrzędny je zdefiniował */
     }
     .main-nav-icons {
         border-top-left-radius: 0;
         border-bottom-left-radius: 0;
     }
+
 
     .sidebar-wrapper {
         min-width: 250px;
@@ -1325,11 +1357,13 @@ body.dark-mode .nav-icon::after {
         min-width: 180px;
         width: 20%;
         max-width: 300px;
+        /* Upewnia się, że prawy sidebar jest widoczny, jeśli jest to widok 3-kolumnowy */
         display: flex !important;
     }
 }
 
 @media (max-width: 768px) {
+    /* ZMODYFIKOWANE: Nagłówek główny na mobile */
     .main-header {
         padding: 0.8rem 1rem;
     }
@@ -1341,49 +1375,51 @@ body.dark-mode .nav-icon::after {
     }
 
     .container {
-        flex-direction: column;
-        margin: 0;
-        border-radius: 0;
-        box-shadow: none;
+        flex-direction: column; /* Ułóż elementy pionowo */
+        margin: 0; /* ZMODYFIKOWANE: Usuń marginesy dla pełnej szerokości */
+        border-radius: 0; /* ZMODYFIKOWANE: Usuń zaokrąglenia */
+        box-shadow: none; /* ZMODYFIKOWANE: Usuń cień */
     }
 
     .sidebar-wrapper {
-        min-width: unset;
-        width: 100%;
+        min-width: unset; /* ZMODYFIKOWANE: Usuń minimalną szerokość */
+        width: 100%; /* Pasek boczny na całą szerokość */
         flex-direction: column;
         height: auto;
-        border-right: none;
+        border-right: none; /* ZMODYFIKOWANE: Usuń prawą ramkę */
     }
 
     .main-nav-icons {
-        flex-direction: row;
+        flex-direction: row; /* Ikonki nawigacyjne w poziomie */
         padding: 0.5rem;
         gap: 1rem;
         border-right: none;
         border-bottom: 1px solid var(--primary-color-light);
         width: 100%;
-        justify-content: space-around;
-        border-top-left-radius: 0;
-        border-bottom-left-radius: 0;
+        justify-content: space-around; /* Rozłóż równomiernie */
+        border-top-left-radius: 0; /* ZMODYFIKOWANE: Usuń zaokrąglenia */
+        border-bottom-left-radius: 0; /* ZMODYFIKOWANE: Usuń zaokrąglenia */
     }
     .main-nav-icons .add-new-button {
-        margin-top: 0;
+        margin-top: 0; /* Usuń auto-margines */
     }
 
     #sidebar {
-        width: 100%;
+        width: 100%; /* Lista konwersacji na całą szerokość */
         border-right: none;
         border-bottom: 1px solid var(--border-color-light);
         padding-top: 0.5rem;
     }
 
     .chat-area {
-        display: none;
+        display: none; /* Domyślnie ukryj obszar czatu na mobile */
+        /* ZMODYFIKOWANE: Obliczenie wysokości na mobile (header + nav-icons + footer) */
         height: calc(100vh - (1.6rem + 2rem) - (50px + 1rem) - (1rem + 3rem)); /* Przybliżone wartości */
-        border-top-right-radius: 0;
-        border-bottom-right-radius: 0;
+        border-top-right-radius: 0; /* ZMODYFIKOWANE: Usuń zaokrąglenia */
+        border-bottom-right-radius: 0; /* ZMODYFIKOWANE: Usuń zaokrąglenia */
     }
 
+    /* ZMODYFIKOWANE: Pokaż przycisk wstecz na mobile */
     .chat-header .back-button {
         display: block;
     }
@@ -1393,7 +1429,7 @@ body.dark-mode .nav-icon::after {
         gap: 0.6rem;
     }
 
-    .chat-header-actions {
+    .chat-header-actions.right-aligned {
         gap: 0.5rem;
     }
 
@@ -1402,9 +1438,10 @@ body.dark-mode .nav-icon::after {
     }
 
     .right-sidebar-wrapper {
-        display: none !important;
+        display: none !important; /* ZMODYFIKOWANE: Ukryj prawy pasek boczny na mobile, wymuś to */
     }
 
+    /* Dostosowanie wielkości czcionek i paddingów dla mobile */
     .app-title {
         font-size: 1.3rem;
     }
@@ -1415,6 +1452,9 @@ body.dark-mode .nav-icon::after {
     .search-bar input {
         padding: 0.6rem 1rem 0.6rem 2.5rem;
         font-size: 0.85rem;
+    }
+    .contact-item {
+        padding: 0.6rem;
     }
     .contact-name {
         font-size: 0.95rem;
@@ -1437,109 +1477,108 @@ body.dark-mode .nav-icon::after {
 }
 
 body.auth-body {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    background: var(--bg-color-light);
-    font-family: 'Segoe UI', sans-serif;
-    margin: 0;
-    box-sizing: border-box;
+    display: flex; /* Użyj flexbox do centrowania zawartości */
+    justify-content: center; /* Centruj poziomo */
+    align-items: center; /* Centruj pionowo */
+    min-height: 100vh; /* Upewnij się, że body ma przynajmniej wysokość widokową */
+    background: var(--bg-color-light); /* Jasne tło dla całej strony, zdefiniowane w :root */
+    font-family: 'Segoe UI', sans-serif; /* Spójna czcionka */
+    margin: 0; /* Usuń domyślny margines body */
+    box-sizing: border-box; /* Model pudełkowy dla łatwiejszego rozmiarowania */
 }
 
 /* Kontener główny formularza (Login/Rejestracja) */
 .auth-container {
-    background: var(--bg-color-container);
-    padding: 2.5rem;
-    border-radius: 12px;
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
-    text-align: center;
-    width: 100%;
-    max-width: 400px;
-    margin: 20px;
+    background: var(--bg-color-container); /* Białe tło dla kontenera formularza */
+    padding: 2.5rem; /* Wewnętrzne odstępy */
+    border-radius: 12px; /* Zaokrąglone rogi */
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1); /* Delikatny cień */
+    text-align: center; /* Centruj tekst wewnątrz kontenera */
+    width: 100%; /* Pełna szerokość */
+    max-width: 400px; /* Ogranicz maksymalną szerokość dla lepszego wyglądu */
+    margin: 20px; /* Margines, aby nie przylegało do krawędzi na mniejszych ekranach */
 }
 
 /* Nagłówki h2 w kontenerach autoryzacji */
 .auth-container h2 {
-    font-size: 1.8rem;
-    color: var(--primary-color);
-    margin-bottom: 1.5rem;
+    font-size: 1.8rem; /* Rozmiar czcionki */
+    color: var(--primary-color); /* Kolor główny aplikacji */
+    margin-bottom: 1.5rem; /* Odstęp pod nagłówkiem */
 }
 
 /* Formularz autoryzacji (Login/Rejestracja) */
 .auth-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
+    display: flex; /* Użyj flexbox dla elementów formularza */
+    flex-direction: column; /* Ułóż elementy pionowo */
+    gap: 1rem; /* Odstęp między elementami formularza */
 }
 
 /* Pola input w formularzach autoryzacji */
 .auth-form input {
-    padding: 0.8rem;
-    border-radius: 8px;
-    border: 1px solid var(--border-color-medium);
-    background: var(--bg-color-input);
-    font-size: 0.95rem;
-    color: var(--text-color-dark);
-    outline: none;
-    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    padding: 0.8rem; /* Wewnętrzne odstępy */
+    border-radius: 8px; /* Zaokrąglone rogi */
+    border: 1px solid var(--border-color-medium); /* Kolor ramki */
+    background: var(--bg-color-input); /* Jasne tło inputu */
+    font-size: 0.95rem; /* Rozmiar czcionki */
+    color: var(--text-color-dark); /* Kolor tekstu */
+    outline: none; /* Usuń domyślny focus outline */
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out; /* Płynne przejścia */
 }
 .auth-form input:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 2px rgba(106, 90, 205, 0.2);
+    border-color: var(--primary-color); /* Kolor ramki na focusie */
+    box-shadow: 0 0 0 2px rgba(106, 90, 205, 0.2); /* Delikatny cień na focusie */
 }
 .auth-form input::placeholder {
-    color: var(--text-color-medium);
+    color: var(--text-color-medium); /* Kolor placeholder'a */
 }
 
 /* Wrapper dla pola hasła (dla ikonki oka) */
 .password-wrapper {
-    position: relative;
+    position: relative; /* Ważne dla pozycjonowania ikonki oka */
 }
 
 /* Styl ikonki oka w polu hasła */
 .password-wrapper .eye {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    cursor: pointer;
-    color: var(--text-color-medium);
-    font-size: 1.1rem;
-    transition: color 0.2s;
+    position: absolute; /* Pozycjonowanie absolutne względem password-wrapper */
+    right: 12px; /* Odległość od prawej krawędzi */
+    top: 50%; /* W połowie wysokości */
+    transform: translateY(-50%); /* Korekta pionowa do środka */
+    cursor: pointer; /* Kursor wskazujący na klikalność */
+    color: var(--text-color-medium); /* Kolor ikonki */
+    font-size: 1.1rem; /* Rozmiar ikonki */
+    transition: color 0.2s; /* Płynne przejście koloru na hover */
 }
 .password-wrapper .eye:hover {
-    color: var(--text-color-dark);
+    color: var(--text-color-dark); /* Ciemniejszy kolor na hover */
 }
 
 /* Przycisk logowania/rejestracji */
 .login-btn {
-    padding: 0.8rem;
-    background: var(--primary-color);
-    border: none;
-    border-radius: 8px;
-    color: var(--text-color-light);
-    font-weight: bold;
-    cursor: pointer;
-    transition: background 0.3s ease-in-out;
+    padding: 0.8rem; /* Wewnętrzne odstępy */
+    background: var(--primary-color); /* Kolor główny aplikacji */
+    border: none; /* Brak ramki */
+    border-radius: 8px; /* Zaokrąglone rogi */
+    color: var(--text-color-light); /* Biały tekst */
+    font-weight: bold; /* Pogrubiony tekst */
+    cursor: pointer; /* Kursor wskazujący na klikalność */
+    transition: background 0.3s ease-in-out; /* Płynne przejście tła */
 }
 .login-btn:hover {
-    background: var(--primary-color-dark);
+    background: var(--primary-color-dark); /* Ciemniejszy kolor na hover */
 }
 
 /* Link do przełączania między logowaniem a rejestracją */
 .switch-link {
-    margin-top: 1.5rem;
-    font-size: 0.9rem;
-    color: var(--text-color-dark);
+    margin-top: 1.5rem; /* Odstęp od formularza */
+    font-size: 0.9rem; /* Rozmiar czcionki */
+    color: var(--text-color-dark); /* Kolor tekstu */
 }
 .switch-link a {
-    color: var(--primary-color);
-    text-decoration: none;
-    font-weight: bold;
-    transition: color 0.2s;
+    color: var(--primary-color); /* Kolor główny dla linku */
+    text-decoration: none; /* Brak podkreślenia */
+    font-weight: bold; /* Pogrubiony tekst */
+    transition: color 0.2s; /* Płynne przejście koloru */
 }
 .switch-link a:hover {
-    color: var(--primary-color-dark);
+    color: var(--primary-color-dark); /* Ciemniejszy kolor na hover */
 }
-
