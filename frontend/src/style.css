@@ -442,7 +442,7 @@ body {
     position: relative;
     background: var(--bg-color-lighter);
     /* ZMODYFIKOWANE: Usunięcie zaokrągleń, będą one obsługiwane przez .container */
-    border-top-right-radius: 0;
+    border-top-right-radius: 0; 
     border-bottom-right-radius: 0;
     /* NOWE: Upewnienie się, że również lewy górny róg jest prosty, aby pasował do .container */
     border-top-left-radius: 0;
@@ -467,9 +467,9 @@ body {
 
 .chat-area {
     flex: 1;
-    display: none;
+    display: none; /* Domyślnie ukryty, pokazywany przez JS */
     flex-direction: column;
-    height: 100%;
+    /* Usunięto height: 100%; - Polegamy na flex: 1 dla zarządzania wysokością */
     position: relative;
     background: var(--bg-color-chat-messages);
 }
@@ -664,8 +664,8 @@ body {
     align-items: center; 
 }
 .color-box, .bg-box {
-    width: 35px; 
-    height: 35px; 
+    width: 45px; 
+    height: 45px; 
     border-radius: 50%;
     cursor: pointer;
     border: 3px solid transparent; 
@@ -986,20 +986,18 @@ body {
 
 /* PRAWY SIDEBAR (AKTYWNI UŻYTKOWNICY) */
 .right-sidebar-wrapper {
-    min-width: 200px;
-    width: 20%;
-    max-width: 300px;
+    min-width: 250px; /* Zwiększono z 200px */
+    width: 25%;      /* Zwiększono z 20% */
+    max-width: 350px; /* Zwiększono z 300px */
     border-left: 1px solid var(--border-color-light);
     background-color: var(--bg-color-sidebar-wrapper);
     display: flex; /* ZMODYFIKOWANE: Zawsze display: flex; na desktopie */
     flex-direction: column;
     padding: 1rem;
     overflow-y: auto;
-    /* ZMODYFIKOWANE: Usunięcie zaokrągleń, będą one obsługiwane przez .container */
     border-top-right-radius: 0;
     border-bottom-right-radius: 0;
     flex-shrink: 0;
-    /* NOWE: Upewnienie się, że prawy sidebar jest widoczny na większych ekranach */
     display: flex !important; /* Użycie !important dla pewności, ale staraj się unikać, jeśli to możliwe */
 }
 
@@ -1057,14 +1055,6 @@ body {
     background-color: #4caf50;
     margin-left: auto;
     flex-shrink: 0;
-}
-
-.no-active-users-message {
-    text-align: center;
-    color: var(--text-color-medium); /* Zakładając, że masz zmienne CSS dla kolorów */
-    font-size: 0.9em;
-    margin-top: 10px;
-    /* Domyślnie jest widoczny, JS go ukryje, jeśli są aktywni użytkownicy */
 }
 
 /* Dark mode overrides */
@@ -1159,7 +1149,7 @@ body.dark-mode .nav-icon::after {
     color: var(--text-color-dark);
 }
 .dark-mode .contact .last-message,
-.dark-mode .contact .last-message-time {
+.dark-mode .contact .message-time { /* Poprawiono z .last-message-time */
     color: var(--text-color-medium);
 }
 .dark-mode .search-bar input {
@@ -1354,10 +1344,9 @@ body.dark-mode .nav-icon::after {
     }
 
     .right-sidebar-wrapper {
-        min-width: 180px;
-        width: 20%;
-        max-width: 300px;
-        /* Upewnia się, że prawy sidebar jest widoczny, jeśli jest to widok 3-kolumnowy */
+        min-width: 200px; /* Dostosowano dla mniejszych widoków desktopowych/tabletowych */
+        width: 22%;      /* Dostosowano dla mniejszych widoków desktopowych/tabletowych */
+        max-width: 300px; /* Dostosowano dla mniejszych widoków desktopowych/tabletowych */
         display: flex !important;
     }
 }
@@ -1453,7 +1442,8 @@ body.dark-mode .nav-icon::after {
         padding: 0.6rem 1rem 0.6rem 2.5rem;
         font-size: 0.85rem;
     }
-    .contact-item {
+    /* contact-item nie ma w HTML, używamy .contact */
+    .contact {
         padding: 0.6rem;
     }
     .contact-name {
