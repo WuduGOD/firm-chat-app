@@ -107,8 +107,8 @@ wss.on('connection', (ws) => {
                 // No need to update status to offline here; 'onclose' handles it more reliably.
             }
 
-            // ***** KEY ADDITION: Handle 'get_active_users' request *****
-            // This is triggered by the frontend on WebSocket 'onopen'
+            // ***** KLUCZOWY DODATEK: Obsługa żądania 'get_active_users' *****
+            // To jest wywoływane przez frontend w WebSocket 'onopen'
             else if (data.type === 'get_active_users' && userData) {
                 console.log(`Received request for active users from ${userData.username}.`);
                 const activeUsersFromDb = await getOnlineStatusesFromDb(); // Fetch from DB
@@ -123,7 +123,28 @@ wss.on('connection', (ws) => {
                 }));
                 console.log(`Sent active users list to ${userData.username}. List size: ${formattedUsers.length}`);
             }
+            // ***** NOWY DODATEK: Obsługa wiadomości 'status' z frontendu *****
+            else if (data.type === 'status') {
+                const userId = data.user;
+                const isOnline = data.online;
 
+                // Ustaw userData dla tego połączenia WebSocket, jeśli jeszcze nie jest ustawione (dla początkowej wiadomości 'status')
+                // Jest to kluczowe, ponieważ późniejsze wiadomości 'get_active_users' lub 'leave' mogą polegać na userData
+                if (!userData) {
+                    userData = { username: userId, room: 'global' }; // Przypisz domyślny pokój 'global' lub null
+                    clients.set(ws, userData);
+                } else {
+                    // Zaktualizuj nazwę użytkownika (ID Supabase) w userData, jeśli się zmieni (mało prawdopodobne)
+                    userData.username = userId;
+                    clients.set(ws, userData); // Upewnij się, że mapa jest zaktualizowana, jeśli obiekt userData został zastąpiony
+                }
+
+                await updateProfileStatus(userId, isOnline);
+                console.log(`User ${userId} status updated to ${isOnline}. (from 'status' message)`);
+
+                // Rozgłoś tę zmianę statusu do wszystkich innych klientów
+                broadcastUserStatus(userId, isOnline);
+            }
             else {
                 console.warn('Unhandled message type or missing userData:', data);
             }
