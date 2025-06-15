@@ -19,10 +19,20 @@ const pool = new Pool({
     keepAlive: true
 });
 
-export const wss = new WebSocketServer({ noServer: true });
+// Testuj połączenie z bazą danych na starcie
+pool.connect()
+    .then(client => {
+        console.log("Successfully connected to PostgreSQL!");
+        client.release();
+    })
+    .catch(err => {
+        console.error("Failed to connect to PostgreSQL on startup:", err.message);
+        // Ważne: Jeśli połączenie z bazą danych jest krytyczne, możesz tu zakończyć proces.
+        // process.exit(1); 
+    });
 
-// Usuwamy globalną mapę userStatus, bo będziemy polegać na bazie danych
-// const userStatus = new Map(); // NIE JEST JUŻ POTRZEBNA
+
+export const wss = new WebSocketServer({ noServer: true });
 
 const clients = new Map(); // Map(ws, { username, room })
 
@@ -75,7 +85,7 @@ wss.on('connection', (ws) => {
                 broadcastUserStatus(userData.username, true);
             }
 
-            if (data.type === 'message' && userData) {
+            else if (data.type === 'message' && userData) {
                 const inserted_at = await saveMessage(userData.username, userData.room, data.text);
                 const msgObj = {
                     type: 'message',
@@ -86,24 +96,44 @@ wss.on('connection', (ws) => {
                 };
                 broadcastToRoom(userData.room, JSON.stringify(msgObj));
             }
+            
             // Nowa obsługa wiadomości typing
-            if (data.type === 'typing' && userData) {
+            else if (data.type === 'typing' && userData) {
                 // Rozsyłaj wiadomość typing tylko do klientów w tym samym pokoju
                 const typingMsg = {
                     type: 'typing',
                     username: userData.username,
                     room: userData.room // upewnij się, że room jest przekazywany dalej
                 };
-                broadcastToRoom(userData.room, JSON.stringify(typingMsg)); // Zmieniono na broadcastToRoom
+                broadcastToRoom(userData.room, JSON.stringify(typingMsg)); 
             }
 
             // Opcjonalnie: Obsługa wiadomości 'leave' (z front-endu)
-            if (data.type === 'leave' && userData) {
+            else if (data.type === 'leave' && userData) {
                 clients.delete(ws); // Usuń połączenie WS
                 // Nie ustawiaj na offline od razu, ponieważ on('close') to zrobi bardziej niezawodnie
                 console.log(`Użytkownik ${userData.username} zgłosił opuszczenie pokoju ${userData.room || 'nieznany'}.`);
             }
 
+            // ***** KLUCZOWY DODATEK: Obsługa żądania 'get_active_users' *****
+            else if (data.type === 'get_active_users' && userData) {
+                console.log(`Received request for active users from ${userData.username}.`);
+                const activeUsers = await getOnlineStatusesFromDb(); 
+                const formattedUsers = activeUsers.map(user => ({
+                    id: user.id,
+                    username: user.id, // Zakładamy, że ID jest nazwą użytkownika; dostosuj, jeśli masz inną kolumnę (np. user.name)
+                    online: user.is_online
+                }));
+                ws.send(JSON.stringify({
+                    type: 'active_users',
+                    users: formattedUsers
+                }));
+                console.log(`Sent active users list to ${userData.username}.`);
+            }
+
+            else {
+                console.warn('Unhandled message type or missing userData:', data);
+            }
 
         } catch (err) {
             console.error('Błąd przy odbiorze wiadomości przez WebSocket:', err);
@@ -152,7 +182,7 @@ async function getOnlineStatusesFromDb() {
     const client = await pool.connect();
     try {
         const query = `
-            SELECT id, is_online
+            SELECT id, is_online, username, email -- Dodaj kolumny, których potrzebujesz na froncie do wyświetlenia nazwy
             FROM public.profiles
             WHERE is_online = TRUE;
         `;
@@ -166,9 +196,6 @@ async function getOnlineStatusesFromDb() {
     }
 }
 
-// Pozostałe funkcje (broadcastToRoom, broadcastUserStatus, saveMessage, getLastMessages)
-// pozostają bez zmian lub z minimalnymi korektami jak w server.js powyżej.
-
 function broadcastToRoom(room, msg) {
     for (const [client, data] of clients.entries()) {
         if (client.readyState === WebSocket.OPEN && data.room === room) {
@@ -177,8 +204,6 @@ function broadcastToRoom(room, msg) {
     }
 }
 
-// UWAGA: ta funkcja teraz rozgłasza statusy pobrane z bazy/utrwalone w mapie clients.
-// Upewnij się, że 'user' w wiadomości 'status' to ID użytkownika.
 function broadcastUserStatus(userId, isOnline) {
     const msg = JSON.stringify({
         type: 'status',
@@ -202,7 +227,7 @@ async function saveMessage(username, room, text) {
     } catch (err) {
         console.error('Błąd zapisu wiadomości:', err);
     }
-    return new Date();
+    return new Date(); // Zwróć aktualną datę, nawet jeśli zapis się nie powiedzie
 }
 
 async function getLastMessages(room, limit = 50) {
