@@ -163,10 +163,14 @@ body {
     margin: 0.5rem 1rem 1rem 1rem;
     box-shadow: var(--shadow-medium);
     align-items: stretch;
-    /* NOWE: Ograniczenie maksymalnej szerokości kontenera na dużych ekranach */
-    max-width: 1400px; /* Dostosuj tę wartość do preferowanej maksymalnej szerokości */
-    margin-left: auto; /* Centrowanie kontenera na stronie */
-    margin-right: auto; /* Centrowanie kontenera na stronie */
+    /* ZMIENIONE: Usunięto ograniczenie maksymalnej szerokości i centrowanie, aby komunikator rozciągał się na całą szerokość */
+    /* max-width: 1400px; */
+    /* margin-left: auto; */
+    /* margin-right: auto; */
+    width: 100%; /* Upewnia się, że kontener zajmuje całą dostępną szerokość */
+    margin: 0; /* Usuwa marginesy, aby przylegał do krawędzi okna */
+    border-radius: 0; /* Usuwa zaokrąglenia, gdy jest pełna szerokość */
+    box-shadow: none; /* Usuwa cień, gdy jest pełna szerokość */
 }
 
 /* Sidebar Wrapper (lewy pasek - rozmowy + ikony) */
@@ -478,7 +482,7 @@ body {
     background: var(--bg-color-chat-header);
     border-bottom: 1px solid var(--border-color-light);
     display: flex;
-    justify-content: space-between; /* ZMIENIONE: Rozkłada elementy na krawędziach */
+    justify-content: space-between; /* ZMODYFIKOWANE: Rozkłada elementy na krawędziach */
     align-items: center; /* Wyśrodkowuje elementy w pionie */
     flex-wrap: nowrap;
     gap: 1rem; /* Pozostawiamy gap dla odstępów wewnętrznych */
@@ -968,13 +972,15 @@ body {
     max-width: 300px;
     border-left: 1px solid var(--border-color-light);
     background-color: var(--bg-color-sidebar-wrapper);
-    display: flex;
+    display: flex; /* ZMODYFIKOWANE: Zawsze display: flex; na desktopie */
     flex-direction: column;
     padding: 1rem;
     overflow-y: auto;
     border-top-right-radius: 12px;
     border-bottom-right-radius: 12px;
     flex-shrink: 0;
+    /* NOWE: Upewnienie się, że prawy sidebar jest widoczny na większych ekranach */
+    display: flex !important; /* Użycie !important dla pewności, ale staraj się unikać, jeśli to możliwe */
 }
 
 .right-sidebar h4 {
@@ -1310,7 +1316,9 @@ body.dark-mode .nav-icon::after {
     .right-sidebar-wrapper {
         min-width: 180px;
         width: 20%;
-        max-width: 300px; /* ZMODYFIKOWANE: Wartość max-width, była ucięta */
+        max-width: 300px;
+        /* Upewnia się, że prawy sidebar jest widoczny, jeśli jest to widok 3-kolumnowy */
+        display: flex !important; 
     }
 }
 
@@ -1390,7 +1398,7 @@ body.dark-mode .nav-icon::after {
     }
 
     .right-sidebar-wrapper {
-        display: none; /* Ukryj prawy pasek boczny na mobile */
+        display: none !important; /* ZMODYFIKOWANE: Ukryj prawy pasek boczny na mobile, wymuś to */
     }
 
     /* Dostosowanie wielkości czcionek i paddingów dla mobile */
