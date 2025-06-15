@@ -572,9 +572,14 @@ function displayActiveUsers(activeUsersData) {
     const filteredUsers = activeUsersData.filter(user => String(user.id) !== String(currentUser.id));
 
     if (filteredUsers.length === 0) {
-        noActiveUsersText.style.display = 'block'; // Pokaż wiadomość 'Brak aktywnych użytkowników'
+        noActiveUsersText.style.setProperty('display', 'block', 'important'); // Pokaż wiadomość 'Brak aktywnych użytkowników'
+        noActiveUsersText.style.setProperty('height', 'auto', 'important'); // Zapewnij, że zajmuje wysokość
+        noActiveUsersText.style.setProperty('overflow', 'visible', 'important'); // Zapewnij widoczność zawartości
     } else {
-        noActiveUsersText.style.display = 'none'; // Ukryj wiadomość 'Brak aktywnych użytkowników'
+        noActiveUsersText.style.setProperty('display', 'none', 'important'); // Ukryj wiadomość 'Brak aktywnych użytkowników'
+        noActiveUsersText.style.setProperty('height', '0px', 'important'); // Wymuś zerową wysokość
+        noActiveUsersText.style.setProperty('overflow', 'hidden', 'important'); // Ukryj ewentualne przepełnienie
+
         filteredUsers.forEach(user => {
             const li = document.createElement('li');
             li.classList.add('active-user-item');
