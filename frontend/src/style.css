@@ -586,27 +586,27 @@ body {
 .chat-settings-dropdown {
     right: 0;
     top: 100%;
-    /* ZMIANA: Usunięcie width: max-content; i ustawienie konkretnej szerokości */
-    width: 300px; /* Ustawienie konkretnej szerokości, aby zmieściły się 4 kółka */
-    /* ZMIANA: min-width i max-width niepotrzebne przy stałej szerokości */
-    padding: 0.8rem; /* Zwiększam padding, aby okienko nie było za ciasne */
+    /* ZMIANA: Zwiększamy szerokość, aby dać więcej miejsca na elementy siatki */
+    width: 320px; /* Zwiększona szerokość */
+    padding: 0.8rem; 
     border-top-right-radius: 0;
     z-index: 101;
     box-sizing: border-box;
     display: flex;
-    flex-direction: column; /* Układ głównych sekcji (nagłówki, inputy) nadal pionowy */
-    gap: 0.6rem; /* Odstęp między głównymi sekcjami */
-    overflow-y: auto; /* ZMIANA: Dodajemy scrollbar, jeśli zawartość jest za duża */
-    max-height: 80vh; /* ZMIANA: Ograniczamy maksymalną wysokość, np. 80% wysokości widoku */
+    flex-direction: column; 
+    /* ZMIANA: Zmniejszamy globalny odstęp między sekcjami w dropdownie */
+    gap: 0.4rem; /* Zmniejszony odstęp */
+    overflow-y: hidden; /* ZMIANA: Usuwamy overflow-y, aby wymusić dopasowanie */
+    max-height: none; /* ZMIANA: Usuwamy max-height, aby pozwolić na naturalne dopasowanie */
 }
 .chat-settings-dropdown h3 {
-    font-size: 1.05rem; /* Lekko większa czcionka dla lepszej czytelności */
-    margin-bottom: 0.5rem;
+    font-size: 1rem; /* Lekko zmniejszona czcionka */
+    margin-bottom: 0.4rem; /* Zmniejszony margines */
     color: var(--text-color-dark);
 }
 .chat-settings-dropdown .setting-group {
-    margin-bottom: 0.5rem;
-    padding-bottom: 0.5rem;
+    margin-bottom: 0.4rem; /* Zmniejszony margines */
+    padding-bottom: 0.4rem; /* Zmniejszony padding */
     border-bottom: 1px solid var(--border-color-light);
 }
 .chat-settings-dropdown .setting-group:last-child {
@@ -615,17 +615,17 @@ body {
     padding-bottom: 0;
 }
 .chat-settings-dropdown h4 {
-    font-size: 0.95rem; /* Lekko większa czcionka */
+    font-size: 0.9rem; /* Lekko zmniejszona czcionka */
     color: var(--text-color-medium);
-    margin-bottom: 0.3rem;
+    margin-bottom: 0.2rem; /* Zmniejszony margines */
 }
 .chat-settings-dropdown input[type="text"] {
     width: 100%;
-    padding: 0.6rem; 
+    padding: 0.5rem; /* Zmniejszony padding */ 
     border: 1px solid var(--border-color-medium);
     border-radius: 6px;
-    margin-bottom: 0.4rem;
-    font-size: 0.9rem;
+    margin-bottom: 0.3rem; /* Zmniejszony margines */
+    font-size: 0.85rem; /* Zmniejszona czcionka */
     background-color: var(--bg-color-search-input);
     color: var(--text-color-dark);
 }
@@ -634,10 +634,10 @@ body {
 }
 .chat-settings-dropdown button {
     width: auto;
-    padding: 0.6rem 1.2rem; 
-    font-size: 0.95rem;
+    padding: 0.5rem 1rem; /* Zmniejszony padding */ 
+    font-size: 0.9rem; /* Zmniejszona czcionka */
     display: block;
-    margin-top: 0.4rem;
+    margin-top: 0.3rem; /* Zmniejszony margines */
     background: var(--primary-color);
     color: var(--text-color-light);
     border: none;
@@ -651,22 +651,20 @@ body {
 
 /* Opcje kolorów/tła */
 .color-options, .background-options {
-    display: grid; /* Używamy grid zamiast flex */
+    display: grid; 
     grid-template-columns: repeat(4, 1fr); /* 4 równe kolumny, aby zmieściły 4 kółka */
-    gap: 8px; /* Stały odstęp między elementami siatki */
-    margin: 0.4rem 0; 
-    /* ZMIANA: Upewnienie się, że width jest na 100% dla grid */
+    gap: 6px; /* ZMIANA: Lekko zmniejszony odstęp między kółkami */
+    margin: 0.3rem 0; /* Zmniejszony margines */
     width: 100%; 
     box-sizing: border-box; 
 }
 .color-box, .bg-box {
-    width: 32px; /* Stała szerokość kółek */
-    height: 32px; /* Stała wysokość kółek */
+    width: 30px; /* ZMIANA: Lekko zmniejszone kółka */
+    height: 30px; /* ZMIANA: Lekko zmniejszone kółka */
     border-radius: 50%;
     cursor: pointer;
     border: 2px solid transparent;
     transition: border-color 0.2s;
-    /* Usunięto !important z flex-shrink/grow - grid sam kontroluje rozłożenie */
 }
 
 .color-box.active, .bg-box.active {
