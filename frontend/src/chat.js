@@ -383,7 +383,8 @@ function addMessageToChat(msg) {
 
         if (previewEl && timeEl) {
             const senderName = String(msg.username) === String(currentUser.id) ? "Ja" : (getUserLabelById(msg.username) || msg.username);
-            previewText = `${senderName}: ${msg.text}`; // Użyj textContent, nie innerHTML dla bezpieczeństwa
+            // KLUCZOWA ZMIANA: Bezpośrednia aktualizacja textContent na elemencie DOM
+            previewEl.textContent = `${senderName}: ${msg.text}`; // Użyj textContent, nie innerHTML dla bezpieczeństwa
 
             const lastMessageTime = new Date(msg.inserted_at);
             timeEl.textContent = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
