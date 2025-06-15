@@ -1,4 +1,5 @@
 // Importy zależności - dopasowane do ścieżek z Twojego działającego HTML
+// Zakładając, że wszystkie pliki JS są w /src/
 import { loadAllProfiles, getUserLabelById } from './profiles.js';
 import { supabase } from './supabaseClient.js';
 
@@ -18,7 +19,7 @@ let sidebarEl; // ID: sidebar, Klasa: conversations-list
 let searchInput;
 let contactsListEl; // ID: contactsList
 
-let chatAreaWrapper; // NOWY: Kontener dla logo-screen i chat-area
+let chatAreaWrapper; // Kontener dla logo-screen i chat-area
 let logoScreen; // ID: logoScreen
 let chatArea; // ID: chatArea
 
@@ -44,7 +45,7 @@ let sendButton;
 let rightSidebarWrapper; // Klasa: right-sidebar-wrapper
 let rightSidebar; // ID: rightSidebar
 let activeUsersListEl; // ID: activeUsersList
-let noActiveUsersText; // Klasa: no-active-users-message
+let noActiveUsersText; // ID: noActiveUsersText, bez klasy .no-active-users-message w HTML
 
 // Zmienne stanu czatu
 let allConversations = [];
@@ -466,7 +467,7 @@ function updateUserStatusIndicator(userId, isOnline) {
             } else {
                  // If user is online and not already in the list, add them
                 const li = document.createElement('li');
-                li.classList.add('active-user-item'); // Dodaj klasę, jeśli potrzebne do stylowania ogólnego
+                li.classList.add('active-user-item'); // Dodaj klasę do LI, jeśli potrzebne do stylowania ogólnego
                 li.dataset.userId = userId;
 
                 const avatarSrc = `https://i.pravatar.cc/150?img=${userId.charCodeAt(0) % 70 + 1}`; // Temporary random avatar
@@ -536,16 +537,26 @@ function initWebSocket() {
     socket.onopen = () => {
         console.log('WebSocket connected');
         reconnectAttempts = 0; // Reset reconnect attempts
-        if (currentRoom && currentUser) {
-            // Join the current room if one is active
-            socket.send(JSON.stringify({
-                type: 'join',
-                name: currentUser.id,
-                room: currentRoom,
-            }));
-            console.log(`Sent join message to WebSocket for room: ${currentRoom}`);
+        if (currentUser) { // Only attempt to join if currentUser is defined
+            if (currentRoom) {
+                // Join the current room if one is active
+                socket.send(JSON.stringify({
+                    type: 'join',
+                    name: currentUser.id,
+                    room: currentRoom,
+                }));
+                console.log(`Sent join message to WebSocket for room: ${currentRoom}`);
+            } else {
+                // If no specific room, send a global join for presence
+                socket.send(JSON.stringify({
+                    type: 'join',
+                    name: currentUser.id,
+                    room: 'global', // Join a general room for status updates
+                }));
+                 console.log(`Sent global join message to WebSocket for user: ${currentUser.id}`);
+            }
         } else {
-            console.warn("WebSocket opened but currentRoom or currentUser is not set. Cannot join room yet.");
+            console.warn("WebSocket opened but currentUser is not set. Cannot join room yet.");
         }
         // Send "online" status for the current user
         if (currentUser) {
@@ -619,6 +630,7 @@ function initWebSocket() {
  */
 async function loadActiveUsers() {
     console.log("Loading active users for right sidebar...");
+    // Sprawdź, czy elementy istnieją, zanim spróbujesz ich użyć
     if (!activeUsersListEl || !noActiveUsersText) {
         console.error("activeUsersListEl or noActiveUsersText not found, cannot load active users.");
         return;
@@ -744,8 +756,8 @@ function setupChatSettingsDropdown() {
                     }
 
                     console.log('New nickname set:', newNickname, 'for user:', currentUser.id);
-                    // Use a custom modal or simple text update instead of alert
-                    alert(`Nickname '${newNickname}' has been set successfully.`); // User notification
+                    // Użyj alertu jako prostego powiadomienia, zgodnie z Twoim wcześniejszym kodem
+                    alert(`Nickname '${newNickname}' has been set successfully.`);
                     await loadAllProfiles(); // Reload profiles to update cache
                     // Update chat header if it's the current user's chat
                     if (chatUserName && currentChatUser && String(currentUser.id) === String(currentChatUser.id)) {
@@ -755,8 +767,7 @@ function setupChatSettingsDropdown() {
 
                 } catch (error) {
                     console.error('Error updating nickname:', error.message);
-                    // Use a custom modal or simple text update instead of alert
-                    alert(`Error setting nickname: ${error.message}`); // Error notification
+                    alert(`Error setting nickname: ${error.message}`);
                 }
             } else if (!currentUser) {
                 alert("Error: You are not logged in to set a nickname.");
@@ -771,7 +782,6 @@ function setupChatSettingsDropdown() {
         searchMessagesButton.addEventListener('click', () => {
             const searchTerm = messageSearchInput.value.trim();
             console.log('Searching messages for:', searchTerm, '(functionality to be implemented)');
-            // Use a custom modal or simple text update instead of alert
             alert(`Searching messages for '${searchTerm}' (functionality to be implemented).`);
         });
     }
@@ -784,49 +794,50 @@ function setupChatSettingsDropdown() {
 async function initializeApp() {
     console.log("Initializing Komunikator application...");
 
-    // 1. Get DOM element references (zaktualizowane do nowego HTML)
+    // 1. Get DOM element references (zaktualizowane do Twojego oryginalnego HTML)
     mainHeader = document.querySelector('.main-header');
     menuButton = document.getElementById('menuButton');
-    dropdownMenu = document.getElementById('dropdownMenu'); // ID: dropdownMenu, Klasa: dropdown
+    dropdownMenu = document.getElementById('dropdownMenu');
     themeToggle = document.getElementById('themeToggle');
     logoutButton = document.getElementById('logoutButton');
 
     container = document.querySelector('.container');
-    sidebarWrapper = document.querySelector('.sidebar-wrapper'); // Kontener dla main-nav-icons i sidebar
+    sidebarWrapper = document.querySelector('.sidebar-wrapper');
     mainNavIcons = document.querySelector('.main-nav-icons');
     navIcons = document.querySelectorAll('.nav-icon');
 
-    sidebarEl = document.getElementById('sidebar'); // ID: sidebar, Klasa: conversations-list
-    searchInput = sidebarEl.querySelector('input[type="text"]');
+    sidebarEl = document.getElementById('sidebar');
+    // searchInput jest bezpośrednio w div.search-bar, nie ma ID, więc querySelector to wybiera.
+    searchInput = sidebarEl.querySelector('.search-bar input[type="text"]');
     contactsListEl = document.getElementById('contactsList');
 
-    chatAreaWrapper = document.querySelector('.chat-area-wrapper'); // NOWY: Kontener dla logo-screen i chat-area
+    chatAreaWrapper = document.querySelector('.chat-area-wrapper');
     logoScreen = document.getElementById('logoScreen');
     chatArea = document.getElementById('chatArea');
 
-    chatHeader = document.querySelector('.chat-header'); // Klasa: chat-header
+    chatHeader = document.querySelector('.chat-header');
     backButton = document.getElementById('backButton');
     chatUserName = document.getElementById('chatUserName');
-    userStatusSpan = document.getElementById('userStatus'); // ID: userStatus, Klasa: status
+    userStatusSpan = document.getElementById('userStatus');
     chatHeaderActions = chatHeader.querySelector('.chat-header-actions');
     chatSettingsButton = document.getElementById('chatSettingsButton');
-    chatSettingsDropdown = document.getElementById('chatSettingsDropdown'); // ID: chatSettingsDropdown, Klasa: dropdown chat-settings-dropdown
-    typingStatusHeader = document.getElementById('typingStatus'); // ID: typingStatus, Klasa: typing-status (status w nagłówku)
-    typingIndicatorMessages = document.getElementById('typingIndicator'); // ID: typingIndicator, Klasa: typing-indicator (animowane kropki w wiadomościach)
+    chatSettingsDropdown = document.getElementById('chatSettingsDropdown');
+    typingStatusHeader = document.getElementById('typingStatus'); // Status w nagłówku (pusty div w HTML)
+    typingIndicatorMessages = document.getElementById('typingIndicator'); // Animowane kropki w wiadomościach
 
+    messageContainer = document.getElementById('messageContainer');
 
-    messageContainer = document.getElementById('messageContainer'); // ID: messageContainer, Klasa: messages
-
-    chatFooter = document.querySelector('.chat-footer'); // Klasa: chat-footer
+    chatFooter = document.querySelector('.chat-footer');
     attachButton = chatFooter.querySelector('.attach-button');
     messageInput = document.getElementById('messageInput');
     emojiButton = chatFooter.querySelector('.emoji-button');
     sendButton = document.getElementById('sendButton');
 
-    rightSidebarWrapper = document.querySelector('.right-sidebar-wrapper'); // Klasa: right-sidebar-wrapper
-    rightSidebar = document.getElementById('rightSidebar'); // ID: rightSidebar
+    rightSidebarWrapper = document.querySelector('.right-sidebar-wrapper');
+    rightSidebar = document.getElementById('rightSidebar');
     activeUsersListEl = document.getElementById('activeUsersList');
-    noActiveUsersText = document.querySelector('.no-active-users-message'); // Klasa: no-active-users-message
+    // KLUCZOWA ZMIANA: Wybieranie elementu po ID, nie po klasie, zgodnie z HTML
+    noActiveUsersText = document.getElementById('noActiveUsersText');
 
 
     // 2. Validate if all critical UI elements are found
@@ -840,11 +851,11 @@ async function initializeApp() {
         container: container,
         sidebarWrapper: sidebarWrapper,
         mainNavIcons: mainNavIcons,
-        navIconsLength: navIcons.length,
+        navIconsLength: navIcons.length, // Sprawdzamy długość NodeList
         sidebarEl: sidebarEl,
         searchInput: searchInput,
         contactsListEl: contactsListEl,
-        chatAreaWrapper: chatAreaWrapper, // NOWY ELEMENT DO WALIDACJI
+        chatAreaWrapper: chatAreaWrapper,
         logoScreen: logoScreen,
         chatArea: chatArea,
         chatHeader: chatHeader,
@@ -854,28 +865,43 @@ async function initializeApp() {
         chatHeaderActions: chatHeaderActions,
         chatSettingsButton: chatSettingsButton,
         chatSettingsDropdown: chatSettingsDropdown,
-        typingStatusHeader: typingStatusHeader, // SPRAWDZAMY OBA
-        typingIndicatorMessages: typingIndicatorMessages, // SPRAWDZAMY OBA
+        typingStatusHeader: typingStatusHeader,
+        typingIndicatorMessages: typingIndicatorMessages,
         messageContainer: messageContainer,
         chatFooter: chatFooter,
         attachButton: attachButton,
         messageInput: messageInput,
         emojiButton: emojiButton,
         sendButton: sendButton,
-        rightSidebarWrapper: rightSidebarWrapper, // NOWY ELEMENT DO WALIDACJI
+        rightSidebarWrapper: rightSidebarWrapper,
         rightSidebar: rightSidebar,
         activeUsersListEl: activeUsersListEl,
         noActiveUsersText: noActiveUsersText
     };
 
-    const missingCount = Object.values(missingElements).filter(val => val === null || val === undefined || (Array.isArray(val) && val.length === 0)).length;
+    let allElementsFound = true;
+    for (const key in missingElements) {
+        // Specjalne sprawdzenie dla NodeList (navIcons)
+        if (key === 'navIconsLength') {
+            if (missingElements[key] === 0) {
+                console.error(`Error: Element '${key}' (NodeList) is empty.`);
+                allElementsFound = false;
+            }
+        } else if (missingElements[key] === null || missingElements[key] === undefined) {
+            console.error(`Error: Critical UI element '${key}' not found.`);
+            allElementsFound = false;
+        }
+    }
 
-    if (missingCount > 0) {
-        console.error('Error: One or more critical UI elements not found. Please check your HTML selectors. Missing elements:', missingElements);
-        return;
+    if (!allElementsFound) {
+        console.error('Initialization failed due to missing UI elements. Please check your HTML selectors. Details:', missingElements);
+        // Możesz dodać alert dla użytkownika tutaj, ale w Canvas lepiej unikać alertów
+        // alert('Błąd inicjalizacji aplikacji: Brakujące elementy UI. Sprawdź konsolę.');
+        return; // Zakończ inicjalizację, jeśli brakuje elementów
     } else {
         console.log('All critical UI elements found.');
     }
+
 
     // 3. Check Supabase user session
     const { data: { session } } = await supabase.auth.getSession();
@@ -935,7 +961,9 @@ async function initializeApp() {
             logoScreen.classList.remove('hidden');
         }
         if (sidebarWrapper) { // sidebar-wrapper zawiera main-nav-icons i sidebar
-            sidebarWrapper.classList.add('visible'); // Pokaż cały sidebar-wrapper
+            // Na desktopie sidebar-wrapper jest zawsze widoczny
+            // Na mobile, kliknięcie backButton oznacza powrót do widoku listy rozmów, więc sidebar-wrapper staje się widoczny
+            sidebarWrapper.classList.add('visible');
         }
         backButton.classList.remove('show-on-mobile');
     });
@@ -957,6 +985,10 @@ async function initializeApp() {
 
     // Close dropdown when clicking outside
     document.addEventListener('click', (event) => {
+        if (!chatSettingsDropdown.classList.contains('hidden') && !chatSettingsButton.contains(event.target)) {
+            chatSettingsDropdown.classList.add('hidden');
+        }
+        // Również zamknij główne menu rozwijane, jeśli kliknięto poza nim
         if (!dropdownMenu.classList.contains('hidden') && !menuButton.contains(event.target)) {
             dropdownMenu.classList.add('hidden');
         }
@@ -1011,8 +1043,7 @@ async function initializeApp() {
 
     // Tooltip functionality for data-tooltip attributes (main-nav-icons)
     // UWAGA: Twój HTML ma data-tooltip, ale nie ma elementu .tooltip do wyświetlania.
-    // Dodaję prostą implementację tooltipa, jeśli nie masz jej w CSS.
-    // Możesz usunąć ten blok, jeśli masz bardziej rozbudowany system tooltipów.
+    // Dodaję prostą implementację tooltipa. Jeśli masz własne style, usuń ten blok.
     document.querySelectorAll('.main-nav-icons .nav-icon[data-tooltip]').forEach(element => {
         let tooltipEl;
 
@@ -1022,6 +1053,22 @@ async function initializeApp() {
                 if (!tooltipEl) {
                     tooltipEl = document.createElement('div');
                     tooltipEl.classList.add('simple-tooltip'); // Użyj unikalnej klasy
+                    // Dodaj styl dla .simple-tooltip w style.css, np.:
+                    /*
+                    .simple-tooltip {
+                        position: absolute;
+                        background-color: rgba(0, 0, 0, 0.75);
+                        color: white;
+                        padding: 5px 10px;
+                        border-radius: 4px;
+                        font-size: 0.85em;
+                        z-index: 10000;
+                        white-space: nowrap;
+                        pointer-events: none; // Ważne, aby nie blokować interakcji
+                        display: none;
+                        transform: translateY(-50%); // Aby wyśrodkować pionowo
+                    }
+                    */
                     document.body.appendChild(tooltipEl);
                 }
                 tooltipEl.textContent = text;
@@ -1043,33 +1090,15 @@ async function initializeApp() {
         element.addEventListener('mouseleave', hideTooltip);
     });
 
-    // Dodaj styl dla .simple-tooltip do style.css jeśli chcesz, żeby był widoczny
-    /*
-    .simple-tooltip {
-        position: absolute;
-        background-color: rgba(0, 0, 0, 0.75);
-        color: white;
-        padding: 5px 10px;
-        border-radius: 4px;
-        font-size: 0.85em;
-        z-index: 10000;
-        white-space: nowrap;
-        pointer-events: none; // Ważne, aby nie blokować interakcji
-        display: none;
-        transform: translateY(-50%); // Aby wyśrodkować pionowo
-    }
-    */
-
-
     // Handle media query changes for responsive layout
     function handleMediaQueryChange(mq) {
         if (mq.matches) { // Mobile view (max-width: 768px)
             console.log("Mobile view activated. Hiding chat area, showing sidebar wrapper.");
             chatArea.classList.remove('active'); // Hide chat area
             logoScreen.classList.remove('hidden'); // Show logo screen
-            sidebarWrapper.classList.add('visible'); // Show sidebar by default on mobile (but initially hidden by transform)
+            sidebarWrapper.classList.add('visible'); // Show sidebar by default on mobile (but initially hidden by transform in CSS)
 
-            if (rightSidebarWrapper) { // Użyj rightSidebarWrapper
+            if (rightSidebarWrapper) {
                 rightSidebarWrapper.style.display = 'none'; // Hide right sidebar on mobile
             }
 
@@ -1085,14 +1114,14 @@ async function initializeApp() {
             chatArea.classList.remove('active'); // Hide chat area (show logo screen by default)
             logoScreen.classList.remove('hidden'); // Show logo screen
 
-            if (rightSidebarWrapper) { // Użyj rightSidebarWrapper
+            if (rightSidebarWrapper) {
                 rightSidebarWrapper.style.display = 'flex'; // Show right sidebar on desktop
             }
             backButton.classList.remove('show-on-mobile'); // Hide back button on desktop
 
             // Aktywuj layout grid dla desktopu zgodnie z media query
             container.style.display = 'grid';
-            container.style.gridTemplateColumns = 'auto 1fr auto';
+            container.style.gridTemplateColumns = 'auto 1fr auto'; // To samo co w CSS
             // Pamiętaj, że w tym trybie .main-nav-icons powinno być ukryte przez CSS
         }
     }
