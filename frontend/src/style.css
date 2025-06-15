@@ -586,27 +586,27 @@ body {
 .chat-settings-dropdown {
     right: 0;
     top: 100%;
-    /* KLUCZOWA ZMIANA: Sztywna, bardzo wąska szerokość, aby WYMUSIĆ zawijanie */
-    width: 120px; /* To jest bardzo wąsko! Powinno zmusić do zawijania. */
-    min-width: 120px; /* Upewniamy się, że nie jest szerszy, ale też nie za mały */
-    max-width: 120px; /* I że nie urośnie */
-    padding: 0.3rem; /* Zmniejszony padding wewnętrzny dla większej przestrzeni na elementy */
+    /* KLUCZOWA ZMIANA: Zwiększona szerokość, aby pomieścić elementy poziomo */
+    width: 180px; /* Szerokość dobrana tak, aby pomieścić 3-4 kółka z odstępami */
+    min-width: 180px;
+    max-width: 200px; /* Lekkie ograniczenie, aby nie było za szeroko */
+    padding: 0.6rem; /* Odpowiedni padding */
     border-top-right-radius: 0;
     z-index: 101;
     box-sizing: border-box;
     display: flex;
-    flex-direction: column; /* Główny układ dropdownu nadal pionowy (sekcje Ustawienia, Motywy itd.) */
-    gap: 0.2rem; /* Jeszcze mniejszy odstęp między sekcjami */
+    flex-direction: column; /* Układ głównych sekcji (nagłówki, inputy) nadal pionowy */
+    gap: 0.5rem; /* Odstęp między głównymi sekcjami */
     overflow: visible; /* Zostawiamy visible, żeby paski przewijania się nie pojawiały, jeśli nie ma potrzeby */
 }
 .chat-settings-dropdown h3 {
-    font-size: 0.85rem; /* Mniejsza czcionka dla nagłówków sekcji */
-    margin-bottom: 0.2rem; /* Mniejsze marginesy pod nagłówkami */
+    font-size: 1rem; /* Przywracamy nieco większą czcionkę */
+    margin-bottom: 0.4rem;
     color: var(--text-color-dark);
 }
 .chat-settings-dropdown .setting-group {
-    margin-bottom: 0.2rem; /* Mniejsze marginesy między grupami ustawień */
-    padding-bottom: 0.2rem; /* Mniejszy padding na dole grup */
+    margin-bottom: 0.4rem;
+    padding-bottom: 0.4rem;
     border-bottom: 1px solid var(--border-color-light);
 }
 .chat-settings-dropdown .setting-group:last-child {
@@ -615,17 +615,17 @@ body {
     padding-bottom: 0;
 }
 .chat-settings-dropdown h4 {
-    font-size: 0.75rem; /* Mniejsza czcionka dla podnagłówków */
+    font-size: 0.9rem; /* Przywracamy nieco większą czcionkę */
     color: var(--text-color-medium);
-    margin-bottom: 0.1rem; /* Bardzo mały margines pod podnagłówkami */
+    margin-bottom: 0.2rem;
 }
 .chat-settings-dropdown input[type="text"] {
     width: 100%;
-    padding: 0.2rem; /* Mniejszy padding w polach tekstowych */
+    padding: 0.5rem; /* Przywracamy nieco większy padding */
     border: 1px solid var(--border-color-medium);
     border-radius: 6px;
-    margin-bottom: 0.1rem; /* Mały margines pod polami tekstowymi */
-    font-size: 0.8rem;
+    margin-bottom: 0.3rem;
+    font-size: 0.9rem;
     background-color: var(--bg-color-search-input);
     color: var(--text-color-dark);
 }
@@ -634,10 +634,10 @@ body {
 }
 .chat-settings-dropdown button {
     width: auto;
-    padding: 0.2rem 0.5rem; /* Mniejszy padding dla przycisków */
-    font-size: 0.8rem;
+    padding: 0.5rem 1rem; /* Przywracamy nieco większy padding */
+    font-size: 0.9rem;
     display: block;
-    margin-top: 0.1rem; /* Mały margines nad przyciskami */
+    margin-top: 0.3rem;
     background: var(--primary-color);
     color: var(--text-color-light);
     border: none;
@@ -652,24 +652,24 @@ body {
 /* Opcje kolorów/tła */
 .color-options, .background-options {
     display: flex;
-    flex-direction: row; /* EKSPILCYTNIE ustawiamy kierunek na rząd */
-    flex-wrap: wrap; /* ZAWINEJCIE SIĘ! */
-    gap: 0.1rem; /* BARDZO MAŁY odstęp między kółkami */
-    margin-top: 0.1rem; /* BARDZO MAŁY margines górny */
-    justify-content: flex-start; /* Wyrównaj do lewej */
-    width: 100%; /* Upewnij się, że zajmuje całą dostępną szerokość w rodzicu */
-    box-sizing: border-box; /* Ważne, aby padding i border nie dodawały do szerokości */
+    flex-direction: row; /* Wymuszamy układ poziomy */
+    flex-wrap: wrap; /* Pozwalamy na zawijanie, gdy braknie miejsca */
+    gap: 0.4rem; /* Odstęp między kółkami */
+    margin-top: 0.4rem;
+    justify-content: flex-start; /* Wyrównanie do lewej */
+    width: 100%; /* Ważne, aby kontener wypełnił dostępną szerokość */
+    box-sizing: border-box; /* Zapewnia, że padding i border nie zwiększają szerokości */
 }
 .color-box, .bg-box {
-    width: 20px; /* Utrzymujemy stałą szerokość */
-    height: 20px; /* Utrzymujemy stałą wysokość */
+    width: 28px; /* Przywracamy nieco większy rozmiar kółek */
+    height: 28px;
     border-radius: 50%;
     cursor: pointer;
     border: 2px solid transparent;
     transition: border-color 0.2s;
-    flex-shrink: 0; /* Zapobiega kurczeniu się poniżej rozmiaru */
-    flex-grow: 0; /* Zapobiega rozrastaniu się ponad rozmiar */
-    flex-basis: auto; /* Pozwoli na obliczenie podstawowego rozmiaru przed flex-grow/shrink */
+    flex-shrink: 0; /* Zapobiega kurczeniu się */
+    flex-grow: 0; /* Zapobiega rozrastaniu się */
+    /* Usunięto flex-basis: auto; tutaj, aby rely na width/height i gap */
 }
 .color-box.active, .bg-box.active {
     border-color: var(--primary-color);
