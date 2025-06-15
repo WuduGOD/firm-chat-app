@@ -148,8 +148,8 @@ body {
     display: flex;
     overflow: hidden;
     border-radius: 12px;
-    /* POPRAWKA: Zmniejszenie górnego marginesu kontenera */
-    margin: 0.5rem 1rem 1rem 1rem; /* Mniejszy margines górny, reszta bez zmian */
+    /* Zmniejszony górny margines, reszta bez zmian */
+    margin: 0.5rem 1rem 1rem 1rem;
     box-shadow: var(--shadow-medium);
 }
 
@@ -172,10 +172,10 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding-top: 1.5rem;
-    padding-bottom: 1rem;
-    /* POPRAWKA: Zmniejszenie odstępów między ikonami */
-    gap: 1rem; /* Zmniejszono z 1.5rem na 1rem */
+    /* DOPASOWANIE: Zmniejszenie paddingu i gapu dla mniejszych przerw między ikonami */
+    padding-top: 1rem; /* Zmniejszono z 1.5rem */
+    padding-bottom: 0.5rem; /* Zmniejszono z 1rem */
+    gap: 0.5rem; /* Zmniejszono z 1rem na 0.5rem - to klucz do mniejszych przerw */
     border-top-left-radius: 12px;
     border-bottom-left-radius: 12px;
     flex-shrink: 0;
@@ -213,7 +213,6 @@ body {
     visibility: hidden;
     transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out, transform 0.2s ease-in-out;
     z-index: 1000;
-    /* POPRAWKA: Upewnij się, że tooltip nie blokuje interakcji, gdy jest ukryty */
     pointer-events: none;
 }
 
@@ -249,23 +248,24 @@ body {
 #sidebar.conversations-list {
     flex-grow: 1;
     background: var(--bg-color-sidebar);
-    padding: 1rem;
+    /* DOPASOWANIE: Zmniejszenie paddingu góra/dół dla mniejszych przerw */
+    padding: 0.5rem 1rem 1rem 1rem; /* Zmniejszono górny padding z 1rem na 0.5rem */
     overflow-y: auto;
-    /* POPRAWKA: Pozwól sidebarowi się skurczyć, jeśli to konieczne */
-    flex-shrink: 1; /* Zmieniono z 0 na 1 */
-    padding-top: 0;
+    flex-shrink: 1;
 }
 
 #sidebar.conversations-list h2 {
-    margin-bottom: 1rem;
+    /* DOPASOWANIE: Zmniejszenie marginesu i paddingu nagłówka dla mniejszej przerwy */
+    margin-bottom: 0.5rem; /* Zmniejszono z 1rem */
     font-size: 1.3rem;
     color: var(--text-color-dark);
-    padding-top: 1rem;
+    padding-top: 0.5rem; /* Zmniejszono z 1rem */
 }
 
 .search-bar {
     position: relative;
-    margin-bottom: 1rem;
+    /* DOPASOWANIE: Zmniejszenie marginesu dolnego dla mniejszej przerwy */
+    margin-bottom: 0.5rem; /* Zmniejszono z 1rem */
 }
 .search-bar input {
     width: 100%;
@@ -340,22 +340,20 @@ body {
     border-radius: 50%;
     margin-right: 0.8rem;
     object-fit: cover;
-    flex-shrink: 0; /* Zapobiegaj zmniejszaniu się avatara */
+    flex-shrink: 0;
 }
 
 .contact .contact-info {
     display: flex;
     flex-direction: column;
     flex-grow: 1;
-    /* POPRAWKA: Umożliwienie obcinania tekstu wewnątrz flexboxa */
-    min-width: 0; /* Kluczowe, aby zawartość mogła się skurczyć */
+    min-width: 0;
 }
 
 .contact .contact-name {
     font-weight: bold;
     color: var(--text-color-dark);
     font-size: 1rem;
-    /* POPRAWKA: Zapewnienie obcinania zbyt długich nazw */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -364,11 +362,10 @@ body {
 .contact .last-message {
     font-size: 0.85rem;
     color: var(--text-color-medium);
-    /* POPRAWKA: Zapewnienie obcinania zbyt długich wiadomości */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 100%; /* Upewnij się, że dostosowuje się do dostępnej przestrzeni */
+    max-width: 100%;
 }
 
 .contact .contact-meta {
@@ -378,8 +375,8 @@ body {
     gap: 5px;
     font-size: 0.8rem;
     color: var(--text-color-medium);
-    flex-shrink: 0; /* Zapobiegaj zmniejszaniu się timestampu */
-    margin-left: 0.5rem; /* Dodaj trochę odstępu od tekstu */
+    flex-shrink: 0;
+    margin-left: 0.5rem;
 }
 
 .contact .unread-count {
@@ -432,8 +429,7 @@ body {
     background: var(--bg-color-lighter);
     border-top-right-radius: 12px;
     border-bottom-right-radius: 12px;
-    /* POPRAWKA: Upewnij się, że obszar czatu nie jest nadmiernie zmniejszany */
-    flex-shrink: 0; /* Dodano, aby chat-area miał priorytet w szerokości */
+    flex-shrink: 0;
 }
 
 .logo-screen {
@@ -499,7 +495,7 @@ body {
     gap: 2px;
     font-weight: bold;
     flex-grow: 1;
-    min-width: 0; /* Zapewnij, że tekst nie będzie wychodził poza obszar */
+    min-width: 0;
 }
 .user-info .username {
     white-space: nowrap;
@@ -511,7 +507,7 @@ body {
     display: flex;
     gap: 0.8rem;
     margin-left: auto;
-    flex-shrink: 0; /* Upewnij się, że przyciski akcji się nie zmniejszają */
+    flex-shrink: 0;
 }
 .chat-header-actions button {
     background: none;
@@ -790,7 +786,7 @@ body {
 .link-preview-content {
     display: flex;
     flex-direction: column;
-    min-width: 0; /* Zapewnij, że tekst w preview może się obciąć */
+    min-width: 0;
 }
 .link-preview-title {
     font-weight: bold;
@@ -931,7 +927,7 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    min-width: 0; /* Zapewnij, że nazwa może się obciąć */
+    min-width: 0;
 }
 
 .active-users-list li .status-dot {
@@ -1204,41 +1200,41 @@ body.dark-mode .nav-icon::after {
 /* Media Queries dla responsywności */
 @media (max-width: 1024px) {
     .container {
-        margin: 0.5rem; /* Zmniejsz marginesy kontenera na tabletach */
+        margin: 0.5rem;
     }
 
     .sidebar-wrapper {
-        min-width: 250px; /* Nieco mniejszy min-width dla tabletów */
-        width: 30%; /* Pozwól na nieco szerszy lewy pasek, jeśli to konieczne */
+        min-width: 250px;
+        width: 30%;
         max-width: 300px;
     }
 
     .right-sidebar-wrapper {
-        min-width: 180px; /* Nieco mniejszy min-width dla prawego paska */
+        min-width: 180px;
         width: 20%;
         max-width: 250px;
         padding: 0.8rem;
     }
 
     .chat-header, .chat-footer {
-        padding: 0.8rem 1rem; /* Mniejszy padding w nagłówku i stopce czatu */
+        padding: 0.8rem 1rem;
     }
 
     .messages {
-        padding: 1rem; /* Mniejszy padding wiadomości */
+        padding: 1rem;
     }
 }
 
 @media (max-width: 768px) {
     body {
-        overflow-y: auto; /* Pozwól na przewijanie body na mniejszych ekranach */
+        overflow-y: auto;
     }
     .container {
-        flex-direction: column; /* Ułóż kolumny jedna pod drugą */
-        margin: 0; /* Usuń marginesy dla pełnej szerokości */
-        border-radius: 0; /* Usuń zaokrąglenia */
-        box-shadow: none; /* Usuń cień */
-        height: auto; /* Pozwól na dynamiczną wysokość */
+        flex-direction: column;
+        margin: 0;
+        border-radius: 0;
+        box-shadow: none;
+        height: auto;
     }
 
     .main-header {
@@ -1246,51 +1242,49 @@ body.dark-mode .nav-icon::after {
     }
 
     .sidebar-wrapper {
-        width: 100%; /* Lewy sidebar na pełną szerokość */
+        width: 100%;
         min-width: unset;
         max-width: unset;
         border-right: none;
-        border-bottom: 1px solid var(--border-color-light); /* Dodaj dolną ramkę */
-        flex-direction: row; /* Zostaw ikony obok listy konwersacji */
-        height: auto; /* Daj auto wysokość, jeśli ma być zawsze widoczny */
+        border-bottom: 1px solid var(--border-color-light);
+        flex-direction: row;
+        height: auto;
         border-top-left-radius: 0;
         border-bottom-left-radius: 0;
-        padding: 0; /* Usuń padding, bo jest wewnątrz */
+        padding: 0;
     }
 
     .main-nav-icons {
-        width: 55px; /* Nieco węższy pasek ikon */
+        width: 55px;
         padding-top: 1rem;
         padding-bottom: 0.5rem;
         border-top-left-radius: 0;
         border-bottom-left-radius: 0;
-        gap: 0.8rem; /* Mniejsze przerwy */
+        gap: 0.8rem;
     }
 
     #sidebar.conversations-list {
         flex-grow: 1;
         padding: 0.8rem;
         overflow-y: auto;
-        height: 100%; /* Wypełnij dostępną wysokość */
+        height: 100%;
     }
 
     .chat-area-wrapper {
-        width: 100%; /* Obszar czatu na pełną szerokość */
-        border-top-left-radius: 0; /* Usuń zaokrąglenia, jeśli zajmuje całą szerokość */
+        width: 100%;
+        border-top-left-radius: 0;
         border-bottom-left-radius: 0;
         border-top-right-radius: 0;
         border-bottom-right-radius: 0;
-        /* Jeśli sidebar ma się chować/pokazywać, wtedy czat jest zawsze widoczny */
-        min-height: calc(100vh - 60px); /* Wysokość ekranu minus nagłówek, żeby nie znikał */
+        min-height: calc(100vh - 60px);
     }
 
     .right-sidebar-wrapper {
-        display: none; /* Ukryj prawy sidebar na małych ekranach domyślnie */
-        /* Włącz go tylko za pomocą JS, jeśli użytkownik kliknie przycisk */
+        display: none;
     }
 
     .back-button {
-        display: block; /* Pokaż przycisk wstecz na mobilnych */
+        display: block;
     }
     .chat-header .user-info {
         flex-grow: 1;
@@ -1301,9 +1295,8 @@ body.dark-mode .nav-icon::after {
         gap: 0.5rem;
     }
 
-    /* Dopasowanie wiadomości na małych ekranach */
     .message {
-        max-width: 85%; /* Wiadomości mogą być szersze */
+        max-width: 85%;
     }
 }
 
