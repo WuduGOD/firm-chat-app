@@ -46,6 +46,12 @@
     /* DODANE: zmienne dla border-radius */
     --border-radius-default: 8px;
     --border-radius-message: 15px;
+
+    /* DODANE: nowe zmienne dla kolorów ikon i hover states w nagłówku */
+    --icon-color-medium: var(--text-color-medium);
+    --bg-color-hover: var(--bg-color-search-input);
+    --color-online: #4caf50;
+    --color-offline: #888;
 }
 
 body {
@@ -68,7 +74,7 @@ body {
     border-bottom: 1px solid var(--border-color-medium);
     box-shadow: var(--shadow-light);
     flex-shrink: 0;
-    height: var(--header-height); /* Ustawienie stałej wysokości dla nagłówka */
+    /* usunięto height: var(--header-height); - lepiej pozwolić, by padding i zawartość określały wysokość */
 }
 
 .app-title {
@@ -157,6 +163,10 @@ body {
     margin: 0.5rem 1rem 1rem 1rem;
     box-shadow: var(--shadow-medium);
     align-items: stretch;
+    /* NOWE: Ograniczenie maksymalnej szerokości kontenera na dużych ekranach */
+    max-width: 1400px; /* Dostosuj tę wartość do preferowanej maksymalnej szerokości */
+    margin-left: auto; /* Centrowanie kontenera na stronie */
+    margin-right: auto; /* Centrowanie kontenera na stronie */
 }
 
 /* Sidebar Wrapper (lewy pasek - rozmowy + ikony) */
@@ -164,7 +174,7 @@ body {
     display: flex;
     flex-direction: row;
     min-width: 280px;
-    flex: 0 0 280px;
+    flex: 0 0 280px; /* Ustawia stałą szerokość bazową dla sidebara, która nie rośnie i nie kurczy się */
     max-width: 350px;
     background: var(--bg-color-sidebar-wrapper);
     border-right: 1px solid var(--border-color-light);
@@ -183,7 +193,6 @@ body {
     border-top-left-radius: 12px;
     border-bottom-left-radius: 12px;
     flex-shrink: 0;
-    /* ZMODYFIKOWANE: Dodany gap dla odstępów między ikonami */
     gap: 0.8rem;
 }
 
@@ -411,21 +420,21 @@ body {
     border-radius: 50%;
 }
 #userStatus.online::before {
-    background-color: #4caf50;
+    background-color: var(--color-online); /* Użycie zmiennej */
 }
 #userStatus.offline::before {
-    background-color: #888;
+    background-color: var(--color-offline); /* Użycie zmiennej */
 }
 #userStatus.online {
-    color: #4caf50;
+    color: var(--color-online); /* Użycie zmiennej */
 }
 #userStatus.offline {
-    color: #888;
+    color: var(--color-offline); /* Użycie zmiennej */
 }
 
 /* Chat Area Wrapper - nowy kontener dla logo-screen i chat-area */
 .chat-area-wrapper {
-    flex-grow: 1;
+    flex-grow: 1; /* Pozwala mu zająć całą dostępną przestrzeń */
     display: flex;
     flex-direction: column;
     position: relative;
@@ -469,13 +478,16 @@ body {
     background: var(--bg-color-chat-header);
     border-bottom: 1px solid var(--border-color-light);
     display: flex;
-    justify-content: flex-start;
-    align-items: center; /* ZMODYFIKOWANE: Wyśrodkowuje elementy w pionie */
+    justify-content: space-between; /* ZMIENIONE: Rozkłada elementy na krawędziach */
+    align-items: center; /* Wyśrodkowuje elementy w pionie */
     flex-wrap: nowrap;
-    gap: 1rem; /* ZMODYFIKOWANE: Odstęp między grupami */
+    gap: 1rem; /* Pozostawiamy gap dla odstępów wewnętrznych */
     box-shadow: var(--shadow-light);
     position: relative;
     flex-shrink: 0;
+    z-index: 50;
+    /* NOWE: Minimalna wysokość nagłówka dla lepszego wyglądu */
+    min-height: 60px; /* Dostosuj wg potrzeb */
 }
 
 /* ZMODYFIKOWANE: Przycisk wstecz */
@@ -486,7 +498,7 @@ body {
     font-size: 1.3rem; /* Rozmiar ikony */
     color: var(--text-color-medium);
     cursor: pointer;
-    margin-right: 0.5rem; /* Odstęp od user-info */
+    /* margin-right: 0.5rem; */ /* Ten margines będzie teraz obsługiwany przez gap w user-info-wrapper */
     padding: 0.4rem; /* Delikatny padding dla obszaru kliknięcia */
     border-radius: 50%; /* Zaokrąglony kształt */
     transition: color 0.2s, background-color 0.2s;
@@ -497,14 +509,33 @@ body {
     background-color: var(--bg-color-search-input);
 }
 
+/* NOWE: Wrapper dla avatara, nazwy i statusu */
+.user-info-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem; /* Odstęp między avatarem a user-info (tekst) */
+    flex-grow: 1; /* Pozwala mu zająć dostępną przestrzeń */
+    min-width: 0; /* Ważne dla ellipsis */
+}
+
+.user-info-wrapper .avatar { /* Styl dla obrazka avatara w nagłówku */
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+
 /* ZMODYFIKOWANE: user-info */
 .user-info {
     display: flex;
     flex-direction: column; /* Nick i status jeden pod drugim */
     align-items: flex-start; /* Wyrównuje tekst do lewej */
     gap: 2px;
-    font-weight: bold;
+    /* font-weight: bold; */ /* Przeniesiono do #chatUserName */
     min-width: 0; /* Umożliwia ellipsis */
+    /* flex-grow: 1; */ /* Niepotrzebne tutaj, flex-grow jest na user-info-wrapper */
 }
 
 /* ZMODYFIKOWANE: Poprawka selektora dla nazwy użytkownika (przez ID) */
@@ -512,7 +543,10 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 100%;
+    max-width: 100%; /* Ważne, aby tekst nie wychodził poza kontener */
+    font-weight: bold; /* Przeniesiono tutaj */
+    font-size: 1.1rem; /* Zachowaj lub dostosuj, jeśli chcesz inny */
+    color: var(--text-color-dark); /* Upewnij się, że kolor jest poprawny */
 }
 
 /* ZMODYFIKOWANE: chat-header-actions */
@@ -521,6 +555,7 @@ body {
     gap: 0.8rem;
     margin-left: auto; /* Wypycha maksymalnie na prawo */
     flex-shrink: 0; /* Ważne: Nie pozwalamy tej grupie się kurczyć */
+    align-items: center; /* Wyśrodkowanie ikon, jeśli mają różne rozmiary */
 }
 
 .chat-header-actions button {
@@ -528,13 +563,18 @@ body {
     border: none;
     font-size: 1.3rem;
     cursor: pointer;
-    color: var(--text-color-medium);
-    transition: color 0.2s;
+    color: var(--text-color-medium); /* Użyj zmiennej dla spójności */
+    transition: color 0.2s, background-color 0.2s; /* Dodano transition dla tła */
+    padding: 0.5rem; /* Zwiększony padding dla lepszej klikalności */
+    border-radius: 50%; /* Aby były okrągłe */
+    display: flex; /* Dodano, aby wyśrodkować ikonę w przycisku */
+    justify-content: center;
+    align-items: center;
 }
 
 .chat-header-actions button:hover {
     color: var(--primary-color);
-    background-color: var(--bg-color-search-input);
+    background-color: var(--bg-color-hover); /* Użycie zmiennej z :root */
 }
 
 /* Dropdown ustawień czatu */
@@ -1023,6 +1063,10 @@ body.dark-mode {
 
     --bg-color-container: #2e2e4a;
     --bg-color-input: #3a3a5e;
+
+    /* DODANE: zmienne dla dark mode dla ikon i hover states */
+    --icon-color-medium: var(--text-color-medium);
+    --bg-color-hover: #4e4e7e; /* Ciemniejszy hover dla trybu ciemnego */
 }
 
 /* Główne sekcje w dark mode */

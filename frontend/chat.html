@@ -53,10 +53,16 @@
       <section id="chatArea" class="chat-area">
         <header class="chat-header">
           <button id="backButton" class="back-button"><i class="fas fa-arrow-left"></i></button>
-          <div class="user-info">
-            <span id="chatUserName"></span>
-            <span id="userStatus" class="status"></span>
+
+          <!-- NOWY ELEMENT WRAPUJĄCY DLA AVATARA, NICKU I STATUSU -->
+          <div class="user-info-wrapper">
+            <img src="https://i.pravatar.cc/150?img=68" alt="User Avatar" class="avatar"> <!-- PRZYKŁADOWY AVATAR, ZASTĄP WŁASNYM LUB GENERUJ DYNAMICZNIE -->
+            <div class="user-info">
+              <span id="chatUserName"></span>
+              <span id="userStatus" class="status"></span>
+            </div>
           </div>
+          
           <div class="chat-header-actions right-aligned">
             <button><i class="fas fa-video"></i></button>
             <button><i class="fas fa-phone"></i></button>
