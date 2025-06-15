@@ -215,7 +215,6 @@ async function loadContacts() {
             <div class="contact-info">
                 <span class="contact-name">${getUserLabelById(user.id) || user.email}</span>
                 <span class="last-message">${previewText}</span>
-				<span class="contact-status ${user.is_online ? 'online' : 'offline'}">${user.is_online ? 'Online' : 'Offline'}</span>
             </div>
             <div class="contact-meta">
                 <span class="message-time">${timeText}</span>
@@ -252,12 +251,14 @@ async function handleConversationClick(user, clickedConvoItemElement) {
     currentRoom = getRoomName(String(currentUser.id), String(currentChatUser.id));
     console.log(`Starting chat with ${currentChatUser.username}, room ID: ${currentRoom}`);
 
-    if (chatUserName && messageInput && sendButton) { // Zaktualizowane zmienne
+    if (chatUserName && messageInput && sendButton && userStatusSpan) { // Dodaj userStatusSpan do warunku
         chatUserName.textContent = currentChatUser.username;
-        // Ustaw avatar w nagłówku czatu, jeśli masz takie miejsce w HTML
-        // Jeśli nie, możesz np. zaktualizować avatar w elemencie 'contact' w contactsListEl
-        // (chociaż w nowym HTML nie ma osobnego avatara w nagłówku czatu)
-        // chatHeaderAvatar.src = `https://i.pravatar.cc/150?img=${user.id % 70 + 1}`;
+        // Tutaj ustawiamy początkowy status dla nowo otwartego czatu
+        userStatusSpan.textContent = user.is_online ? 'Online' : 'Offline'; // Użyj statusu z obiektu 'user'
+        userStatusSpan.classList.toggle('online', user.is_online);
+        userStatusSpan.classList.toggle('offline', !user.is_online);
+        console.log(`Initial status for active chat user ${currentChatUser.username}: ${user.is_online ? 'Online' : 'Offline'}`);
+
         messageInput.disabled = false;
         sendButton.disabled = false;
         messageInput.focus();
@@ -475,21 +476,7 @@ function initWebSocket() {
                 }
                 break;
             case 'status':
-                console.log(`Received status update for user ${data.user}: ${data.online ? 'Online' : 'Offline'}`);
-                // 1. Aktualizuj status w nagłówku aktywnego czatu (jeśli ten użytkownik jest aktywny)
                 updateUserStatusIndicator(data.user, data.online);
-
-                // 2. Znajdź i zaktualizuj status na LIŚCIE KONTAKTÓW (dla wszystkich użytkowników)
-                const contactItemToUpdate = contactsListEl.querySelector(`.contact[data-convo-id="${data.user}"]`);
-                if (contactItemToUpdate) {
-                    const statusSpan = contactItemToUpdate.querySelector('.contact-status');
-                    if (statusSpan) {
-                        statusSpan.textContent = data.online ? 'Online' : 'Offline';
-                        statusSpan.classList.toggle('online', data.online);
-                        statusSpan.classList.toggle('offline', !data.online);
-                        console.log(`Updated status on contact list for user ${data.user}.`);
-                    }
-                }
                 break;
             default:
                 console.warn("Unknown WS message type:", data.type, data);
