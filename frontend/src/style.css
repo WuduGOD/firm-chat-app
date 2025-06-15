@@ -587,7 +587,7 @@ body {
     right: 0;
     top: 100%;
     /* ZMIANA: Zwiększamy szerokość, aby dać więcej miejsca na elementy siatki */
-    width: 350px; /* Zwiększona szerokość, aby pomieścić 4 kółka z większym gapem */
+    width: 360px; /* Zwiększona szerokość, aby pomieścić 4 kółka z większym gapem */
     padding: 0.8rem; 
     border-top-right-radius: 0;
     z-index: 101;
@@ -595,18 +595,18 @@ body {
     display: flex;
     flex-direction: column; 
     /* ZMIANA: Zmniejszamy globalny odstęp między sekcjami w dropdownie */
-    gap: 0.4rem; /* Zmniejszony odstęp */
+    gap: 0.3rem; /* JESZCZE MNIEJSZY odstęp */
     overflow-y: hidden; /* ZMIANA: Usuwamy overflow-y, aby wymusić dopasowanie */
     max-height: none; /* ZMIANA: Usuwamy max-height, aby pozwolić na naturalne dopasowanie */
 }
 .chat-settings-dropdown h3 {
-    font-size: 1rem; /* Lekko zmniejszona czcionka */
-    margin-bottom: 0.4rem; /* Zmniejszony margines */
+    font-size: 0.95rem; /* JESZCZE MNIEJSZA czcionka */
+    margin-bottom: 0.3rem; /* JESZCZE MNIEJSZY margines */
     color: var(--text-color-dark);
 }
 .chat-settings-dropdown .setting-group {
-    margin-bottom: 0.4rem; /* Zmniejszony margines */
-    padding-bottom: 0.4rem; /* Zmniejszony padding */
+    margin-bottom: 0.3rem; /* JESZCZE MNIEJSZY margines */
+    padding-bottom: 0.3rem; /* JESZCZE MNIEJSZY padding */
     border-bottom: 1px solid var(--border-color-light);
 }
 .chat-settings-dropdown .setting-group:last-child {
@@ -615,17 +615,17 @@ body {
     padding-bottom: 0;
 }
 .chat-settings-dropdown h4 {
-    font-size: 0.9rem; /* Lekko zmniejszona czcionka */
+    font-size: 0.85rem; /* JESZCZE MNIEJSZA czcionka */
     color: var(--text-color-medium);
-    margin-bottom: 0.2rem; /* Zmniejszony margines */
+    margin-bottom: 0.1rem; /* JESZCZE MNIEJSZY margines */
 }
 .chat-settings-dropdown input[type="text"] {
     width: 100%;
-    padding: 0.5rem; /* Zmniejszony padding */ 
+    padding: 0.4rem; /* JESZCZE MNIEJSZY padding */ 
     border: 1px solid var(--border-color-medium);
     border-radius: 6px;
-    margin-bottom: 0.3rem; /* Zmniejszony margines */
-    font-size: 0.85rem; /* Zmniejszona czcionka */
+    margin-bottom: 0.2rem; /* JESZCZE MNIEJSZY margines */
+    font-size: 0.8rem; /* JESZCZE MNIEJSZA czcionka */
     background-color: var(--bg-color-search-input);
     color: var(--text-color-dark);
 }
@@ -634,10 +634,10 @@ body {
 }
 .chat-settings-dropdown button {
     width: auto;
-    padding: 0.5rem 1rem; /* Zmniejszony padding */ 
-    font-size: 0.9rem; /* Zmniejszona czcionka */
+    padding: 0.4rem 0.8rem; /* JESZCZE MNIEJSZY padding */ 
+    font-size: 0.85rem; /* JESZCZE MNIEJSZA czcionka */
     display: block;
-    margin-top: 0.3rem; /* Zmniejszony margines */
+    margin-top: 0.2rem; /* JESZCZE MNIEJSZY margines */
     background: var(--primary-color);
     color: var(--text-color-light);
     border: none;
@@ -652,15 +652,15 @@ body {
 /* Opcje kolorów/tła */
 .color-options, .background-options {
     display: grid; 
-    grid-template-columns: repeat(4, minmax(0, 1fr)); /* ZMIANA: Użycie minmax(0, 1fr) dla lepszego rozłożenia */
-    gap: 10px; /* ZMIANA: Lekko zwiększony odstęp między kółkami, aby były bardziej oddalone */
-    margin: 0.3rem 0; 
+    grid-template-columns: repeat(4, minmax(0, 1fr)); 
+    gap: 8px; /* ZMIANA: Lekko zmniejszony odstęp między kółkami, aby zyskać miejsce */
+    margin: 0.2rem 0; /* ZMIANA: Zmniejszony margines */
     width: 100%; 
     box-sizing: border-box; 
 }
 .color-box, .bg-box {
-    width: 32px; /* ZMIANA: Przywrócone kółka do rozmiaru 32px, bo mamy więcej miejsca */
-    height: 32px; /* ZMIANA: Przywrócone kółka do rozmiaru 32px */
+    width: 28px; /* ZMIANA: ZMNIEJSZONE KÓŁKA */
+    height: 28px; /* ZMIANA: ZMNIEJSZONE KÓŁKA */
     border-radius: 50%;
     cursor: pointer;
     border: 2px solid transparent;
