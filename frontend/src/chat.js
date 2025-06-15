@@ -16,7 +16,8 @@ let navIcons;
 
 let sidebarEl;
 let searchInput;
-let contactsListEl;
+let contactsListEl; // Referencja do UL
+let activeUsersContent; // NOWA ZMIENNA: Referencja do kontenera dla listy aktywnych użytkowników i komunikatu
 
 let logoScreen;
 let chatArea;
@@ -41,8 +42,7 @@ let sendButton;
 
 // Zmienne dla prawego sidebara (Aktywni Użytkownicy)
 let rightSidebar;
-let activeUsersListEl;
-let noActiveUsersText; // NOWA ZMIENNA: do przechowywania referencji do elementu tekstu 'Brak aktywnych użytkowników.'
+let noActiveUsersText; // Referencja do DIV z tekstem 'Brak aktywnych użytkowników.'
 
 // Zmienne czatu
 let allConversations = [];
@@ -342,7 +342,7 @@ function addMessageToChat(msg) {
             const senderName = String(msg.username) === String(currentUser.id) ? "Ja" : (getUserLabelById(msg.username) || msg.username);
             previewEl.textContent = `${senderName}: ${msg.text}`;
 
-            const lastMessageTime = new Date(msg.inserted_at || Date.now());
+            const lastMessageTime = new Date(msg.inserted_at);
             timeEl.textContent = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
         }
 
@@ -549,8 +549,8 @@ function initWebSocket() {
 // NOWA FUNKCJA: Ładowanie aktywnych użytkowników
 async function loadActiveUsers() {
     console.log("Loading active users for right sidebar...");
-    if (!activeUsersListEl || !noActiveUsersText) { // Dodaj noActiveUsersText do walidacji
-        console.error("activeUsersListEl or noActiveUsersText not found, cannot load active users.");
+    if (!activeUsersListEl || !noActiveUsersText || !activeUsersContent) { // Dodaj activeUsersContent do walidacji
+        console.error("activeUsersListEl, noActiveUsersText or activeUsersContent not found, cannot load active users.");
         return;
     }
 
@@ -565,18 +565,20 @@ async function loadActiveUsers() {
 
 // NOWA FUNKCJA: Wyświetlanie aktywnych użytkowników
 function displayActiveUsers(activeUsersData) {
-    if (!activeUsersListEl || !noActiveUsersText) return; // Upewnij się, że elementy istnieją
+    if (!activeUsersListEl || !noActiveUsersText || !activeUsersContent) return; // Upewnij się, że elementy istnieją
 
     activeUsersListEl.innerHTML = ''; // Wyczyść poprzednie elementy listy użytkowników
 
     const filteredUsers = activeUsersData.filter(user => String(user.id) !== String(currentUser.id));
 
     if (filteredUsers.length === 0) {
-        // Brak innych aktywnych użytkowników, pokazujemy komunikat "Brak aktywnych użytkowników"
-        noActiveUsersText.classList.remove('hidden-element'); 
+        // Brak innych aktywnych użytkowników: ukryj listę, pokaż komunikat
+        activeUsersListEl.style.display = 'none';
+        noActiveUsersText.style.display = 'block';
     } else {
-        // Są inni aktywni użytkownicy, ukrywamy komunikat "Brak aktywnych użytkowników"
-        noActiveUsersText.classList.add('hidden-element'); 
+        // Są inni aktywni użytkownicy: pokaż listę, ukryj komunikat
+        activeUsersListEl.style.display = 'block';
+        noActiveUsersText.style.display = 'none';
         
         filteredUsers.forEach(user => {
             const li = document.createElement('li');
@@ -708,7 +710,8 @@ async function initializeApp() {
 
     sidebarEl = document.getElementById('sidebar');
     searchInput = sidebarEl.querySelector('.search-bar input');
-    contactsListEl = document.getElementById('contactsList');
+    contactsListEl = document.getElementById('activeUsersList'); // Upewnij się, że to jest UL z ID activeUsersList
+    activeUsersContent = document.getElementById('activeUsersContent'); // NOWA REFERENCJA
 
     logoScreen = document.getElementById('logoScreen');
     chatArea = document.getElementById('chatArea');
@@ -733,27 +736,26 @@ async function initializeApp() {
     sendButton = chatFooter.querySelector('#sendButton');
 
     rightSidebar = document.getElementById('rightSidebar');
-    activeUsersListEl = document.getElementById('activeUsersList');
     noActiveUsersText = document.getElementById('noActiveUsersText'); // NOWA REFERENCJA
 
     // 2. Walidacja, czy kluczowe elementy UI zostały znalezione
     if (!mainHeader || !menuButton || !dropdownMenu || !themeToggle || !logoutButton ||
         !container || !sidebarWrapper || !mainNavIcons || !navIcons.length ||
-        !sidebarEl || !searchInput || !contactsListEl ||
+        !sidebarEl || !searchInput || !contactsListEl || !activeUsersContent || // Dodaj activeUsersContent do walidacji
         !logoScreen || !chatArea ||
         !chatHeader || !backButton || !chatUserName || !userStatusSpan || !chatHeaderActions || !chatSettingsButton || !chatSettingsDropdown || !typingStatusDiv ||
         !messageContainer || !typingIndicatorDiv ||
         !chatFooter || !attachButton || !messageInput || !emojiButton || !sendButton ||
-        !rightSidebar || !activeUsersListEl || !noActiveUsersText) { // Dodaj walidację dla nowego elementu
+        !rightSidebar || !noActiveUsersText) { // Usuń activeUsersListEl stąd, bo jest już sprawdzane
         console.error('Error: One or more critical UI elements not found. Please check your HTML selectors. Missing elements:', {
             mainHeader, menuButton, dropdownMenu, themeToggle, logoutButton,
             container, sidebarWrapper, mainNavIcons, navIcons: navIcons.length > 0,
-            sidebarEl, searchInput, contactsListEl,
+            sidebarEl, searchInput, contactsListEl, activeUsersContent,
             logoScreen, chatArea,
             chatHeader, backButton, chatUserName, userStatusSpan, chatHeaderActions, chatSettingsButton, chatSettingsDropdown, typingStatusDiv,
             messageContainer, typingIndicatorDiv,
             chatFooter, attachButton, messageInput, emojiButton, sendButton,
-            rightSidebar, activeUsersListEl, noActiveUsersText
+            rightSidebar, noActiveUsersText
         });
         return;
     } else {
