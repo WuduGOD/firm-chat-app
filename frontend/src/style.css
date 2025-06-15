@@ -68,6 +68,7 @@ body {
     border-bottom: 1px solid var(--border-color-medium);
     box-shadow: var(--shadow-light);
     flex-shrink: 0;
+    height: var(--header-height); /* Ustawienie stałej wysokości dla nagłówka */
 }
 
 .app-title {
@@ -155,6 +156,7 @@ body {
     border-radius: 12px;
     margin: 0.5rem 1rem 1rem 1rem;
     box-shadow: var(--shadow-medium);
+    align-items: stretch;
 }
 
 /* Sidebar Wrapper (lewy pasek - rozmowy + ikony) */
@@ -162,7 +164,7 @@ body {
     display: flex;
     flex-direction: row;
     min-width: 280px;
-    width: 25%;
+    flex: 0 0 280px;
     max-width: 350px;
     background: var(--bg-color-sidebar-wrapper);
     border-right: 1px solid var(--border-color-light);
@@ -182,7 +184,7 @@ body {
     border-bottom-left-radius: 12px;
     flex-shrink: 0;
     /* ZMODYFIKOWANE: Dodany gap dla odstępów między ikonami */
-    gap: 1rem;
+    gap: 0.8rem;
 }
 
 .nav-icon {
@@ -463,18 +465,17 @@ body {
 
 /* --- ZMODYFIKOWANE SEKCJE DLA NAGŁÓWKA CZATU --- */
 .chat-header {
-    padding: 0.8rem 1.2rem;
+    padding: 0.7rem 1.5rem;
     background: var(--bg-color-chat-header);
     border-bottom: 1px solid var(--border-color-light);
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center; /* ZMODYFIKOWANE: Wyśrodkowuje elementy w pionie */
     flex-wrap: nowrap;
     gap: 1rem; /* ZMODYFIKOWANE: Odstęp między grupami */
     box-shadow: var(--shadow-light);
     position: relative;
     flex-shrink: 0;
-    z-index: 50;
 }
 
 /* ZMODYFIKOWANE: Przycisk wstecz */
@@ -503,7 +504,6 @@ body {
     align-items: flex-start; /* Wyrównuje tekst do lewej */
     gap: 2px;
     font-weight: bold;
-    flex-grow: 1; /* Pozwala na zajmowanie dostępnej przestrzeni */
     min-width: 0; /* Umożliwia ellipsis */
 }
 
@@ -512,8 +512,7 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-size: 1.1rem; /* Zachowaj lub dostosuj, jeśli chcesz inny */
-    color: var(--text-color-dark);
+    max-width: 100%;
 }
 
 /* ZMODYFIKOWANE: chat-header-actions */
@@ -522,7 +521,6 @@ body {
     gap: 0.8rem;
     margin-left: auto; /* Wypycha maksymalnie na prawo */
     flex-shrink: 0; /* Ważne: Nie pozwalamy tej grupie się kurczyć */
-    min-width: fit-content; /* ZMODYFIKOWANE: Zapewnia, że grupa będzie miała minimalną szerokość swoich dzieci */
 }
 
 .chat-header-actions button {
@@ -532,11 +530,6 @@ body {
     cursor: pointer;
     color: var(--text-color-medium);
     transition: color 0.2s;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 0.4rem;
-    border-radius: 50%;
 }
 
 .chat-header-actions button:hover {
