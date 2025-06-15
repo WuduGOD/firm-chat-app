@@ -57,6 +57,10 @@ let reconnectAttempts = 0; // Licznik prób ponownego połączenia
 let typingTimeout; // Timeout dla wskaźnika pisania (dla obu wskaźników)
 let currentActiveConvoItem = null; // Aktualnie wybrany element konwersacji na liście
 
+// NOWA ZMIENNA: Mapa do przechowywania aktualnych statusów online (userID -> boolean)
+let onlineUsers = new Map();
+
+
 /**
  * Resets the chat view to its initial state.
  */
@@ -253,11 +257,14 @@ async function handleConversationClick(user, clickedConvoItemElement) {
 
     if (chatUserName && messageInput && sendButton && userStatusSpan) {
         chatUserName.textContent = currentChatUser.username;
-        // Set initial status based on 'user' object (assumes 'is_online' property)
-        userStatusSpan.textContent = user.is_online ? 'Online' : 'Offline';
-        userStatusSpan.classList.toggle('online', user.is_online);
-        userStatusSpan.classList.toggle('offline', !user.is_online);
-        console.log(`Initial status for active chat user ${currentChatUser.username}: ${user.is_online ? 'Online' : 'Offline'}`);
+        
+        // KLUCZOWA ZMIANA: Sprawdzamy aktualny status z mapy onlineUsers
+        // Jeśli użytkownik jest w mapie i jest online, to jest online. W przeciwnym razie offline.
+        const isUserOnline = onlineUsers.get(String(user.id)) === true; 
+        userStatusSpan.textContent = isUserOnline ? 'Online' : 'Offline';
+        userStatusSpan.classList.toggle('online', isUserOnline);
+        userStatusSpan.classList.toggle('offline', !isUserOnline);
+        console.log(`Initial status for active chat user ${currentChatUser.username} (from onlineUsers map): ${isUserOnline ? 'Online' : 'Offline'}`);
 
         messageInput.disabled = false;
         sendButton.disabled = false;
@@ -428,6 +435,7 @@ function addMessageToChat(msg) {
  */
 function updateUserStatusIndicator(userId, isOnline) {
     console.log(`[Status Update Debug] Function called for userId: ${userId}, isOnline: ${isOnline}`);
+    onlineUsers.set(String(userId), isOnline); // ZAWSZE AKTUALIZUJ MAPĘ onlineUsers
 
     // Update status in the active chat header
     if (currentChatUser && userStatusSpan) {
@@ -491,7 +499,6 @@ function updateUserStatusIndicator(userId, isOnline) {
                     <span class="status-dot online"></span>
                 `;
                 activeUsersListEl.appendChild(li);
-                console.log(`Added new online user to active list: ${getUserLabelById(userId)}`);
             }
             // If there are active users, ensure the list is visible and message is hidden
             noActiveUsersText.style.display = 'none';
@@ -551,34 +558,24 @@ function initWebSocket() {
         console.log('WebSocket connected');
         reconnectAttempts = 0; // Reset reconnect attempts
         if (currentUser) { // Only attempt to join if currentUser is defined
-            if (currentRoom) {
-                // Join the current room if one is active
-                socket.send(JSON.stringify({
-                    type: 'join',
-                    name: currentUser.id,
-                    room: currentRoom,
-                }));
-                console.log(`Sent join message to WebSocket for room: ${currentRoom}`);
-            } else {
-                // If no specific room, send a global join for presence
-                socket.send(JSON.stringify({
-                    type: 'join',
-                    name: currentUser.id,
-                    room: 'global', // Join a general room for status updates
-                }));
-                 console.log(`Sent global join message to WebSocket for user: ${currentUser.id}`);
-            }
-        } else {
-            console.warn("WebSocket opened but currentUser is not set. Cannot join room yet.");
-        }
-        // Send "online" status for the current user
-        if (currentUser) {
+            // KLUCZOWA ZMIANA: Zawsze dołączamy do "global" pokoju po otwarciu WS,
+            // aby otrzymywać ogólne statusy. Specyficzne pokoje będą dołączane w handleConversationClick.
+            socket.send(JSON.stringify({
+                type: 'join',
+                name: currentUser.id,
+                room: 'global', // Dołącz do globalnego pokoju dla statusów
+            }));
+            console.log(`Sent global join message to WebSocket for user: ${currentUser.id}`);
+
+            // Send "online" status for the current user
             socket.send(JSON.stringify({
                 type: 'status',
                 user: currentUser.id,
                 online: true
             }));
             console.log(`Sent 'online' status for user ${currentUser.id}`);
+        } else {
+            console.warn("WebSocket opened but currentUser is not set. Cannot join room yet.");
         }
         // Request active users list after successful connection
         loadActiveUsers();
@@ -666,6 +663,7 @@ function displayActiveUsers(activeUsersData) {
     if (!activeUsersListEl || !noActiveUsersText) return;
 
     activeUsersListEl.innerHTML = ''; // Clear previous list items
+    onlineUsers.clear(); // KLUCZOWA ZMIANA: Czyścimy mapę przed uzupełnieniem z active_users
 
     // Filter out the current user from the active users list
     const filteredUsers = activeUsersData.filter(user => String(user.id) !== String(currentUser.id));
@@ -692,8 +690,10 @@ function displayActiveUsers(activeUsersData) {
                 <span class="status-dot online"></span>
             `;
             activeUsersListEl.appendChild(li);
+            onlineUsers.set(String(user.id), true); // KLUCZOWA ZMIANA: Aktualizujemy mapę onlineUsers
         });
     }
+    console.log("[Status Update Debug] onlineUsers map after displayActiveUsers:", onlineUsers);
 }
 
 /**
