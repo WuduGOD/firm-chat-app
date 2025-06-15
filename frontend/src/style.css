@@ -202,7 +202,6 @@ body {
 .nav-icon {
     background: none;
     border: none;
-    color: var(--text-color-light);
     font-size: 1.5rem;
     cursor: pointer;
     width: 45px;
@@ -587,22 +586,22 @@ body {
 .chat-settings-dropdown {
     right: 0;
     top: 100%;
-    min-width: 250px;
-    padding: 1rem;
+    min-width: 200px; /* Zmniejszony min-width */
+    padding: 0.8rem; /* Zmniejszony padding */
     border-top-right-radius: 0;
     z-index: 101;
     /* NOWE: Ograniczenie maksymalnej szerokości dropdowna dla lepszego wyglądu */
-    max-width: 280px; /* Dostosuj w razie potrzeby */
+    max-width: 220px; /* Zmniejszony max-width, dostosuj w razie potrzeby */
     box-sizing: border-box; /* Ważne, aby padding nie powiększał szerokości */
 }
 .chat-settings-dropdown h3 {
     font-size: 1.1rem;
-    margin-bottom: 0.8rem; /* Zmniejszony margines */
+    margin-bottom: 0.6rem; /* Zmniejszony margines */
     color: var(--text-color-dark);
 }
 .chat-settings-dropdown .setting-group {
-    margin-bottom: 0.8rem; /* Zmniejszony margines */
-    padding-bottom: 0.8rem; /* Zmniejszony padding */
+    margin-bottom: 0.6rem; /* Zmniejszony margines */
+    padding-bottom: 0.6rem; /* Zmniejszony padding */
     border-bottom: 1px solid var(--border-color-light);
 }
 .chat-settings-dropdown .setting-group:last-child {
@@ -613,14 +612,14 @@ body {
 .chat-settings-dropdown h4 {
     font-size: 0.9rem;
     color: var(--text-color-medium);
-    margin-bottom: 0.4rem; /* Zmniejszony margines */
+    margin-bottom: 0.3rem; /* Zmniejszony margines */
 }
 .chat-settings-dropdown input[type="text"] {
     width: 100%;
     padding: 0.5rem;
     border: 1px solid var(--border-color-medium);
     border-radius: 6px;
-    margin-bottom: 0.4rem; /* Zmniejszony margines */
+    margin-bottom: 0.3rem; /* Zmniejszony margines */
     font-size: 0.9rem;
     background-color: var(--bg-color-search-input);
     color: var(--text-color-dark);
@@ -633,7 +632,7 @@ body {
     padding: 0.5rem 1rem;
     font-size: 0.9rem;
     display: block;
-    margin-top: 0.4rem; /* Zmniejszony margines */
+    margin-top: 0.3rem; /* Zmniejszony margines */
     background: var(--primary-color);
     color: var(--text-color-light);
     border: none;
@@ -648,14 +647,14 @@ body {
 /* Opcje kolorów/tła */
 .color-options, .background-options {
     display: flex;
-    flex-wrap: wrap; /* NOWE: Sprawia, że elementy zawijają się do nowej linii */
-    gap: 0.5rem;
-    margin-top: 0.5rem;
+    flex-wrap: wrap; /* Sprawia, że elementy zawijają się do nowej linii */
+    gap: 0.4rem; /* Zmniejszony gap */
+    margin-top: 0.4rem; /* Zmniejszony margines */
     justify-content: flex-start; /* Wyrównaj do lewej */
 }
 .color-box, .bg-box {
-    width: 30px;
-    height: 30px;
+    width: 28px; /* Zmniejszona szerokość */
+    height: 28px; /* Zmniejszona wysokość */
     border-radius: 50%;
     cursor: pointer;
     border: 2px solid transparent;
