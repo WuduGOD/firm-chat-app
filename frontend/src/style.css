@@ -587,25 +587,25 @@ body {
     right: 0;
     top: 100%;
     /* ZMODYFIKOWANE: Bardziej agresywne ustawienie szerokości minimalnej i maksymalnej */
-    min-width: 160px; /* Dodatkowo zmniejsz minimum */
-    width: 180px; /* Spróbuj sztywną szerokość, aby wymusić zawijanie */
-    max-width: 200px; /* Lekko zwiększ maksimum, jeśli 180px jest zbyt mało */
-    padding: 0.5rem; /* Lekko zmniejszony padding */
+    min-width: 150px; /* ZMNIEJSZAMY JESCZE BARDZIEJ */
+    width: 160px; /* ZMNIEJSZAMY JESCZE BARDZIEJ */
+    max-width: 180px; /* ZMNIEJSZAMY JESCZE BARDZIEJ */
+    padding: 0.4rem; /* ZMNIEJSZAMY JESCZE BARDZIEJ PADDING */
     border-top-right-radius: 0;
     z-index: 101;
     box-sizing: border-box;
-    display: flex; /* Upewnij się, że jest flex container */
+    display: flex;
     flex-direction: column; /* Utrzymaj układ pionowy dla głównych sekcji */
-    gap: 0.4rem; /* Zmniejszony odstęp między sekcjami w dropdownie */
+    gap: 0.3rem; /* ZMNIEJSZAMY JESCZE BARDZIEJ ODSTĘP MIĘDZY SEKCJI */
 }
 .chat-settings-dropdown h3 {
-    font-size: 0.95rem; /* Nieznacznie zmniejszona czcionka */
-    margin-bottom: 0.4rem; /* Zmniejszony margines */
+    font-size: 0.9rem; /* ZMNIEJSZONA CZCIONKA */
+    margin-bottom: 0.3rem; /* ZMNIEJSZONY MARGINES */
     color: var(--text-color-dark);
 }
 .chat-settings-dropdown .setting-group {
-    margin-bottom: 0.4rem; /* Zmniejszony margines */
-    padding-bottom: 0.4rem; /* Zmniejszony padding */
+    margin-bottom: 0.3rem; /* ZMNIEJSZONY MARGINES */
+    padding-bottom: 0.3rem; /* ZMNIEJSZONY PADDING */
     border-bottom: 1px solid var(--border-color-light);
 }
 .chat-settings-dropdown .setting-group:last-child {
@@ -614,17 +614,17 @@ body {
     padding-bottom: 0;
 }
 .chat-settings-dropdown h4 {
-    font-size: 0.8rem; /* Zmniejszona czcionka */
+    font-size: 0.8rem; /* ZMNIEJSZONA CZCIONKA */
     color: var(--text-color-medium);
-    margin-bottom: 0.2rem; /* Zmniejszony margines */
+    margin-bottom: 0.1rem; /* ZMNIEJSZONY MARGINES */
 }
 .chat-settings-dropdown input[type="text"] {
     width: 100%;
-    padding: 0.3rem; /* Zmniejszony padding */
+    padding: 0.2rem; /* ZMNIEJSZONY PADDING */
     border: 1px solid var(--border-color-medium);
     border-radius: 6px;
-    margin-bottom: 0.2rem; /* Zmniejszony margines */
-    font-size: 0.8rem; /* Zmniejszona czcionka */
+    margin-bottom: 0.1rem; /* ZMNIEJSZONY MARGINES */
+    font-size: 0.8rem; /* ZMNIEJSZONA CZCIONKA */
     background-color: var(--bg-color-search-input);
     color: var(--text-color-dark);
 }
@@ -633,10 +633,10 @@ body {
 }
 .chat-settings-dropdown button {
     width: auto;
-    padding: 0.3rem 0.6rem; /* Zmniejszony padding */
-    font-size: 0.8rem; /* Zmniejszona czcionka */
+    padding: 0.2rem 0.5rem; /* ZMNIEJSZONY PADDING */
+    font-size: 0.8rem; /* ZMNIEJSZONA CZCIONKA */
     display: block;
-    margin-top: 0.2rem; /* Zmniejszony margines */
+    margin-top: 0.1rem; /* ZMNIEJSZONY MARGINES */
     background: var(--primary-color);
     color: var(--text-color-light);
     border: none;
@@ -652,16 +652,13 @@ body {
 .color-options, .background-options {
     display: flex;
     flex-wrap: wrap; /* Upewnij się, że jest włączone zawijanie */
-    gap: 0.2rem; /* ZMODYFIKOWANE: Jeszcze bardziej zmniejszony odstęp */
-    margin-top: 0.2rem; /* Zmniejszony margines */
+    gap: 0.15rem; /* ZMODYFIKOWANE: Jeszcze bardziej zmniejszony odstęp */
+    margin-top: 0.15rem; /* Zmniejszony margines */
     justify-content: flex-start; /* Wyrównaj do lewej */
-    /* NOWE: Opcjonalnie, jeśli elementy nadal się nie zawijają, możesz dodać */
-    /* max-width: 100%; */
-    /* box-sizing: border-box; */
 }
 .color-box, .bg-box {
-    width: 22px; /* ZMODYFIKOWANE: Dalej zmniejszona szerokość */
-    height: 22px; /* ZMODYFIKOWANE: Dalej zmniejszona wysokość */
+    width: 20px; /* ZMODYFIKOWANE: Dalej zmniejszona szerokość */
+    height: 20px; /* ZMODYFIKOWANE: Dalej zmniejszona wysokość */
     border-radius: 50%;
     cursor: pointer;
     border: 2px solid transparent;
@@ -1560,4 +1557,13 @@ body.auth-body {
     margin-top: 1.5rem; /* Odstęp od formularza */
     font-size: 0.9rem; /* Rozmiar czcionki */
     color: var(--text-color-dark); /* Kolor tekstu */
+}
+.switch-link a {
+    color: var(--primary-color); /* Kolor główny dla linku */
+    text-decoration: none; /* Brak podkreślenia */
+    font-weight: bold; /* Pogrubiony tekst */
+    transition: color 0.2s; /* Płynne przejście koloru */
+}
+.switch-link a:hover {
+    color: var(--primary-color-dark); /* Ciemniejszy kolor na hover */
 }
