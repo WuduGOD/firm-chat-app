@@ -11,39 +11,49 @@ let logoutButton;
 
 let container;
 let sidebarWrapper;
-let mainNavIcons; // Zaktualizowana referencja
-let navIcons; // Zaktualizowana referencja
+let mainNavIcons; 
+let navIcons; 
 
 let sidebarEl;
-let searchInput; // Zaktualizowana referencja
+let searchInput; 
 let contactsListEl; // Referencja do UL konwersacji
 let activeUsersContent; // Referencja do kontenera dla listy aktywnych użytkowników i komunikatu
 
 let logoScreen;
 let chatArea;
 
-let chatHeader; // Zaktualizowana referencja (będzie chatHeaderMain)
+let chatHeader; 
 let backButton;
 let chatUserName;
 let userStatusSpan;
 let chatHeaderActions;
 let chatSettingsButton;
 let chatSettingsDropdown;
-let typingStatusDiv;
+let typingStatusDiv; // Używamy tylko tej zmiennej dla wskaźnika pisania
 
 let messageContainer;
-let typingIndicatorDiv;
+// let typingIndicatorDiv; // USUNIĘTO: Zastąpione przez typingStatusDiv
 
-let chatFooter; // Zaktualizowana referencja (będzie chatFooterMain)
-let attachButton; // Zaktualizowana referencja
+let chatFooter; 
+let attachButton; 
 let messageInput;
-let emojiButton; // Zaktualizowana referencja
+let emojiButton; 
 let sendButton;
 
 // Zmienne dla prawego sidebara (Aktywni Użytkownicy)
 let rightSidebar;
 let activeUsersListEl; // Referencja do UL aktywnych użytkowników
 let noActiveUsersText; // Referencja do DIV z tekstem 'Brak aktywnych użytkowników.'
+
+// Zmienne czatu
+let allConversations = [];
+let currentUser = null; // Używamy tego obiektu z Supabase
+let currentChatUser = null;
+let currentRoom = null;
+let socket = null;
+let reconnectAttempts = 0;
+let typingTimeout;
+let currentActiveConvoItem = null;
 
 // Funkcja resetująca widok czatu
 function resetChatView() {
@@ -66,8 +76,8 @@ function resetChatView() {
         userStatusSpan.textContent = "";
         userStatusSpan.classList.remove('online', 'offline');
     }
-    if (typingIndicatorDiv) {
-        typingIndicatorDiv.classList.add('hidden');
+    if (typingStatusDiv) { // Zmieniono z typingIndicatorDiv
+        typingStatusDiv.classList.add('hidden');
     }
 
     currentChatUser = null;
@@ -431,11 +441,11 @@ function updateUserStatusIndicator(userId, isOnline) {
 
 function showTypingIndicator(usernameId) {
     // Sprawdź, czy wskaźnik pisania jest dla aktualnie aktywnego czatu
-    if (currentChatUser && String(usernameId) === String(currentChatUser.id) && typingIndicatorDiv) {
-        typingIndicatorDiv.classList.remove('hidden');
+    if (currentChatUser && String(usernameId) === String(currentChatUser.id) && typingStatusDiv) { // Zmieniono z typingIndicatorDiv
+        typingStatusDiv.classList.remove('hidden'); // Zmieniono z typingIndicatorDiv
         clearTimeout(typingTimeout);
         typingTimeout = setTimeout(() => {
-            typingIndicatorDiv.classList.add('hidden');
+            typingStatusDiv.classList.add('hidden'); // Zmieniono z typingIndicatorDiv
         }, 3000);
         console.log(`${getUserLabelById(usernameId)} is typing...`);
     }
@@ -714,11 +724,11 @@ async function initializeApp() {
     chatHeaderActions = chatHeader.querySelector('.chat-header-actions');
     chatSettingsButton = chatHeader.querySelector('#chatSettingsButton');
     chatSettingsDropdown = chatHeader.querySelector('#chatSettingsDropdown');
-    typingStatusDiv = chatHeader.querySelector('#typingStatus');
+    typingStatusDiv = chatArea.querySelector('#typingStatus'); // POPRAWKA: Prawidłowy selektor dla typingStatusDiv
 
 
     messageContainer = chatArea.querySelector('#messageContainer');
-    typingIndicatorDiv = chatArea.querySelector('#typingIndicator');
+    // typingIndicatorDiv = chatArea.querySelector('#typingIndicator'); // USUNIĘTO
 
     chatFooter = document.getElementById('chatFooterMain'); 
     attachButton = chatFooter.querySelector('#attachButton'); 
@@ -731,48 +741,49 @@ async function initializeApp() {
     noActiveUsersText = document.getElementById('noActiveUsersText'); 
 
     // 2. Walidacja, czy kluczowe elementy UI zostały znalezione
+    // Logujemy bezpośrednio wartości null/undefined dla łatwiejszego debugowania
     if (!mainHeader || !menuButton || !dropdownMenu || !themeToggle || !logoutButton ||
         !container || !sidebarWrapper || !mainNavIcons || !navIcons.length ||
         !sidebarEl || !searchInput || !contactsListEl || !activeUsersContent ||
         !logoScreen || !chatArea ||
         !chatHeader || !backButton || !chatUserName || !userStatusSpan || !chatHeaderActions || !chatSettingsButton || !chatSettingsDropdown || !typingStatusDiv ||
-        !messageContainer || !typingIndicatorDiv ||
+        !messageContainer || 
         !chatFooter || !attachButton || !messageInput || !emojiButton || !sendButton ||
         !rightSidebar || !activeUsersListEl || !noActiveUsersText) { 
         console.error('Error: One or more critical UI elements not found. Please check your HTML selectors. Missing elements:', {
-            mainHeader: !!mainHeader, 
-            menuButton: !!menuButton,
-            dropdownMenu: !!dropdownMenu,
-            themeToggle: !!themeToggle,
-            logoutButton: !!logoutButton,
-            container: !!container,
-            sidebarWrapper: !!sidebarWrapper,
-            mainNavIcons: !!mainNavIcons,
+            mainHeader: mainHeader, 
+            menuButton: menuButton,
+            dropdownMenu: dropdownMenu,
+            themeToggle: themeToggle,
+            logoutButton: logoutButton,
+            container: container,
+            sidebarWrapper: sidebarWrapper,
+            mainNavIcons: mainNavIcons,
             navIconsLength: navIcons.length, 
-            sidebarEl: !!sidebarEl,
-            searchInput: !!searchInput,
-            contactsListEl: !!contactsListEl,
-            activeUsersContent: !!activeUsersContent,
-            logoScreen: !!logoScreen,
-            chatArea: !!chatArea,
-            chatHeader: !!chatHeader,
-            backButton: !!backButton,
-            chatUserName: !!chatUserName,
-            userStatusSpan: !!userStatusSpan,
-            chatHeaderActions: !!chatHeaderActions,
-            chatSettingsButton: !!chatSettingsButton,
-            chatSettingsDropdown: !!chatSettingsDropdown,
-            typingStatusDiv: !!typingStatusDiv,
-            messageContainer: !!messageContainer,
-            typingIndicatorDiv: !!typingIndicatorDiv,
-            chatFooter: !!chatFooter,
-            attachButton: !!attachButton,
-            messageInput: !!messageInput,
-            emojiButton: !!emojiButton,
-            sendButton: !!sendButton,
-            rightSidebar: !!rightSidebar,
-            activeUsersListEl: !!activeUsersListEl,
-            noActiveUsersText: !!noActiveUsersText
+            sidebarEl: sidebarEl,
+            searchInput: searchInput,
+            contactsListEl: contactsListEl,
+            activeUsersContent: activeUsersContent,
+            logoScreen: logoScreen,
+            chatArea: chatArea,
+            chatHeader: chatHeader,
+            backButton: backButton,
+            chatUserName: chatUserName,
+            userStatusSpan: userStatusSpan,
+            chatHeaderActions: chatHeaderActions,
+            chatSettingsButton: chatSettingsButton,
+            chatSettingsDropdown: chatSettingsDropdown,
+            typingStatusDiv: typingStatusDiv,
+            messageContainer: messageContainer,
+            // typingIndicatorDiv: typingIndicatorDiv, // USUNIĘTO Z LOGOWANIA BŁĘDÓW
+            chatFooter: chatFooter,
+            attachButton: attachButton,
+            messageInput: messageInput,
+            emojiButton: emojiButton,
+            sendButton: sendButton,
+            rightSidebar: rightSidebar,
+            activeUsersListEl: activeUsersListEl,
+            noActiveUsersText: noActiveUsersText
         });
         return;
     } else {
