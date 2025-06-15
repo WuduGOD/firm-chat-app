@@ -507,7 +507,6 @@ body {
     display: flex;
     gap: 0.8rem;
     margin-left: auto;
-    flex-shrink: 0;
 }
 .chat-header-actions button {
     background: none;
