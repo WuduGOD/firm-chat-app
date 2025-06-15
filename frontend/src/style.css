@@ -664,8 +664,8 @@ body {
     align-items: center; 
 }
 .color-box, .bg-box {
-    width: 45px; 
-    height: 45px; 
+    width: 35px; 
+    height: 35px; 
     border-radius: 50%;
     cursor: pointer;
     border: 3px solid transparent; 
