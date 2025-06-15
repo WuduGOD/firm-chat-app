@@ -1,248 +1,262 @@
 /* Reset */
 * {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
 :root {
-  /* Kolory bazowe */
-  --primary-color: #6a5acd;
-  --primary-color-dark: #5a4bbf;
-  --secondary-color: #4caf50; /* dla przycisku dodawania */
+    /* Kolory bazowe */
+    --primary-color: #6a5acd;
+    --primary-color-dark: #5a4bbf;
+    --secondary-color: #4caf50; /* dla przycisku dodawania */
 
-  /* Kolory tekstu */
-  --text-color-dark: #333;
-  --text-color-medium: #666;
-  --text-color-light: #f1f1f1;
+    /* Kolory tekstu */
+    --text-color-dark: #333;
+    --text-color-medium: #666;
+    --text-color-light: #f1f1f1;
 
-  /* Kolory tła */
-  --bg-color-light: #f8f9fa;
-  --bg-color-lighter: #fbfbfb; /* dla logo-screen */
-  --bg-color-sidebar-wrapper: #eef2f6;
-  --bg-color-sidebar: #fff;
-  --bg-color-chat-messages: #f9fafb;
-  --bg-color-message-received: #e9eef2;
-  --bg-color-search-input: #f1f2f3;
+    /* Kolory tła */
+    --bg-color-light: #f8f9fa; /* Główne tło aplikacji */
+    --bg-color-lighter: #fbfbfb; /* dla logo-screen */
+    --bg-color-sidebar-wrapper: #eef2f6; /* Tło lewej i prawej kolumny */
+    --bg-color-sidebar: #fff; /* Tło listy kontaktów/aktywnych użytkowników w sidebarach */
+    --bg-color-chat-messages: #f9fafb; /* Tło obszaru wiadomości */
+    --bg-color-message-received: #e9eef2; /* Tło wiadomości odebranych */
+    --bg-color-search-input: #f1f2f3; /* Tło pola wyszukiwania */
+    --bg-color-header: #fff; /* Tło nagłówka aplikacji */
+    --bg-color-chat-header: #fff; /* Tło nagłówka czatu */
+    --bg-color-chat-footer: #fff; /* Tło stopki czatu */
+    --bg-color-dropdown: #fff; /* Tło dropdownów */
 
-  /* Kolory obramowań i cieni */
-  --border-color-light: #eee;
-  --border-color-medium: #ddd;
-  --shadow-light: 0 2px 5px rgba(0,0,0,0.03);
-  --shadow-medium: 0 0 20px rgba(0,0,0,0.08);
+    /* Kolory obramowań i cieni */
+    --border-color-light: #eee;
+    --border-color-medium: #ddd;
+    --shadow-light: 0 2px 5px rgba(0,0,0,0.03);
+    --shadow-medium: 0 0 20px rgba(0,0,0,0.08);
 
-  /* Inne */
-  --dropdown-top-offset: 120%; /* Domyślna pozycja dropdown */
+    /* Inne */
+    --dropdown-top-offset: 120%; /* Domyślna pozycja dropdown */
+
+    /* Nowe zmienne dla trybu autoryzacji */
+    --bg-color-container: #ffffff; /* Tło kontenera logowania */
+    --bg-color-input: #f1f2f3; /* Tło inputów logowania */
 }
 
 body {
-  font-family: 'Segoe UI', sans-serif;
-  background: var(--bg-color-light); /* Użycie zmiennej */
-  color: var(--text-color-dark); /* Użycie zmiennej */
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+    font-family: 'Segoe UI', sans-serif;
+    background: var(--bg-color-light); /* Użycie zmiennej */
+    color: var(--text-color-dark); /* Użycie zmiennej */
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Zapobiega przewijaniu się całej strony */
 }
 
-/* Główna nawigacja (Nagłówek) */
+/* Główna nawigacja (Nagłówek aplikacji) */
 .main-header {
-  background: #fff;
-  padding: 1rem 2rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid var(--border-color-medium); /* POPRAWIONE */
-  box-shadow: var(--shadow-light); /* POPRAWIONE */
+    background: var(--bg-color-header);
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color-medium);
+    box-shadow: var(--shadow-light);
+    flex-shrink: 0; /* Zapobiega zmniejszaniu się nagłówka */
 }
 
 .app-title {
-  font-size: 1.4rem;
-  color: var(--primary-color); /* POPRAWIONE */
-  font-weight: bold;
+    font-size: 1.4rem;
+    color: var(--primary-color);
+    font-weight: bold;
 }
 
 .user-menu {
-  display: flex;
-  gap: 0.8rem;
-  position: relative;
+    display: flex;
+    gap: 0.8rem;
+    position: relative;
 }
 
 .user-menu button {
-  background: none;
-  border: none;
-  font-size: 1.3rem;
-  cursor: pointer;
-  color: var(--text-color-medium); /* POPRAWIONE */
-  transition: color 0.2s;
+    background: none;
+    border: none;
+    font-size: 1.3rem;
+    cursor: pointer;
+    color: var(--text-color-medium);
+    transition: color 0.2s;
 }
 .user-menu button:hover {
-  color: #6a5acd;
+    color: var(--primary-color);
 }
 
 /* Dropdown (dla menu głównego i czatu) */
 .dropdown {
-  position: absolute;
-  right: 0;
-  top: 120%; /* Domyślna pozycja poniżej elementu triggerującego */
-  background: white;
-  border: 1px solid #ccc;
-  padding: 0.5rem;
-  border-radius: 6px;
-  box-shadow: 0 5px 10px rgba(0,0,0,0.1);
-  z-index: 100;
-  min-width: 180px; /* Nieco mniejsza, aby lepiej pasowała do pozycji menu */
-  display: flex; /* Użyj flexbox dla elementów menu */
-  flex-direction: column;
-  gap: 0.5rem; /* Odstęp między elementami menu */
+    position: absolute;
+    right: 0;
+    top: var(--dropdown-top-offset); /* Zmienna dla offsetu */
+    background: var(--bg-color-dropdown);
+    border: 1px solid var(--border-color-medium);
+    padding: 0.5rem;
+    border-radius: 6px;
+    box-shadow: var(--shadow-medium);
+    z-index: 100;
+    min-width: 180px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
 }
 .dropdown.hidden {
-  display: none;
+    display: none;
 }
 /* Style dla przycisków w głównym dropdownie */
 .dropdown #themeToggle,
 .dropdown #logoutButton {
-  background: none; /* Resetuj tło */
-  border: none;
-  color: #333; /* Ustaw kolor tekstu */
-  font-size: 1rem;
-  padding: 0.6rem 0.8rem;
-  border-radius: 4px;
-  cursor: pointer;
-  text-align: left; /* Wyrównaj tekst do lewej */
-  width: 100%;
-  transition: background 0.2s, color 0.2s;
-  display: flex; /* Aby ikona i tekst były obok siebie */
-  align-items: center;
-  gap: 0.5rem; /* Odstęp między ikoną a tekstem */
+    background: none;
+    border: none;
+    color: var(--text-color-dark);
+    font-size: 1rem;
+    padding: 0.6rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: background 0.2s, color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 .dropdown #themeToggle i,
 .dropdown #logoutButton i {
-  font-size: 1.1rem; /* Zwiększ rozmiar ikony */
-  color: #666; /* Kolor ikony */
+    font-size: 1.1rem;
+    color: var(--text-color-medium);
 }
 
 .dropdown #themeToggle:hover,
 .dropdown #logoutButton:hover {
-  background: #f0f0f0; /* Lekkie tło po najechaniu */
-  color: #000;
+    background: var(--bg-color-search-input); /* Jasne tło po najechaniu */
+    color: var(--text-color-dark);
 }
 .dropdown #themeToggle:hover i,
 .dropdown #logoutButton:hover i {
-    color: #6a5acd; /* Zmień kolor ikony po najechaniu */
+    color: var(--primary-color);
 }
 
 
-/* Układ główny */
+/* Układ główny - KONTEJNER DLA 3 KOLUMN */
 .container {
-  flex: 1;
-  display: flex;
-  overflow: hidden;
-  border-radius: 12px;
-  margin: 1rem;
-  box-shadow: 0 0 20px rgba(0,0,0,0.08);
+    flex: 1; /* Pozwól kontenerowi wypełnić dostępną przestrzeń pionową */
+    display: flex; /* Użyj Flexbox dla układu kolumnowego */
+    overflow: hidden; /* Ukryj nadmiarową zawartość */
+    border-radius: 12px;
+    margin: 1rem;
+    box-shadow: var(--shadow-medium);
 }
 
-/* Sidebar Wrapper (nowy kontener dla lewego paska) */
+/* Sidebar Wrapper (lewy pasek - rozmowy + ikony) */
 .sidebar-wrapper {
-  display: flex;
-  height: 100%;
-  background: #eef2f6;
+    display: flex; /* Użyj flexbox, aby ułożyć ikony i listę obok siebie */
+    flex-direction: row; /* Ikony i lista obok siebie */
+    min-width: 280px; /* Minimalna szerokość lewego sidebara */
+    width: 25%; /* Domyślna szerokość lewego sidebara */
+    max-width: 350px; /* Maksymalna szerokość lewego sidebara */
+    background: var(--bg-color-sidebar-wrapper);
+    border-right: 1px solid var(--border-color-light); /* Linia oddzielająca */
 }
 
 /* Main Nav Icons (pionowy pasek ikon) */
 .main-nav-icons {
-  width: 60px;
-  background: #6a5acd;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-top: 1.5rem;
-  padding-bottom: 1rem;
-  gap: 1.5rem;
-  border-top-left-radius: 12px;
-  border-bottom-left-radius: 12px;
+    width: 60px;
+    background: var(--primary-color); /* Użyj koloru głównego */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 1.5rem;
+    padding-bottom: 1rem;
+    gap: 1.5rem;
+    border-top-left-radius: 12px;
+    border-bottom-left-radius: 12px;
+    flex-shrink: 0; /* Zapobiega zmniejszaniu się paska ikon */
 }
 
 .nav-icon {
-  background: none;
-  border: none;
-  color: #fff;
-  font-size: 1.5rem;
-  cursor: pointer;
-  width: 45px;
-  height: 45px;
-  border-radius: 10px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  transition: background 0.3s, color 0.3s;
-  position: relative;
+    background: none;
+    border: none;
+    color: var(--text-color-light);
+    font-size: 1.5rem;
+    cursor: pointer;
+    width: 45px;
+    height: 45px;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: background 0.3s, color 0.3s;
+    position: relative;
 }
 
 .nav-icon::after {
-    content: attr(data-tooltip); /* Pobiera tekst z atrybutu data-tooltip */
+    content: attr(data-tooltip);
     position: absolute;
-    left: 100%; /* Ustawia tooltip obok elementu (po prawej) */
+    left: 100%;
     top: 50%;
-    transform: translateY(-50%) translateX(10px); /* Przesunięcie i odstęp od ikony */
-    white-space: nowrap; /* Zapobiega zawijaniu tekstu */
-    background-color: rgba(0, 0, 0, 0.8); /* Ciemne tło */
-    color: #fff; /* Jasny tekst */
+    transform: translateY(-50%) translateX(10px);
+    white-space: nowrap;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: var(--text-color-light);
     padding: 0.5rem 0.8rem;
     border-radius: 6px;
     font-size: 0.85rem;
-    opacity: 0; /* Domyślnie ukryty */
-    visibility: hidden; /* Domyślnie ukryty */
+    opacity: 0;
+    visibility: hidden;
     transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out, transform 0.2s ease-in-out;
-    z-index: 1000; /* Upewnij się, że tooltip jest na wierzchu */
-    pointer-events: none; /* Ważne: pozwala na klikanie pod tooltipem */
+    z-index: 1000;
+    pointer-events: none;
 }
 
 .nav-icon:hover {
-  background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.2);
 }
 
 .nav-icon:hover::after {
-    opacity: 1; /* Pokaż tooltip po najechaniu */
+    opacity: 1;
     visibility: visible;
-    transform: translateY(-50%) translateX(0); /* Anuluj przesunięcie dla animacji */
+    transform: translateY(-50%) translateX(0);
 }
 
 .nav-icon.active {
-  background: #fff;
-  color: #6a5acd;
+    background: var(--bg-color-sidebar); /* Białe tło dla aktywnej ikony */
+    color: var(--primary-color);
 }
 
 .nav-icon.add-new-button {
     margin-top: auto;
-    margin-bottom: 0; /* Usuń dolny margines, bo to ostatni element */
-    background: #4caf50;
+    margin-bottom: 0;
+    background: var(--secondary-color);
     border-radius: 50%;
     font-size: 1.8rem;
-    color: white;
+    color: var(--text-color-light);
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 .nav-icon.add-new-button:hover {
-    background: #43a047;
+    background: var(--secondary-color-dark); /* Nowa zmienna dla hover */
 }
 
-/* Sidebar (lista konwersacji) */
+/* Sidebar (lista konwersacji) - teraz zajmuje resztę miejsca w .sidebar-wrapper */
 #sidebar.conversations-list {
-  width: 350px; /* Zwiększona szerokość */
-  background: #fff;
-  padding: 1rem;
-  border-right: 1px solid #eee;
-  overflow-y: auto;
-  flex-shrink: 0;
-  padding-top: 0;
+    flex-grow: 1; /* Wypełnij dostępną przestrzeń w sidebar-wrapper */
+    background: var(--bg-color-sidebar);
+    padding: 1rem;
+    /* border-right: 1px solid #eee; - Usunięte, bo już jest na .sidebar-wrapper */
+    overflow-y: auto;
+    flex-shrink: 0;
+    padding-top: 0;
 }
 
 #sidebar.conversations-list h2 {
-  margin-bottom: 1rem;
-  font-size: 1.3rem;
-  color: #333;
-  padding-top: 1rem;
+    margin-bottom: 1rem;
+    font-size: 1.3rem;
+    color: var(--text-color-dark);
+    padding-top: 1rem;
 }
 
 .search-bar {
@@ -253,71 +267,76 @@ body {
     width: 100%;
     padding: 0.6rem 0.8rem 0.6rem 2.5rem;
     border-radius: 20px;
-    border: 1px solid #ddd;
-    background: #f1f2f3;
+    border: 1px solid var(--border-color-medium);
+    background: var(--bg-color-search-input);
     font-size: 0.9rem;
     outline: none;
+    color: var(--text-color-dark); /* Dodane dla dark mode */
+}
+.search-bar input::placeholder {
+    color: var(--text-color-medium); /* Dodane dla dark mode */
 }
 .search-bar i {
     position: absolute;
     left: 1rem;
     top: 50%;
     transform: translateY(-50%);
-    color: #999;
+    color: var(--text-color-medium);
 }
 
 /* Kategorie sortowania kontaktów */
 .contact-categories {
     display: flex;
-    flex-wrap: wrap; /* Pozwala na zawijanie przycisków */
+    flex-wrap: wrap;
     gap: 0.5rem;
     margin-bottom: 1rem;
-    padding: 0 0.5rem; /* Wyrównanie z resztą listy */
+    padding: 0 0.5rem;
 }
 .contact-categories .category-button {
-    background: #f1f2f3;
-    border: 1px solid #ddd;
+    background: var(--bg-color-search-input);
+    border: 1px solid var(--border-color-medium);
     padding: 0.5rem 0.8rem;
     border-radius: 20px;
     font-size: 0.85rem;
     cursor: pointer;
-    color: #555;
+    color: var(--text-color-medium);
     transition: background 0.2s, border-color 0.2s, color 0.2s;
-    white-space: nowrap; /* Zapobiega zawijaniu tekstu */
+    white-space: nowrap;
 }
 .contact-categories .category-button:hover {
-    background: #e0e2e5;
-    border-color: #ccc;
+    background: var(--bg-color-message-received);
+    border-color: var(--border-color-medium);
 }
 .contact-categories .category-button.active {
-    background: #6a5acd;
-    border-color: #6a5acd;
-    color: white;
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: var(--text-color-light);
 }
 
 
 /* Styl pojedynczego kontaktu/konwersacji */
 .contact {
-  padding: 0.8rem;
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  border-radius: 10px;
-  transition: background 0.2s;
-  position: relative;
-  margin-bottom: 0.3rem;
+    padding: 0.8rem;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: background 0.2s;
+    position: relative;
+    margin-bottom: 0.3rem;
+    color: var(--text-color-dark); /* Dodane dla dark mode */
 }
 .contact:hover,
 .contact.active {
-  background: #eef2f6;
+    background: var(--bg-color-sidebar-wrapper);
 }
 
 .contact img.avatar {
-  width: 45px;
-  height: 45px;
-  border-radius: 50%;
-  margin-right: 0.8rem;
-  object-fit: cover;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    margin-right: 0.8rem;
+    object-fit: cover;
 }
 
 .contact .contact-info {
@@ -328,13 +347,13 @@ body {
 
 .contact .contact-name {
     font-weight: bold;
-    color: #333;
+    color: var(--text-color-dark);
     font-size: 1rem;
 }
 
 .contact .last-message {
     font-size: 0.85rem;
-    color: #777;
+    color: var(--text-color-medium);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -347,7 +366,7 @@ body {
     align-items: flex-end;
     gap: 5px;
     font-size: 0.8rem;
-    color: #999;
+    color: var(--text-color-medium);
 }
 
 .contact .unread-count {
@@ -362,110 +381,128 @@ body {
     display: block;
 }
 
-/* Status online/offline - teraz jako tekst */
-.user-info .status {
-  font-size: 0.85rem;
-  font-weight: normal;
-  color: #555;
+/* Status online/offline - w nagłówku czatu */
+#userStatus {
+    font-size: 0.85rem; /* Było 0.85em, zmieniono na rem */
+    font-weight: 500; /* Było normal, zmieniono na 500 */
+    color: var(--text-color-medium);
+    display: flex; /* Użyj flexbox, aby kropka i tekst były obok siebie */
+    align-items: center;
+    gap: 5px; /* Odstęp między kropką a tekstem */
+}
+#userStatus::before {
+    content: '';
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    /* margin-right: 5px; - usunięte, bo już jest gap */
+}
+#userStatus.online::before {
+    background-color: #4caf50; /* Zielony */
+}
+#userStatus.offline::before {
+    background-color: #888; /* Szary */
+}
+#userStatus.online {
+    color: #4caf50; /* Zielony tekst */
+}
+#userStatus.offline {
+    color: #888; /* Szary tekst */
 }
 
-.user-info .status.online {
-    color: #4caf50;
-}
-.user-info .status.offline {
-    color: #888;
-}
 
-/* Czat */
-.chat-layout {
-  flex: 1;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  background: #fdfdfd;
-  border-top-right-radius: 12px;
-  border-bottom-right-radius: 12px;
+/* Chat Area Wrapper - nowy kontener dla logo-screen i chat-area */
+.chat-area-wrapper {
+    flex-grow: 1; /* Pozwól mu zająć jak najwięcej miejsca */
+    display: flex; /* Użyj flexbox, aby zarządzać logo-screen/chat-area */
+    flex-direction: column;
+    position: relative;
+    background: var(--bg-color-lighter); /* Domyślne tło */
+    border-top-right-radius: 12px; /* Domyślne zaokrąglenie */
+    border-bottom-right-radius: 12px;
 }
 
 .logo-screen {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  color: #888;
-  padding: 2rem;
-  font-size: 1.1rem;
-  background: #fbfbfb;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    color: var(--text-color-medium);
+    padding: 2rem;
+    font-size: 1.1rem;
+    background: var(--bg-color-lighter);
 }
 .logo-screen.hidden {
-  display: none;
+    display: none;
 }
 
 .chat-area {
-  flex: 1;
-  display: none;
-  flex-direction: column;
-  height: 100%;
-  position: relative;
+    flex: 1;
+    display: none; /* Domyślnie ukryte */
+    flex-direction: column;
+    height: 100%;
+    position: relative;
+    background: var(--bg-color-chat-messages); /* Tło czatu */
 }
 .chat-area.active {
-  display: flex;
+    display: flex; /* Pokaż, gdy aktywna */
 }
 
 .chat-header {
-  padding: 1rem 1.5rem;
-  background: #fff;
-  border-bottom: 1px solid #eee;
-  display: flex;
-  justify-content: space-between; /* Przestrzeń między user-info a akcjami */
-  align-items: center;
-  flex-wrap: nowrap;
-  gap: 1rem;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.03);
-  position: relative;
+    padding: 1rem 1.5rem;
+    background: var(--bg-color-chat-header);
+    border-bottom: 1px solid var(--border-color-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 1rem;
+    box-shadow: var(--shadow-light);
+    position: relative;
+    flex-shrink: 0; /* Zapobiega zmniejszaniu się nagłówka czatu */
 }
 
 .back-button {
-  display: none;
-  padding: 0.6rem 0.8rem;
-  background: #f1f2f3;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  font-size: 1.1rem;
-  color: #666;
+    display: none; /* Domyślnie ukryty, pokazywany przez JS na mobilnych */
+    padding: 0.6rem 0.8rem;
+    background: var(--bg-color-search-input);
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    color: var(--text-color-medium);
 }
-.back-button.show {
-  display: block;
+.back-button.show-on-mobile { /* Klasa do pokazywania na mobilnych */
+    display: block;
 }
 
 .user-info {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  font-weight: bold;
-  flex-grow: 1; /* Pozwoli user-info zająć dostępną przestrzeń */
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    font-weight: bold;
+    flex-grow: 1;
 }
 
-/* Nowe stylowanie dla ikon czatu wyrównanych do prawej */
 .chat-header-actions.right-aligned {
     display: flex;
     gap: 0.8rem;
-    margin-left: auto; /* Wypycha je na prawo */
+    margin-left: auto;
 }
 .chat-header-actions button {
     background: none;
     border: none;
     font-size: 1.3rem;
     cursor: pointer;
-    color: #666;
+    color: var(--text-color-medium);
     transition: color 0.2s;
 }
 .chat-header-actions button:hover {
-    color: #6a5acd;
+    color: var(--primary-color);
 }
 
 
@@ -481,12 +518,12 @@ body {
 .chat-settings-dropdown h3 {
     font-size: 1.1rem;
     margin-bottom: 1rem;
-    color: #333;
+    color: var(--text-color-dark);
 }
 .chat-settings-dropdown .setting-group {
     margin-bottom: 1rem;
     padding-bottom: 1rem;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border-color-light);
 }
 .chat-settings-dropdown .setting-group:last-child {
     border-bottom: none;
@@ -495,16 +532,21 @@ body {
 }
 .chat-settings-dropdown h4 {
     font-size: 0.9rem;
-    color: #666;
+    color: var(--text-color-medium);
     margin-bottom: 0.5rem;
 }
 .chat-settings-dropdown input[type="text"] {
     width: 100%;
     padding: 0.5rem;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border-color-medium);
     border-radius: 6px;
     margin-bottom: 0.5rem;
     font-size: 0.9rem;
+    background-color: var(--bg-color-search-input); /* Dodane dla dark mode */
+    color: var(--text-color-dark); /* Dodane dla dark mode */
+}
+.chat-settings-dropdown input[type="text"]::placeholder {
+    color: var(--text-color-medium);
 }
 .chat-settings-dropdown button {
     width: auto;
@@ -512,6 +554,15 @@ body {
     font-size: 0.9rem;
     display: block;
     margin-top: 0.5rem;
+    background: var(--primary-color); /* Zmienione */
+    color: var(--text-color-light); /* Zmienione */
+    border: none; /* Zmienione */
+    border-radius: 6px; /* Zmienione */
+    cursor: pointer; /* Zmienione */
+    transition: background 0.2s; /* Zmienione */
+}
+.chat-settings-dropdown button:hover {
+    background: var(--primary-color-dark); /* Zmienione */
 }
 
 /* Opcje kolorów/tła */
@@ -529,7 +580,7 @@ body {
     transition: border-color 0.2s;
 }
 .color-box.active, .bg-box.active {
-    border-color: #6a5acd;
+    border-color: var(--primary-color);
 }
 
 /* Konkretne motywy kolorów wiadomości */
@@ -539,7 +590,7 @@ body {
 .color-box.red-theme { background-color: #ef4444; }
 
 /* Konkretne tła czatu */
-.bg-box.default-bg { background-color: #f9fafb; border: 1px solid #ddd; }
+.bg-box.default-bg { background-color: #f9fafb; border: 1px solid var(--border-color-medium); }
 .bg-box.dark-bg { background-color: #333; }
 .bg-box.pattern-bg { background-image: url('data:image/svg+xml;utf8,<svg width="10" height="10" viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"><circle cx="2.5" cy="2.5" r="1.5" fill="%23e0e0e0"/></svg>'); background-size: 10px 10px; }
 
@@ -553,9 +604,10 @@ body {
     position: absolute;
     bottom: 80px;
     left: 15px;
-    background: #e9eef2;
+    background: var(--bg-color-message-received);
     border-radius: 15px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    z-index: 5; /* Upewnij się, że jest nad wiadomościami, ale pod footerem */
 }
 .typing-indicator.hidden {
     display: none;
@@ -564,7 +616,7 @@ body {
 .typing-indicator .dot {
     width: 8px;
     height: 8px;
-    background-color: #666;
+    background-color: var(--text-color-medium);
     border-radius: 50%;
     animation: bounce 1.4s infinite ease-in-out both;
 }
@@ -580,21 +632,21 @@ body {
 
 
 .typing-status {
-  font-size: 0.8rem;
-  color: #999;
-  margin-left: auto;
-  min-width: 100px;
-  text-align: right;
+    font-size: 0.8rem;
+    color: var(--text-color-medium);
+    margin-left: auto; /* Usunięto z HTML, więc to nie będzie działać */
+    min-width: 100px; /* Może być usunięte */
+    text-align: right; /* Może być usunięte */
 }
 
 .messages {
-  flex: 1;
-  padding: 1.5rem;
-  overflow-y: auto;
-  background: #f9fafb;
-  display: flex;
-  flex-direction: column;
-  gap: 0.7rem;
+    flex: 1;
+    padding: 1.5rem;
+    overflow-y: auto;
+    background: var(--bg-color-chat-messages);
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
 }
 
 /* Stylowanie wiadomości w zależności od motywu */
@@ -626,39 +678,61 @@ body {
 .messages.pattern-bg {
     background-image: url('data:image/svg+xml;utf8,<svg width="10" height="10" viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"><circle cx="2.5" cy="2.5" r="1.5" fill="%23e0e0e0"/></svg>');
     background-size: 10px 10px;
-    background-color: #f9fafb;
+    background-color: var(--bg-color-chat-messages); /* Zmieniono, aby używało zmiennej */
 }
 
 
 .message {
-  max-width: 65%;
-  padding: 0.8rem 1rem;
-  border-radius: 15px;
-  background: #e9eef2;
-  position: relative;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-  width: fit-content;
-  min-width: 60px;
+    max-width: 65%;
+    padding: 0.8rem 1rem;
+    border-radius: 15px;
+    background: var(--bg-color-message-received);
+    position: relative;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    width: fit-content;
+    min-width: 60px;
+    color: var(--text-color-dark); /* Upewnij się, że tekst jest widoczny */
 }
 .message.sent {
-  margin-left: auto;
-  background: #6a5acd;
-  color: white;
+    margin-left: auto;
+    background: var(--primary-color);
+    color: var(--text-color-light);
 }
 
 .message.received {
-  margin-right: auto;
-  background-color: var(--bg-color-message-received);
-  color: var(--text-color-dark);
+    margin-right: auto;
+    background-color: var(--bg-color-message-received);
+    color: var(--text-color-dark);
 }
 
+/* Ogonek wiadomości - uniwersalny styl dla obu trybów */
+.message::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    border: 8px solid transparent; /* Rozmiar ogonka */
+    width: 0;
+    height: 0;
+}
+
+.message.sent::before {
+    right: -8px; /* Pozycja dla wysłanych */
+    border-left-color: var(--primary-color); /* Kolor ogonka jak wiadomości */
+}
+
+.message.received::before {
+    left: -8px; /* Pozycja dla otrzymanych */
+    border-right-color: var(--bg-color-message-received); /* Kolor ogonka jak wiadomości */
+}
+
+
 .timestamp {
-  font-size: 0.7rem;
-  opacity: 0.7;
-  margin-top: 5px;
-  display: block;
-  text-align: right;
-  color: #777;
+    font-size: 0.7rem;
+    opacity: 0.7;
+    margin-top: 5px;
+    display: block;
+    text-align: right;
+    color: var(--text-color-medium);
 }
 .message.sent .timestamp {
     color: rgba(255, 255, 255, 0.8);
@@ -666,8 +740,8 @@ body {
 
 /* Link Preview */
 .link-preview-message {
-    background: #fff;
-    border: 1px solid #eee;
+    background: var(--bg-color-sidebar); /* Użyj zmiennej */
+    border: 1px solid var(--border-color-light);
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     display: flex;
     flex-direction: column;
@@ -675,14 +749,14 @@ body {
     padding: 0.8rem;
 }
 .link-preview-message::before {
-    border-color: transparent #fff transparent transparent;
+    border-color: transparent var(--bg-color-sidebar) transparent transparent; /* Ogonek dla link preview (received) */
 }
 .link-preview-message.sent {
-    background: #f0f0f0;
-    border-color: #ddd;
+    background: var(--bg-color-search-input); /* Jasnoszary dla wysłanych */
+    border-color: var(--border-color-medium);
 }
 .link-preview-message.sent::before {
-    border-color: transparent transparent transparent #f0f0f0;
+    border-color: transparent transparent transparent var(--bg-color-search-input); /* Ogonek dla link preview (sent) */
 }
 
 
@@ -694,8 +768,8 @@ body {
 }
 .link-preview-icon {
     font-size: 1.8rem;
-    color: #6a5acd;
-    background: #f1f2f3;
+    color: var(--primary-color);
+    background: var(--bg-color-search-input);
     padding: 0.5rem;
     border-radius: 8px;
 }
@@ -705,61 +779,66 @@ body {
 }
 .link-preview-title {
     font-weight: bold;
-    color: #333;
+    color: var(--text-color-dark);
     font-size: 0.95rem;
 }
 .link-preview-description {
     font-size: 0.8rem;
-    color: #666;
+    color: var(--text-color-medium);
 }
 
 
 /* Dolna belka (Chat Footer) */
 .chat-footer {
-  display: flex;
-  gap: 0.8rem;
-  padding: 1rem 1.5rem;
-  background: #fff;
-  border-top: 1px solid #eee;
-  align-items: center;
-  box-shadow: 0 -2px 5px rgba(0,0,0,0.03);
+    display: flex;
+    gap: 0.8rem;
+    padding: 1rem 1.5rem;
+    background: var(--bg-color-chat-footer);
+    border-top: 1px solid var(--border-color-light);
+    align-items: center;
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.03);
+    flex-shrink: 0; /* Zapobiega zmniejszaniu się stopki czatu */
 }
 
 .chat-footer input {
-  flex: 1;
-  padding: 0.7rem 1rem;
-  border-radius: 25px;
-  border: 1px solid #ddd;
-  background: #f1f2f3;
-  font-size: 0.95rem;
-  outline: none;
+    flex: 1;
+    padding: 0.7rem 1rem;
+    border-radius: 25px;
+    border: 1px solid var(--border-color-medium);
+    background: var(--bg-color-search-input);
+    font-size: 0.95rem;
+    outline: none;
+    color: var(--text-color-dark); /* Dodane dla dark mode */
+}
+.chat-footer input::placeholder {
+    color: var(--text-color-medium);
 }
 
 .chat-footer button {
-  padding: 0.7rem 1.2rem;
-  border: none;
-  background: #6a5acd;
-  color: white;
-  border-radius: 25px;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: background 0.3s;
+    padding: 0.7rem 1.2rem;
+    border: none;
+    background: var(--primary-color);
+    color: var(--text-color-light);
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background 0.3s;
 }
 
 .chat-footer button:hover {
-  background: #5a4bbf;
+    background: var(--primary-color-dark);
 }
 
 .chat-footer button:disabled {
-  background: #a1a1aa;
-  cursor: not-allowed;
+    background: #a1a1aa; /* Specyficzny szary dla disabled */
+    cursor: not-allowed;
 }
 
 .chat-footer .attach-button,
 .chat-footer .emoji-button {
     background: none;
     border: none;
-    color: #666;
+    color: var(--text-color-medium);
     font-size: 1.5rem;
     padding: 0;
     width: auto;
@@ -769,37 +848,110 @@ body {
 }
 .chat-footer .attach-button:hover,
 .chat-footer .emoji-button:hover {
-    color: #6a5acd;
+    color: var(--primary-color);
 }
 
 
-/* Back button dla responsywności - domyślnie ukryty */
-.back-button {
-  display: none;
+/* PRAWY SIDEBAR (AKTYWNI UŻYTKOWNICY) - NOWE STYLE */
+.right-sidebar-wrapper {
+    min-width: 200px; /* Minimalna szerokość */
+    width: 20%; /* Proporcjonalna szerokość */
+    max-width: 300px; /* Maksymalna szerokość */
+    border-left: 1px solid var(--border-color-light);
+    background-color: var(--bg-color-sidebar-wrapper); /* Tło jak lewy sidebar wrapper */
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+    overflow-y: auto; /* Przewijanie listy aktywnych użytkowników */
+    border-top-right-radius: 12px; /* Zaokrąglenia dla prawej kolumny */
+    border-bottom-right-radius: 12px;
+    flex-shrink: 0; /* Zapobiega zmniejszaniu się sidebara */
 }
 
-/* Dark mode */
+.right-sidebar h4 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: var(--text-color-dark);
+    text-align: center;
+    font-size: 1.2rem;
+}
+
+.active-users-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.active-users-list li {
+    display: flex;
+    align-items: center;
+    padding: 0.6rem 0.8rem;
+    margin-bottom: 5px;
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
+    cursor: pointer;
+    color: var(--text-color-dark);
+}
+
+.active-users-list li:hover {
+    background-color: var(--bg-color-search-input); /* Lekkie podświetlenie */
+}
+
+.active-users-list li .avatar {
+    width: 35px; /* Mniejsze avatary dla listy online */
+    height: 35px;
+    border-radius: 50%;
+    margin-right: 10px;
+    object-fit: cover;
+}
+
+.active-users-list li .username {
+    font-weight: 500;
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.active-users-list li .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #4caf50; /* Zielony dla online */
+    margin-left: auto; /* Wypchnij kropkę na prawo */
+    flex-shrink: 0;
+}
+
+/* Dark mode overrides */
 body.dark-mode {
-  --primary-color: #6a5acd; /* Możesz zachować, jeśli ten kolor jest stały */
-  --primary-color-dark: #5a4bbf;
-  --secondary-color: #388e3c; /* przyciemniony dla dark mode */
+    --primary-color: #7f70ea; /* Nieco jaśniejszy fiolet dla dark mode */
+    --primary-color-dark: #6a5acd;
+    --secondary-color: #388e3c;
+    --secondary-color-dark: #2e7d32; /* Nowa zmienna */
 
-  --text-color-dark: #f1f1f1;
-  --text-color-medium: #aaa;
-  --text-color-light: #f1f1f1; /* lub inny odcień jasnego */
+    --text-color-dark: #f1f1f1;
+    --text-color-medium: #aaa;
+    --text-color-light: #f1f1f1;
 
-  --bg-color-light: #1a1a2e; /* Ciemne tło */
-  --bg-color-lighter: #1a1a2e;
-  --bg-color-sidebar-wrapper: #22223b;
-  --bg-color-sidebar: #2e2e4a;
-  --bg-color-chat-messages: #1a1a2e;
-  --bg-color-message-received: #3a3a5e;
-  --bg-color-search-input: #3a3a5e;
+    --bg-color-light: #1a1a2e; /* Główne tło */
+    --bg-color-lighter: #1a1a2e; /* logo-screen */
+    --bg-color-sidebar-wrapper: #22223b;
+    --bg-color-sidebar: #2e2e4a;
+    --bg-color-chat-messages: #1a1a2e;
+    --bg-color-message-received: #3a3a5e;
+    --bg-color-search-input: #3a3a5e;
+    --bg-color-header: #2e2e4a;
+    --bg-color-chat-header: #2e2e4a;
+    --bg-color-chat-footer: #2e2e4a;
+    --bg-color-dropdown: #2e2e4a;
 
-  --border-color-light: #3e3e5a;
-  --border-color-medium: #555;
-  --shadow-light: 0 2px 5px rgba(0,0,0,0.1); /* nieznacznie ciemniejszy cień */
-  --shadow-medium: 0 0 20px rgba(0,0,0,0.2);
+    --border-color-light: #3e3e5a;
+    --border-color-medium: #555;
+    --shadow-light: 0 2px 5px rgba(0,0,0,0.1);
+    --shadow-medium: 0 0 20px rgba(0,0,0,0.2);
+
+    --bg-color-container: #2e2e4a; /* Tło kontenera logowania w dark mode */
+    --bg-color-input: #3a3a5e; /* Tło inputów logowania w dark mode */
 }
 
 /* Główne sekcje w dark mode */
@@ -807,96 +959,97 @@ body.dark-mode {
 .dark-mode #sidebar.conversations-list,
 .dark-mode .chat-header,
 .dark-mode .chat-footer,
-.dark-mode .dropdown {
-  background-color: #2e2e4a;
-  border-color: #3e3e5a;
-  color: #f1f1f1;
+.dark-mode .dropdown,
+.dark-mode .right-sidebar-wrapper { /* Dodano prawy sidebar */
+    background-color: var(--bg-color-header); /* Ujednolicone */
+    border-color: var(--border-color-medium); /* Ujednolicone */
+    color: var(--text-color-dark);
 }
 
 .dark-mode .sidebar-wrapper {
-    background-color: #22223b;
+    background-color: var(--bg-color-sidebar-wrapper);
 }
 
 .dark-mode .main-nav-icons {
-    background: #4a4a75;
+    background: var(--primary-color-dark); /* Ciemniejszy fiolet */
 }
 .dark-mode .nav-icon {
-    color: #f1f1f1;
+    color: var(--text-color-light);
 }
 
 body.dark-mode .nav-icon::after {
-    background-color: #f1f1f1; /* Jasne tło w dark mode */
-    color: #333; /* Ciemny tekst w dark mode */
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2); /* Cień w dark mode */
+    background-color: var(--bg-color-dropdown); /* Jasne tło w dark mode */
+    color: var(--text-color-dark); /* Ciemny tekst w dark mode */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
 .dark-mode .nav-icon:hover {
     background: rgba(255, 255, 255, 0.1);
 }
 .dark-mode .nav-icon.active {
-    background: #f1f1f1;
-    color: #4a4a75;
+    background: var(--bg-color-sidebar);
+    color: var(--primary-color);
 }
 .dark-mode .nav-icon.add-new-button {
-    background: #388e3c;
+    background: var(--secondary-color);
 }
 .dark-mode .nav-icon.add-new-button:hover {
-    background: #2e7d32;
+    background: var(--secondary-color-dark);
 }
 
 /* Lista kontaktów w dark mode */
 .dark-mode .contact {
-  background-color: transparent;
-  color: #f1f1f1;
+    background-color: transparent;
+    color: var(--text-color-dark);
 }
 .dark-mode .contact:hover,
 .dark-mode .contact.active {
-  background-color: #3a3a5e;
+    background-color: var(--bg-color-sidebar-wrapper);
 }
 .dark-mode .contact .contact-name {
-    color: #f1f1f1;
+    color: var(--text-color-dark);
 }
 .dark-mode .contact .last-message,
 .dark-mode .contact .last-message-time {
-    color: #aaa;
+    color: var(--text-color-medium);
 }
 .dark-mode .search-bar input {
-    background: #3a3a5e;
-    border-color: #555;
-    color: #f1f1f1;
+    background: var(--bg-color-search-input);
+    border-color: var(--border-color-medium);
+    color: var(--text-color-dark);
 }
 .dark-mode .search-bar input::placeholder {
-    color: #888;
+    color: var(--text-color-medium);
 }
 .dark-mode .search-bar i {
-    color: #888;
+    color: var(--text-color-medium);
 }
 
 /* Kategorie sortowania w dark mode */
 .dark-mode .contact-categories .category-button {
-    background: #3a3a5e;
-    border-color: #555;
-    color: #f1f1f1;
+    background: var(--bg-color-search-input);
+    border-color: var(--border-color-medium);
+    color: var(--text-color-dark);
 }
 .dark-mode .contact-categories .category-button:hover {
-    background: #4a4a75;
-    border-color: #666;
+    background: var(--bg-color-sidebar-wrapper);
+    border-color: var(--border-color-medium);
 }
 .dark-mode .contact-categories .category-button.active {
-    background: #6a5acd;
-    border-color: #6a5acd;
-    color: white;
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: var(--text-color-light);
 }
 
 /* Czat w dark mode */
 .dark-mode .chat-area,
 .dark-mode .logo-screen {
-  background-color: #1a1a2e;
-  color: #f1f1f1;
+    background-color: var(--bg-color-chat-messages);
+    color: var(--text-color-dark);
 }
 /* Tła czatu w dark mode */
 .dark-mode .messages {
-    background-color: #1a1a2e;
+    background-color: var(--bg-color-chat-messages);
 }
 .dark-mode .messages.dark-bg {
     background-color: #0d0d1e;
@@ -904,28 +1057,26 @@ body.dark-mode .nav-icon::after {
 .dark-mode .messages.pattern-bg {
     background-image: url('data:image/svg+xml;utf8,<svg width="10" height="10" viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"><circle cx="2.5" cy="2.5" r="1.5" fill="%23404040"/></svg>');
     background-size: 10px 10px;
-    background-color: #1a1a2e;
+    background-color: var(--bg-color-chat-messages);
 }
 
 
 /* Wiadomości w dark mode */
 .dark-mode .message {
-  background-color: var(--bg-color-message-received); /* Teraz używamy zmiennej */
-  color: var(--text-color-light); /* Teraz używamy zmiennej */
+    background-color: var(--bg-color-message-received);
+    color: var(--text-color-light);
 }
 .dark-mode .message.sent {
-  background-color: var(--primary-color); /* Teraz używamy zmiennej */
+    background-color: var(--primary-color);
 }
 .dark-mode .message::before {
-  /* Kolor ogonka dla wiadomości otrzymanych w dark mode */
-  border-color: transparent var(--bg-color-message-received) transparent transparent;
+    border-color: transparent var(--bg-color-message-received) transparent transparent;
 }
 .dark-mode .message.sent::before {
-  /* Kolor ogonka dla wiadomości wysłanych w dark mode */
-  border-color: transparent transparent transparent var(--primary-color);
+    border-color: transparent transparent transparent var(--primary-color);
 }
 .dark-mode .timestamp {
-    color: #bbb;
+    color: var(--text-color-medium);
 }
 .dark-mode .message.sent .timestamp {
     color: rgba(255, 255, 255, 0.8);
@@ -955,129 +1106,159 @@ body.dark-mode .nav-icon::after {
 
 /* Link Preview w dark mode */
 .dark-mode .link-preview-message {
-    background: #2e2e4a;
-    border-color: #444;
+    background: var(--bg-color-sidebar);
+    border-color: var(--border-color-medium);
 }
 .dark-mode .link-preview-message::before {
-    border-color: transparent #2e2e4a transparent transparent;
+    border-color: transparent var(--bg-color-sidebar) transparent transparent;
 }
 .dark-mode .link-preview-message.sent {
-    background: #3a3a5e;
-    border-color: #555;
+    background: var(--bg-color-search-input);
+    border-color: var(--border-color-medium);
 }
 .dark-mode .link-preview-message.sent::before {
-    border-color: transparent transparent transparent #3a3a5e;
+    border-color: transparent transparent transparent var(--bg-color-search-input);
 }
 .dark-mode .link-preview-icon {
-    background: #3a3a5e;
-    color: #8a8add;
+    background: var(--bg-color-search-input);
+    color: var(--primary-color);
 }
 .dark-mode .link-preview-title {
-    color: #f1f1f1;
+    color: var(--text-color-dark);
 }
 .dark-mode .link-preview-description {
-    color: #aaa;
+    color: var(--text-color-medium);
 }
 
 /* Animacja ładowania w dark mode */
 .dark-mode .typing-indicator {
-    background: #3a3a5e;
+    background: var(--bg-color-search-input);
 }
 .dark-mode .typing-indicator .dot {
-    background-color: #bbb;
+    background-color: var(--text-color-medium);
 }
 
 /* Pole wpisywania wiadomości w dark mode */
 .dark-mode .chat-footer input {
-    background-color: #2e2e4a;
-    border: 1px solid #555;
-    color: #fff;
+    background-color: var(--bg-color-search-input);
+    border: 1px solid var(--border-color-medium);
+    color: var(--text-color-dark);
 }
 .dark-mode .chat-footer input::placeholder {
-    color: #aaa;
+    color: var(--text-color-medium);
 }
 
 /* Przyciski w dark mode */
 .dark-mode .chat-footer button {
-    background-color: #6a5acd;
-    color: #fff;
+    background-color: var(--primary-color);
+    color: var(--text-color-light);
 }
 .dark-mode .chat-footer button:disabled {
-    background-color: #555;
-    color: #ccc;
+    background-color: var(--border-color-medium);
+    color: var(--text-color-medium);
 }
 .dark-mode .chat-footer .attach-button,
 .dark-mode .chat-footer .emoji-button {
-    color: #aaa;
+    color: var(--text-color-medium);
 }
 .dark-mode .chat-footer .attach-button:hover,
 .dark-mode .chat-footer .emoji-button:hover {
-    color: #6a5acd;
+    color: var(--primary-color);
 }
 
 /* Dropdown w dark mode */
 .dark-mode .dropdown #themeToggle,
 .dark-mode .dropdown #logoutButton {
     background: none;
-    color: #f1f1f1;
+    color: var(--text-color-dark);
 }
 .dark-mode .dropdown #themeToggle i,
 .dark-mode .dropdown #logoutButton i {
-    color: #bbb;
+    color: var(--text-color-medium);
 }
 .dark-mode .dropdown #themeToggle:hover,
 .dark-mode .dropdown #logoutButton:hover {
-    background: #3a3a5e;
-    color: #fff;
+    background: var(--bg-color-search-input);
+    color: var(--text-color-dark);
 }
 .dark-mode .dropdown #themeToggle:hover i,
 .dark-mode .dropdown #logoutButton:hover i {
-    color: #6a5acd;
+    color: var(--primary-color);
 }
 
 
 .dark-mode .chat-settings-dropdown {
-    background-color: #2e2e4a;
-    border-color: #3e3e5a;
+    background-color: var(--bg-color-dropdown);
+    border-color: var(--border-color-medium);
 }
 .dark-mode .chat-settings-dropdown h3,
 .dark-mode .chat-settings-dropdown h4 {
-    color: #f1f1f1;
+    color: var(--text-color-dark);
 }
 .dark-mode .chat-settings-dropdown .setting-group {
-    border-color: #3e3e5a;
+    border-color: var(--border-color-light);
 }
 .dark-mode .chat-settings-dropdown input[type="text"] {
-    background-color: #3a3a5e;
-    border-color: #555;
-    color: #f1f1f1;
+    background-color: var(--bg-color-search-input);
+    border-color: var(--border-color-medium);
+    color: var(--text-color-dark);
 }
 .dark-mode .chat-settings-dropdown input[type="text"]::placeholder {
-    color: #888;
+    color: var(--text-color-medium);
 }
 .dark-mode .chat-settings-dropdown button {
-    background-color: #6a5acd;
+    background-color: var(--primary-color);
 }
 .dark-mode .chat-settings-dropdown button:hover {
-    background-color: #5a4bbf;
+    background-color: var(--primary-color-dark);
 }
 .dark-mode .color-box.active, .dark-mode .bg-box.active {
-    border-color: #f1f1f1;
+    border-color: var(--primary-color);
 }
 .dark-mode .bg-box.default-bg {
-    background-color: #1a1a2e;
-    border: 1px solid #444;
+    background-color: var(--bg-color-chat-messages);
+    border: 1px solid var(--border-color-medium);
 }
 
 
 /* Przycisk Wróć w dark mode */
 .dark-mode .back-button {
-  background-color: #3a3a5e;
-  color: #f1f1f1;
-  border: 1px solid #666;
+    background-color: var(--bg-color-search-input);
+    color: var(--text-color-dark);
+    border: 1px solid var(--border-color-medium);
 }
 
-/* Responsywność - dla małych ekranów (poniżej np. 768px) */
+/* RESPONSYSYWOŚĆ - NOWE ZAPYTANIA MEDIÓW */
+/* Układ trójkolumnowy dla większych ekranów */
+@media (min-width: 1200px) {
+    .sidebar-wrapper {
+        width: 25%; /* Lewa kolumna: 25% */
+    }
+    .chat-area-wrapper {
+        flex-grow: 1; /* Środkowa kolumna: zajmuje resztę */
+        width: auto; /* Resetuj szerokość */
+    }
+    .right-sidebar-wrapper {
+        width: 20%; /* Prawa kolumna: 20% */
+    }
+}
+
+/* Dwie kolumny (środkowa i lewa) dla średnich ekranów (tabletów) */
+@media (max-width: 1199px) {
+    .right-sidebar-wrapper {
+        display: none; /* Ukryj prawy sidebar */
+    }
+    .sidebar-wrapper {
+        width: 350px; /* Stała szerokość lewego sidebara na tabletach */
+        min-width: 280px;
+        max-width: 400px;
+    }
+    .chat-area-wrapper {
+        flex-grow: 1; /* Środkowa kolumna zajmuje całą resztę */
+    }
+}
+
+/* Jedna kolumna (tylko czat lub tylko rozmowy) dla małych ekranów (mobilnych) */
 @media (max-width: 768px) {
     .container {
         margin: 0;
@@ -1085,95 +1266,49 @@ body.dark-mode .nav-icon::after {
         box-shadow: none;
     }
 
+    .main-header {
+        padding: 0.8rem 1rem; /* Mniejszy padding dla nagłówka na mobilnych */
+    }
+
     .sidebar-wrapper {
-        position: absolute;
+        position: fixed; /* Zmieniono na fixed dla lepszej responsywności */
         left: 0;
         top: 0;
         bottom: 0;
-        width: 100%;
-        z-index: 99;
-        transform: translateX(-100%);
+        height: 100%;
+        width: 100%; /* Pełna szerokość na mobilnych, gdy widoczny */
+        z-index: 999; /* Wysoki z-index, aby był nad wszystkim */
+        transform: translateX(-100%); /* Ukryj poza ekranem */
         transition: transform 0.3s ease-in-out;
+        border-radius: 0; /* Usuń zaokrąglenia */
+        border-right: none; /* Usuń prawą ramkę */
     }
     .sidebar-wrapper.visible {
-        transform: translateX(0);
+        transform: translateX(0); /* Pokaż, gdy dodana klasa 'visible' */
     }
 
     .main-nav-icons {
-        border-radius: 0;
+        display: none; /* Ukryj ikonki nawigacyjne na mobilnych */
     }
+
     #sidebar.conversations-list {
-        width: calc(100% - 60px);
-        border-right: none;
+        width: 100%; /* Wypełnij całą szerokość .sidebar-wrapper */
+        border-right: none; /* Usuń prawą ramkę */
+        border-radius: 0;
+        padding: 1rem; /* Upewnij się, że padding jest poprawny */
+    }
+
+    .chat-area-wrapper {
+        width: 100%; /* Czataj na pełnej szerokości */
+        border-radius: 0;
+    }
+    .chat-area {
         border-radius: 0;
     }
 
-    .chat-layout {
-        width: 100%;
-        border-radius: 0;
+    .back-button { /* Domyślnie jest hidden, ale klasa show-on-mobile go pokaże */
+        display: block; /* Pokaż przycisk wstecz na mobilnych, gdy czat aktywny */
     }
-
-    .back-button.show-on-mobile { /* Upewnij się, że ten styl jest używany w JS do pokazywania przycisku */
-        display: block;
-    }
-}
-
-/* Formularz autoryzacji (login/register) */
-.auth-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-/* Pola input w formularzach autoryzacji */
-.auth-form input {
-    padding: 0.8rem;
-    border-radius: 8px;
-    border: 1px solid #ddd;
-    background: #f1f2f3;
-    font-size: 0.95rem;
-}
-
-/* Wrapper dla pola hasła (dla ikonki oka) */
-.password-wrapper {
-    position: relative;
-}
-
-/* Styl ikonki oka w polu hasła */
-.password-wrapper .eye {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    cursor: pointer;
-    color: #888;
-}
-
-/* Przycisk logowania/rejestracji */
-.login-btn {
-    padding: 0.8rem;
-    background: linear-gradient(to right, #fda4af, #f87171);
-    border: none;
-    border-radius: 8px;
-    color: white;
-    font-weight: bold;
-    cursor: pointer;
-    transition: background 0.3s;
-}
-
-.login-btn:hover {
-    background: linear-gradient(to right, #fb7185, #ef4444);
-}
-
-/* Link do przełączania między logowaniem a rejestracją */
-.switch-link {
-    margin-top: 1rem;
-    font-size: 0.9rem;
-}
-
-.switch-link a {
-    color: #ef4444;
-    text-decoration: none;
 }
 
 body.auth-body {
