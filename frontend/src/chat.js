@@ -1,39 +1,37 @@
 // Importy z Twojego oryginalnego chat.js
-// WAŻNE: Upewnij się, że te pliki są dostępne w Twoim projekcie w odpowiednich ścieżkach
 import { loadAllProfiles, getUserLabelById } from './profiles.js';
 import { supabase } from './supabaseClient.js';
 
 // Globalne zmienne UI i czatu - zadeklarowane na początku, aby były dostępne wszędzie
-// Zaktualizowane selektory zgodnie z nowym HTML
 let mainHeader;
 let menuButton;
 let dropdownMenu;
 let themeToggle;
 let logoutButton;
 
-let container; // Główny kontener
-let sidebarWrapper; // Nowy element dla sidebara
-let mainNavIcons; // Kontener na ikony nawigacyjne
-let navIcons; // Wszystkie przyciski ikon nawigacyjnych
+let container;
+let sidebarWrapper;
+let mainNavIcons;
+let navIcons;
 
-let sidebarEl; // Zmieniona nazwa, aby uniknąć kolizji z lokalną zmienną `conversationList` w `initChatApp`
-let searchInput; // Nowa klasa search-bar input
-let contactsListEl; // Element <ul> dla listy kontaktów
+let sidebarEl;
+let searchInput;
+let contactsListEl;
 
-let logoScreen; // Ekran powitalny
-let chatArea; // Główna sekcja czatu
+let logoScreen;
+let chatArea;
 
 let chatHeader;
 let backButton;
 let chatUserName;
 let userStatusSpan;
-let chatHeaderActions; // Nowy element dla przycisków w nagłówku czatu
+let chatHeaderActions;
 let chatSettingsButton;
 let chatSettingsDropdown;
-let typingStatusDiv; // Zmieniona nazwa zmiennej, aby była bardziej opisowa
+let typingStatusDiv;
 
-let messageContainer; // Kontener wiadomości
-let typingIndicatorDiv; // Wskaźnik pisania
+let messageContainer;
+let typingIndicatorDiv;
 
 let chatFooter;
 let attachButton;
@@ -41,49 +39,48 @@ let messageInput;
 let emojiButton;
 let sendButton;
 
-// NOWE ZMIENNE DLA PRAWEGO SIDEBARA (ACTIVE USERS)
+// Zmienne dla prawego sidebara (Aktywni Użytkownicy)
 let rightSidebar;
-let activeUsersListEl; // Lista aktywnych użytkowników
+let activeUsersListEl;
 
 // Zmienne czatu
 let allConversations = [];
-let currentUser = null;
+let currentUser = null; // Używamy tego obiektu z Supabase
 let currentChatUser = null;
 let currentRoom = null;
 let socket = null;
 let reconnectAttempts = 0;
-let typingTimeout; // Dla wskaźnika pisania
-let currentActiveConvoItem = null; // Aby śledzić aktywny element listy konwersacji do usuwania klasy 'active'
+let typingTimeout;
+let currentActiveConvoItem = null;
 
 // Funkcja resetująca widok czatu
 function resetChatView() {
     console.log("Resetting chat view...");
     if (messageContainer) {
-        messageContainer.innerHTML = ""; // Clear chat content
-        messageContainer.classList.remove('blue-theme', 'green-theme', 'red-theme', 'dark-bg', 'pattern-bg'); // Usuń klasy motywu
+        messageContainer.innerHTML = "";
+        messageContainer.classList.remove('blue-theme', 'green-theme', 'red-theme', 'dark-bg', 'pattern-bg');
     }
     if (messageInput) {
         messageInput.disabled = true;
         messageInput.value = "";
     }
-    if (sendButton) { // Zmieniona nazwa zmiennej
+    if (sendButton) {
         sendButton.disabled = true;
     }
-    if (chatUserName) { // Zmieniona nazwa zmiennej
+    if (chatUserName) {
         chatUserName.textContent = "";
     }
-    if (userStatusSpan) { // Zmieniona nazwa zmiennej
+    if (userStatusSpan) {
         userStatusSpan.textContent = "";
         userStatusSpan.classList.remove('online', 'offline');
     }
     if (typingIndicatorDiv) {
-        typingIndicatorDiv.classList.add('hidden'); // Ukryj wskaźnik pisania
+        typingIndicatorDiv.classList.add('hidden');
     }
 
     currentChatUser = null;
     currentRoom = null;
 
-    // Pokaż logoScreen i ukryj chatArea
     if (logoScreen) {
         logoScreen.classList.remove('hidden');
     }
@@ -96,14 +93,11 @@ function resetChatView() {
         currentActiveConvoItem = null;
     }
 
-    // Ukryj dropdown ustawień czatu
     if (chatSettingsDropdown) {
         chatSettingsDropdown.classList.add('hidden');
     }
 }
 
-
-// --- Funkcje z chat.js zaadaptowane do nowej struktury ---
 
 /**
  * Generuje unikalną nazwę pokoju czatu na podstawie dwóch ID użytkowników, posortowanych alfabetycznie.
@@ -112,7 +106,7 @@ function resetChatView() {
  * @returns {string} Nazwa pokoju czatu.
  */
 function getRoomName(user1Id, user2Id) {
-    return [String(user1Id), String(user2Id)].sort().join('_'); // Upewnij się, że są stringami przed sortowaniem
+    return [String(user1Id), String(user2Id)].sort().join('_');
 }
 
 /**
@@ -135,7 +129,7 @@ async function getLastMessageForRoom(roomId) {
     return data && data.length > 0 ? data[0] : null;
 }
 
-// *** NOWA FUNKCJA: Sortowanie konwersacji ***
+// NOWA FUNKCJA: Sortowanie konwersacji
 function sortConversations(conversations) {
     return [...conversations].sort((a, b) => {
         const timeA = a.lastMessage ? new Date(a.lastMessage.inserted_at) : new Date(0);
@@ -153,8 +147,8 @@ async function loadContacts() {
         return;
     }
 
-    if (contactsListEl) { // Zmieniona nazwa zmiennej na contactsListEl
-        contactsListEl.innerHTML = ''; // Wyczyść listę konwersacji
+    if (contactsListEl) {
+        contactsListEl.innerHTML = '';
     } else {
         console.error("contactsListEl element not found!");
         return;
@@ -169,13 +163,13 @@ async function loadContacts() {
     const sortedContacts = sortConversations(contactsWithLastMessage);
 
     sortedContacts.forEach(({ user, lastMessage, roomId }) => {
-        const convoItem = document.createElement('li'); // Zmieniono na <li>
-        convoItem.classList.add('contact'); // Zaktualizowano klasę na 'contact'
+        const convoItem = document.createElement('li');
+        convoItem.classList.add('contact');
         convoItem.dataset.convoId = user.id;
         convoItem.dataset.email = user.email;
         convoItem.dataset.roomId = roomId;
 
-        const avatarSrc = `https://i.pravatar.cc/150?img=${user.id % 70 + 1}`; // Tymczasowy losowy avatar
+        const avatarSrc = `https://i.pravatar.cc/150?img=${user.id.charCodeAt(0) % 70 + 1}`; // Tymczasowy losowy avatar z user.id
 
         let previewText = "Brak wiadomości";
         let timeText = "";
@@ -204,7 +198,7 @@ async function loadContacts() {
             handleConversationClick(user, convoItem);
         });
 
-        contactsListEl.appendChild(convoItem); // Zmieniona zmienna
+        contactsListEl.appendChild(convoItem);
     });
     console.log("Contacts loaded and rendered with last messages (and sorted).");
 }
@@ -219,7 +213,7 @@ async function handleConversationClick(user, clickedConvoItemElement) {
     clickedConvoItemElement.classList.add('active');
     currentActiveConvoItem = clickedConvoItemElement;
 
-    resetChatView(); // Resetuje widok przed załadowaniem nowej rozmowy
+    resetChatView();
 
     currentChatUser = {
         id: user.id,
@@ -229,9 +223,11 @@ async function handleConversationClick(user, clickedConvoItemElement) {
     currentRoom = getRoomName(String(currentUser.id), String(currentChatUser.id));
     console.log(`Starting chat with ${currentChatUser.username}, room ID: ${currentRoom}`);
 
-    if (chatUserName && messageInput && sendButton && userStatusSpan) { // Dodaj userStatusSpan do warunku
+    if (chatUserName && messageInput && sendButton && userStatusSpan) {
         chatUserName.textContent = currentChatUser.username;
         // Tutaj ustawiamy początkowy status dla nowo otwartego czatu
+        // Status zależy od tego, czy użytkownik jest aktywny na serwerze WebSocket
+        // Backend powinien wysłać aktualne statusy aktywnych użytkowników
         userStatusSpan.textContent = user.is_online ? 'Online' : 'Offline'; // Użyj statusu z obiektu 'user'
         userStatusSpan.classList.toggle('online', user.is_online);
         userStatusSpan.classList.toggle('offline', !user.is_online);
@@ -242,7 +238,6 @@ async function handleConversationClick(user, clickedConvoItemElement) {
         messageInput.focus();
     }
 
-    // Pokaż chatArea i ukryj logoScreen
     if (logoScreen) {
         logoScreen.classList.add('hidden');
     }
@@ -251,13 +246,12 @@ async function handleConversationClick(user, clickedConvoItemElement) {
     }
 
     // Obsługa responsywnego przycisku "Wróć"
-    if (backButton) { // Sprawdzanie czy backButton istnieje
-        // Na mobilnych (max-width: 768px), ukryj sidebar i pokaż tylko chatArea
+    if (backButton) {
         const mq = window.matchMedia('(max-width: 768px)');
         if (mq.matches) {
             backButton.classList.add('show-on-mobile');
             if (sidebarWrapper) {
-                sidebarWrapper.classList.remove('visible'); // Ukryj sidebar
+                sidebarWrapper.classList.remove('visible');
             }
         } else {
             backButton.classList.remove('show-on-mobile');
@@ -285,7 +279,7 @@ async function handleConversationClick(user, clickedConvoItemElement) {
 }
 
 function setupSendMessage() {
-    if (!messageInput || !sendButton || !messageContainer) { // Zaktualizowane zmienne
+    if (!messageInput || !sendButton || !messageContainer) {
         console.error("Message input or send button or messageContainer not found for setup.");
         return;
     }
@@ -300,7 +294,7 @@ function setupSendMessage() {
         }
     });
 
-    sendButton.onclick = () => { // Zaktualizowana zmienna
+    sendButton.onclick = () => {
         const text = messageInput.value.trim();
         if (!text || !currentChatUser || !socket || socket.readyState !== WebSocket.OPEN) {
             console.warn("Cannot send message: empty, no recipient, or WebSocket not open.");
@@ -324,7 +318,7 @@ function setupSendMessage() {
     messageInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            sendButton.click(); // Zaktualizowana zmienna
+            sendButton.click();
         }
     });
 }
@@ -337,10 +331,11 @@ function addMessageToChat(msg) {
     console.log("Adding message to UI:", msg);
     console.log("Porównanie pokoi: msg.room =", msg.room, ", currentRoom =", currentRoom);
 
-    const convoItemToUpdate = contactsListEl.querySelector(`.contact[data-room-id="${msg.room}"]`); // Zmieniona klasa
+    // Znajdź element konwersacji po room ID, aby zaktualizować last-message i timestamp
+    const convoItemToUpdate = contactsListEl.querySelector(`.contact[data-room-id="${msg.room}"]`);
     if (convoItemToUpdate) {
-        const previewEl = convoItemToUpdate.querySelector('.last-message'); // Zmieniona klasa
-        const timeEl = convoItemToUpdate.querySelector('.message-time'); // Zmieniona klasa
+        const previewEl = convoItemToUpdate.querySelector('.last-message');
+        const timeEl = convoItemToUpdate.querySelector('.message-time');
 
         if (previewEl && timeEl) {
             const senderName = String(msg.username) === String(currentUser.id) ? "Ja" : (getUserLabelById(msg.username) || msg.username);
@@ -350,8 +345,8 @@ function addMessageToChat(msg) {
             timeEl.textContent = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
         }
 
+        // Przenieś element na początek listy, jeśli to nowa wiadomość lub z innego pokoju
         if (msg.room !== currentRoom) {
-            // Przenieś element na początek listy
             contactsListEl.prepend(convoItemToUpdate);
 
             const unreadCountEl = convoItemToUpdate.querySelector('.unread-count');
@@ -364,13 +359,14 @@ function addMessageToChat(msg) {
         }
     }
 
+    // Wyświetl wiadomość w aktywnym czacie
     if (msg.room !== currentRoom) {
         console.log("Wiadomość nie jest dla aktywnego pokoju, nie dodaję do widoku czatu.");
         return;
     }
 
     const div = document.createElement('div');
-    div.classList.add('message', String(msg.username) === String(currentUser.id) ? 'sent' : 'received'); // Zmieniona klasa na 'message'
+    div.classList.add('message', String(msg.username) === String(currentUser.id) ? 'sent' : 'received');
 
     const timestamp = new Date(msg.inserted_at || Date.now());
     const timeString = timestamp.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
@@ -379,7 +375,7 @@ function addMessageToChat(msg) {
         <p>${msg.text}</p>
         <span class="timestamp">${timeString}</span>
     `;
-    if (messageContainer) { // Zmieniona zmienna
+    if (messageContainer) {
         messageContainer.appendChild(div);
         messageContainer.scrollTop = messageContainer.scrollHeight;
     } else {
@@ -389,7 +385,7 @@ function addMessageToChat(msg) {
 
 function updateUserStatusIndicator(userId, isOnline) {
     // Aktualizacja statusu w nagłówku aktywnego czatu
-    if (currentChatUser && String(currentChatUser.id) === String(userId) && userStatusSpan) { // Zaktualizowana zmienna
+    if (currentChatUser && String(currentChatUser.id) === String(userId) && userStatusSpan) {
         userStatusSpan.textContent = isOnline ? 'Online' : 'Offline';
         userStatusSpan.classList.toggle('online', isOnline);
         userStatusSpan.classList.toggle('offline', !isOnline);
@@ -404,6 +400,23 @@ function updateUserStatusIndicator(userId, isOnline) {
             if (statusIndicator) {
                 statusIndicator.classList.toggle('online', isOnline);
                 statusIndicator.classList.toggle('offline', !isOnline);
+            }
+        } else {
+             // Jeśli użytkownika nie ma jeszcze na liście aktywnych, dodaj go
+            if (isOnline) {
+                const li = document.createElement('li');
+                li.classList.add('active-user-item');
+                li.dataset.userId = userId;
+
+                const avatarSrc = `https://i.pravatar.cc/150?img=${userId.charCodeAt(0) % 70 + 1}`; // Tymczasowy losowy avatar
+
+                li.innerHTML = `
+                    <img src="${avatarSrc}" alt="Avatar" class="avatar-small">
+                    <span class="user-name">${getUserLabelById(userId)}</span>
+                    <span class="status-indicator online"></span>
+                `;
+                activeUsersListEl.appendChild(li);
+                console.log(`Added new online user to active list: ${getUserLabelById(userId)}`);
             }
         }
     }
@@ -422,6 +435,8 @@ function showTypingIndicator(usernameId) {
 }
 
 function initWebSocket() {
+    // Upewnij się, że zmienna środowiskowa VITE_CHAT_WS_URL jest dostępna
+    // W przeciwnym razie użyj domyślnego URL
     const wsUrl = import.meta.env.VITE_CHAT_WS_URL || "wss://firm-chat-app-backend.onrender.com";
 
     if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
@@ -474,7 +489,7 @@ function initWebSocket() {
                 break;
             case 'history':
                 console.log("Loading message history. History room:", data.room, "Current room:", currentRoom);
-                if (messageContainer) { // Zmieniona zmienna
+                if (messageContainer) {
                     messageContainer.innerHTML = '';
                     data.messages.forEach((msg) => addMessageToChat(msg));
                 }
@@ -482,7 +497,7 @@ function initWebSocket() {
             case 'status':
                 updateUserStatusIndicator(data.user, data.online);
                 break;
-            case 'active_users': // Nowy typ wiadomości dla listy aktywnych użytkowników
+            case 'active_users':
                 console.log('Received active users list:', data.users);
                 displayActiveUsers(data.users);
                 break;
@@ -532,6 +547,14 @@ async function loadActiveUsers() {
 function displayActiveUsers(activeUsersData) {
     if (!activeUsersListEl) return;
 
+    // Utwórz mapę bieżących użytkowników, aby zidentyfikować tych, którzy się rozłączyli
+    const currentActiveUserIds = new Set();
+    Array.from(activeUsersListEl.children).forEach(item => {
+        if (item.dataset.userId) {
+            currentActiveUserIds.add(item.dataset.userId);
+        }
+    });
+
     activeUsersListEl.innerHTML = ''; // Wyczyść poprzednią listę
 
     if (activeUsersData.length === 0) {
@@ -548,7 +571,7 @@ function displayActiveUsers(activeUsersData) {
         li.classList.add('active-user-item');
         li.dataset.userId = user.id;
 
-        const avatarSrc = `https://i.pravatar.cc/150?img=${user.id % 70 + 1}`; // Tymczasowy losowy avatar
+        const avatarSrc = `https://i.pravatar.cc/150?img=${user.id.charCodeAt(0) % 70 + 1}`; // Tymczasowy losowy avatar
 
         li.innerHTML = `
             <img src="${avatarSrc}" alt="Avatar" class="avatar-small">
@@ -556,27 +579,32 @@ function displayActiveUsers(activeUsersData) {
             <span class="status-indicator ${user.online ? 'online' : 'offline'}"></span>
         `;
         activeUsersListEl.appendChild(li);
+        currentActiveUserIds.delete(user.id); // Usuń z setu, jeśli użytkownik jest nadal online
     });
+
+    // Użytkownicy pozostali w currentActiveUserIds set są teraz offline i powinni zostać usunięci z listy.
+    // To jest już załatwione przez `activeUsersListEl.innerHTML = '';` na początku funkcji.
+    // Jednak jeśli chcielibyśmy pokazywać offline, musielibyśmy to obsłużyć inaczej,
+    // np. aktualizując tylko status dla istniejących elementów.
+    // W obecnej implementacji lista jest po prostu przebudowywana.
 }
 
 
-// Obsługa dropdownu ustawień czatu (nowa funkcjonalność)
+// Obsługa dropdownu ustawień czatu
 function setupChatSettingsDropdown() {
     if (!chatSettingsButton || !chatSettingsDropdown) return;
 
     chatSettingsButton.addEventListener('click', (event) => {
-        event.stopPropagation(); // Zapobiegaj zamykaniu po kliknięciu na przycisk
+        event.stopPropagation();
         chatSettingsDropdown.classList.toggle('hidden');
     });
 
-    // Zamykanie dropdownu po kliknięciu poza nim
     document.addEventListener('click', (event) => {
         if (!chatSettingsDropdown.classList.contains('hidden') && !chatSettingsButton.contains(event.target)) {
             chatSettingsDropdown.classList.add('hidden');
         }
     });
 
-    // Obsługa wyboru motywu wiadomości
     const colorOptions = chatSettingsDropdown.querySelectorAll('.color-box');
     colorOptions.forEach(option => {
         option.addEventListener('click', () => {
@@ -593,7 +621,6 @@ function setupChatSettingsDropdown() {
         });
     });
 
-    // Obsługa wyboru tła czatu
     const backgroundOptions = chatSettingsDropdown.querySelectorAll('.bg-box');
     backgroundOptions.forEach(option => {
         option.addEventListener('click', () => {
@@ -614,11 +641,10 @@ function setupChatSettingsDropdown() {
     const nicknameInput = document.getElementById('nicknameInput');
     const setNicknameButton = document.getElementById('setNicknameButton');
     if (nicknameInput && setNicknameButton) {
-        setNicknameButton.addEventListener('click', async () => { // Zmieniono na async
+        setNicknameButton.addEventListener('click', async () => {
             const newNickname = nicknameInput.value.trim();
             if (newNickname && currentUser) {
                 try {
-                    // Aktualizuj profil w Supabase
                     const { data, error } = await supabase
                         .from('profiles')
                         .update({ username: newNickname })
@@ -630,15 +656,11 @@ function setupChatSettingsDropdown() {
 
                     console.log('Ustawiono nowy nick:', newNickname, 'dla użytkownika:', currentUser.id);
                     alert(`Nick '${newNickname}' został ustawiony pomyślnie.`);
-                    // Odśwież dane profilu po zmianie nicku
                     await loadAllProfiles();
-                    // Zaktualizuj wyświetlaną nazwę użytkownika, jeśli to konieczne
                     if (chatUserName && currentChatUser && String(currentUser.id) === String(currentChatUser.id)) {
-                        chatUserName.textContent = newNickname; // To tylko jeśli ktoś rozmawia sam ze sobą, lub to jest jego własne okno czatu
+                        chatUserName.textContent = newNickname;
                     }
-                    // Odśwież listę kontaktów, aby odzwierciedlić zmianę nicku, jeśli był to bieżący użytkownik
                     await loadContacts();
-
 
                 } catch (error) {
                     console.error('Błąd podczas aktualizacji nicku:', error.message);
@@ -650,7 +672,6 @@ function setupChatSettingsDropdown() {
         });
     }
 
-    // Obsługa wyszukiwania wiadomości (funkcjonalność do zaimplementowania)
     const messageSearchInput = document.getElementById('messageSearchInput');
     const searchMessagesButton = document.getElementById('searchMessagesButton');
     if (messageSearchInput && searchMessagesButton) {
@@ -667,7 +688,7 @@ function setupChatSettingsDropdown() {
 async function initializeApp() {
     console.log("Initializing Komunikator application...");
 
-    // 1. Pobieranie referencji do wszystkich elementów DOM (ZAKTUALIZOWANE SELEKTORY!)
+    // 1. Pobieranie referencji do wszystkich elementów DOM
     mainHeader = document.querySelector('.main-header');
     menuButton = document.getElementById('menuButton');
     dropdownMenu = document.getElementById('dropdownMenu');
@@ -677,17 +698,17 @@ async function initializeApp() {
     container = document.querySelector('.container');
     sidebarWrapper = document.querySelector('.sidebar-wrapper');
     mainNavIcons = document.querySelector('.main-nav-icons');
-    navIcons = document.querySelectorAll('.nav-icon'); // Wszystkie przyciski ikon nawigacyjnych
+    navIcons = document.querySelectorAll('.nav-icon');
 
-    sidebarEl = document.getElementById('sidebar'); // Było conversationListEl, teraz sidebarEl
-    searchInput = sidebarEl.querySelector('.search-bar input'); // selektor dla inputa w search-bar
-    contactsListEl = document.getElementById('contactsList'); // Element <ul> dla listy kontaktów
+    sidebarEl = document.getElementById('sidebar');
+    searchInput = sidebarEl.querySelector('.search-bar input');
+    contactsListEl = document.getElementById('contactsList');
 
     logoScreen = document.getElementById('logoScreen');
     chatArea = document.getElementById('chatArea');
 
     chatHeader = chatArea.querySelector('.chat-header');
-    backButton = chatHeader.querySelector('#backButton'); // Przycisk wstecz
+    backButton = chatHeader.querySelector('#backButton');
     chatUserName = chatHeader.querySelector('#chatUserName');
     userStatusSpan = chatHeader.querySelector('#userStatus');
     chatHeaderActions = chatHeader.querySelector('.chat-header-actions');
@@ -705,7 +726,6 @@ async function initializeApp() {
     emojiButton = chatFooter.querySelector('.emoji-button');
     sendButton = chatFooter.querySelector('#sendButton');
 
-    // NOWE SELEKTORY DLA PRAWEGO SIDEBARA
     rightSidebar = document.getElementById('rightSidebar');
     activeUsersListEl = document.getElementById('activeUsersList');
 
@@ -749,11 +769,10 @@ async function initializeApp() {
     window.addEventListener('beforeunload', () => {
         if (socket && socket.readyState === WebSocket.OPEN && currentUser) {
             console.log(`Sending 'leave' signal for user ${currentUser.id} before unload.`);
-            // Wysyłamy wiadomość leave
             socket.send(JSON.stringify({
                 type: 'leave',
                 name: currentUser.id,
-                room: currentRoom || 'global' // Użyj 'global' lub pustego stringa, jeśli nie ma aktywnego pokoju
+                room: currentRoom || 'global'
             }));
         }
     });
@@ -770,7 +789,6 @@ async function initializeApp() {
     setupSendMessage();
 
     // 7. Ustawienie domyślnego stanu UI po załadowaniu
-    // Domyślnie pokazujemy logoScreen, ukrywamy chatArea
     logoScreen.classList.remove('hidden');
     chatArea.classList.remove('active');
 
@@ -778,11 +796,9 @@ async function initializeApp() {
     sendButton.disabled = true;
 
     // 8. Dodatkowe event listenery dla całej aplikacji
-    // Obsługa przycisku Wstecz (dla responsywności)
     backButton.addEventListener('click', () => {
         console.log('Back button clicked (UI)');
         resetChatView();
-        // Po powrocie do listy, jeśli WebSocket jest otwarty, możesz opuścić pokój
         if (socket && socket.readyState === WebSocket.OPEN && currentRoom) {
             socket.send(JSON.stringify({
                 type: 'leave',
@@ -792,27 +808,22 @@ async function initializeApp() {
             console.log(`Sent leave message for room: ${currentRoom}`);
         }
 
-        // Ukryj chatArea i pokaż sidebar (dla mobilnych)
         if (chatArea) {
             chatArea.classList.remove('active');
-            logoScreen.classList.remove('hidden'); // Zawsze pokaż logoScreen po powrocie
+            logoScreen.classList.remove('hidden');
         }
         if (sidebarWrapper) {
-            sidebarWrapper.classList.add('visible'); // Upewnij się, że sidebar jest widoczny na mobilnych
+            sidebarWrapper.classList.add('visible');
         }
-        // Ukryj backButton po powrocie do listy rozmów
         backButton.classList.remove('show-on-mobile');
     });
 
-    // Obsługa głównego menu (themeToggle, logoutButton)
     menuButton.addEventListener('click', (event) => {
-        event.stopPropagation(); // Zapobiegaj zamykaniu po kliknięciu na przycisk
+        event.stopPropagation();
         dropdownMenu.classList.toggle('hidden');
-        // Na mobilnych, kliknięcie menuButton powinno pokazywać/ukrywać sidebar
         const mq = window.matchMedia('(max-width: 768px)');
         if (mq.matches) {
             sidebarWrapper.classList.toggle('visible');
-            // Jeśli sidebar jest widoczny, upewnij się, że chatArea jest ukryta
             if (sidebarWrapper.classList.contains('visible')) {
                 chatArea.classList.remove('active');
                 logoScreen.classList.remove('hidden');
@@ -820,17 +831,14 @@ async function initializeApp() {
         }
     });
 
-    // Zamykanie głównego dropdownu po kliknięciu poza nim
     document.addEventListener('click', (event) => {
         if (!dropdownMenu.classList.contains('hidden') && !menuButton.contains(event.target)) {
             dropdownMenu.classList.add('hidden');
         }
     });
 
-    // Obsługa przełączania trybu ciemnego
     themeToggle.addEventListener('click', () => {
         document.body.classList.toggle('dark-mode');
-        // Zapisz preferencje użytkownika w localStorage
         if (document.body.classList.contains('dark-mode')) {
             localStorage.setItem('theme', 'dark');
             themeToggle.innerHTML = '<i class="fas fa-sun"></i> Tryb jasny';
@@ -840,7 +848,6 @@ async function initializeApp() {
         }
     });
 
-    // Wczytaj preferencje motywu przy starcie
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
         document.body.classList.add('dark-mode');
@@ -850,8 +857,6 @@ async function initializeApp() {
         themeToggle.innerHTML = '<i class="fas fa-moon"></i> Tryb ciemny';
     }
 
-
-    // Obsługa wylogowania
     logoutButton.addEventListener('click', async () => {
         const { error } = await supabase.auth.signOut();
         if (error) {
@@ -862,56 +867,45 @@ async function initializeApp() {
         }
     });
 
-    // Obsługa ikon nawigacyjnych (Rozmowy, Grupy, Praca)
     navIcons.forEach(icon => {
         icon.addEventListener('click', () => {
             navIcons.forEach(i => i.classList.remove('active'));
             icon.classList.add('active');
             console.log('Nav icon clicked:', icon.title);
-            // Tutaj możesz dodać logikę do filtrowania listy kontaktów
-            // np. contactsListEl.dataset.filter = icon.title;
-            // i wywołać funkcję loadContacts() ponownie z filtrem
         });
     });
 
-    // Ustawienie dropdownu ustawień czatu
     setupChatSettingsDropdown();
 
-    // Obsługa tooltipów - dostosowano do nowego HTML i ogólnych elementów
     const tooltip = document.createElement('div');
     tooltip.classList.add('tooltip');
     document.body.appendChild(tooltip);
 
-    document.querySelectorAll('[title]').forEach(element => { // Używamy atrybutu title
+    document.querySelectorAll('[title]').forEach(element => {
         element.addEventListener('mouseenter', (e) => {
-            // Nie pokazujemy tooltipów dla elementów z dropdownMenu, bo tam są buttony z tekstem
             if (e.target.closest('.dropdown') || e.target.closest('.main-header')) {
                 return;
             }
 
-            const text = e.target.getAttribute('title'); // Pobieramy tekst z title
+            const text = e.target.getAttribute('title');
             if (text) {
                 tooltip.textContent = text;
                 tooltip.style.opacity = '1';
                 tooltip.style.pointerEvents = 'auto';
 
                 const rect = e.target.getBoundingClientRect();
-                // Pozycjonowanie tooltipa nad elementem
                 tooltip.style.left = `${rect.left + (rect.width / 2)}px`;
-                tooltip.style.top = `${rect.top - tooltip.offsetHeight - 5}px`; // 5px marginesu
+                tooltip.style.top = `${rect.top - tooltip.offsetHeight - 5}px`;
 
-                // Korekta, jeśli tooltip wykracza poza lewą krawędź
                 if (rect.left < tooltip.offsetWidth / 2) {
                     tooltip.style.left = `${tooltip.offsetWidth / 2}px`;
                 }
-                // Korekta, jeśli tooltip wykracza poza prawą krawędź
                 if (rect.right + tooltip.offsetWidth / 2 > window.innerWidth) {
                     tooltip.style.left = `${window.innerWidth - tooltip.offsetWidth / 2}px`;
                 }
 
-                // Dodatkowa korekta dla pozycji X, aby był wyśrodkowany
                 const tooltipX = rect.left + (rect.width / 2) - (tooltip.offsetWidth / 2);
-                tooltip.style.left = `${Math.max(0, tooltipX)}px`; // Zapobiegaj wyjściu poza lewą krawędź
+                tooltip.style.left = `${Math.max(0, tooltipX)}px`;
             }
         });
 
@@ -921,47 +915,37 @@ async function initializeApp() {
         });
     });
 
-    // NOWA LOGIKA RESPONSYWNA
     function handleMediaQueryChange(mq) {
-        if (mq.matches) { // Mniej niż 768px (mobilne)
+        if (mq.matches) {
             console.log("Mobile view activated. Hiding chat area, showing sidebar wrapper.");
-            // Domyślnie ukryj chatArea, pokaż sidebarWrapper
             chatArea.classList.remove('active');
             logoScreen.classList.remove('hidden');
-            sidebarWrapper.classList.add('visible'); // Upewnij się, że sidebar jest widoczny
+            sidebarWrapper.classList.add('visible');
 
-            // Ukryj prawy sidebar
             if (rightSidebar) {
                 rightSidebar.classList.add('hidden');
             }
 
-            // Ukryj backButton, dopóki czat nie jest aktywny
             backButton.classList.remove('show-on-mobile');
-
-            // Usuń klasy Grid layout z kontenera
             container.classList.remove('three-column-grid');
 
-        } else { // Więcej niż 768px (tablet/desktop)
+        } else {
             console.log("Desktop/Tablet view activated. Adjusting layout.");
-            // Pokaż wszystkie trzy kolumny domyślnie
-            sidebarWrapper.classList.add('visible'); // Sidebar jest zawsze widoczny
-            chatArea.classList.remove('active'); // Domyślnie ukryj chat, pokazując logoScreen
+            sidebarWrapper.classList.add('visible');
+            chatArea.classList.remove('active');
             logoScreen.classList.remove('hidden');
 
             if (rightSidebar) {
-                rightSidebar.classList.remove('hidden'); // Pokaż prawy sidebar
+                rightSidebar.classList.remove('hidden');
             }
-            backButton.classList.remove('show-on-mobile'); // Ukryj backButton na większych ekranach
-
-            // Dodaj klasy Grid layout do kontenera
+            backButton.classList.remove('show-on-mobile');
             container.classList.add('three-column-grid');
         }
     }
 
-    // Dodaj listenera dla zmian media query
     const mq = window.matchMedia('(max-width: 768px)');
-    mq.addListener(handleMediaQueryChange); // Poprawiona metoda, teraz addListener działa
-    handleMediaQueryChange(mq); // Wywołaj raz na starcie, aby ustawić początkowy stan
+    mq.addListener(handleMediaQueryChange);
+    handleMediaQueryChange(mq);
 
     console.log("Komunikator application initialized successfully.");
 }
