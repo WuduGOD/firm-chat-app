@@ -1059,6 +1059,24 @@ body {
     flex-shrink: 0;
 }
 
+.no-active-users-message {
+    text-align: center;
+    color: var(--text-color-medium); /* Zakładając, że masz zmienne CSS dla kolorów */
+    font-size: 0.9em;
+    margin-top: 10px;
+    /* Początkowo widoczny, JS go ukryje, jeśli są aktywni użytkownicy */
+}
+
+/* Klasa do całkowitego ukrycia elementu */
+.hidden-element {
+    display: none !important; /* Całkowicie usuwa element z przepływu */
+    height: 0 !important;     /* Zapewnia zerową wysokość */
+    overflow: hidden !important; /* Ukrywa wszelkie przepełnienia */
+    padding: 0 !important;    /* Usuwa wszelkie paddingi */
+    margin: 0 !important;     /* Usuwa wszelkie marginesy */
+    border: 0 !important;     /* Usuwa wszelkie obramowania */
+}
+
 /* Dark mode overrides */
 body.dark-mode {
     --primary-color: #7f70ea;
