@@ -1048,54 +1048,38 @@ async function initializeApp() {
     // Setup chat specific settings dropdown
     setupChatSettingsDropdown();
 
-    // Tooltip functionality for data-tooltip attributes (main-nav-icons)
-    // UWAGA: Twój HTML ma data-tooltip, ale nie ma elementu .tooltip do wyświetlania.
-    // Dodaję prostą implementację tooltipa. Jeśli masz własne style, usuń ten blok.
-    document.querySelectorAll('.main-nav-icons .nav-icon[data-tooltip]').forEach(element => {
-        let tooltipEl;
+    // TOOLTIP FUNCTIONALITY REMOVED: The CSS ::after pseudo-element already handles tooltips.
+    // The JavaScript implementation was redundant and causing the unwanted tooltip at the bottom.
+    // document.querySelectorAll('.main-nav-icons .nav-icon[data-tooltip]').forEach(element => {
+    //     let tooltipEl;
 
-        const showTooltip = (e) => {
-            const text = e.target.dataset.tooltip;
-            if (text) {
-                if (!tooltipEl) {
-                    tooltipEl = document.createElement('div');
-                    tooltipEl.classList.add('simple-tooltip'); // Użyj unikalnej klasy
-                    // Dodaj styl dla .simple-tooltip w style.css, np.:
-                    /*
-                    .simple-tooltip {
-                        position: absolute;
-                        background-color: rgba(0, 0, 0, 0.75);
-                        color: white;
-                        padding: 5px 10px;
-                        border-radius: 4px;
-                        font-size: 0.85em;
-                        z-index: 10000;
-                        white-space: nowrap;
-                        pointer-events: none; // Ważne, aby nie blokować interakcji
-                        display: none;
-                        transform: translateY(-50%); // Aby wyśrodkować pionowo
-                    }
-                    */
-                    document.body.appendChild(tooltipEl);
-                }
-                tooltipEl.textContent = text;
-                tooltipEl.style.display = 'block';
+    //     const showTooltip = (e) => {
+    //         const text = e.target.dataset.tooltip;
+    //         if (text) {
+    //             if (!tooltipEl) {
+    //                 tooltipEl = document.createElement('div');
+    //                 tooltipEl.classList.add('simple-tooltip');
+    //                 document.body.appendChild(tooltipEl);
+    //             }
+    //             tooltipEl.textContent = text;
+    //             tooltipEl.style.display = 'block';
 
-                const rect = e.target.getBoundingClientRect();
-                tooltipEl.style.left = `${rect.right + 10}px`; // Po prawej stronie ikony
-                tooltipEl.style.top = `${rect.top + (rect.height / 2) - (tooltipEl.offsetHeight / 2)}px`;
-            }
-        };
+    //             const rect = e.target.getBoundingClientRect();
+    //             tooltipEl.style.left = `${rect.right + 10}px`;
+    //             tooltipEl.style.top = `${rect.top + (rect.height / 2) - (tooltipEl.offsetHeight / 2)}px`;
+    //         }
+    //     };
 
-        const hideTooltip = () => {
-            if (tooltipEl) {
-                tooltipEl.style.display = 'none';
-            }
-        };
+    //     const hideTooltip = () => {
+    //         if (tooltipEl) {
+    //             tooltipEl.style.display = 'none';
+    //         }
+    //     };
 
-        element.addEventListener('mouseenter', showTooltip);
-        element.addEventListener('mouseleave', hideTooltip);
-    });
+    //     element.addEventListener('mouseenter', showTooltip);
+    //     element.addEventListener('mouseleave', hideTooltip);
+    // });
+
 
     // Handle media query changes for responsive layout
     function handleMediaQueryChange(mq) {
