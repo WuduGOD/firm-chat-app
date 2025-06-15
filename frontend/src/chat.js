@@ -271,16 +271,20 @@ async function handleConversationClick(user, clickedConvoItemElement) {
         chatArea.classList.add('active'); // Show chat area
     }
 
-    // Handle responsive back button visibility
-    if (backButton) {
-        const mq = window.matchMedia('(max-width: 768px)');
-        if (mq.matches) {
-            backButton.classList.add('show-on-mobile'); // Show on mobile
-            if (sidebarWrapper) {
-                sidebarWrapper.classList.remove('visible'); // Hide sidebar on mobile
-            }
-        } else {
-            backButton.classList.remove('show-on-mobile'); // Hide on desktop
+    // Handle responsive back button and sidebar visibility on mobile
+    if (window.matchMedia('(max-width: 768px)').matches) {
+        if (backButton) {
+            backButton.classList.add('show-on-mobile'); // Show back button on mobile
+        }
+        if (sidebarWrapper) {
+            sidebarWrapper.classList.add('hide-on-mobile'); // Hide sidebar on mobile
+        }
+    } else {
+        if (backButton) {
+            backButton.classList.remove('show-on-mobile'); // Hide back button on desktop
+        }
+        if (sidebarWrapper) {
+            sidebarWrapper.classList.remove('hide-on-mobile'); // Ensure sidebar is visible on desktop
         }
     }
 
@@ -453,7 +457,7 @@ function updateUserStatusIndicator(userId, isOnline) {
         if (isOnline) {
             // Do not add the current user to the active users list
             if (String(userId) === String(currentUser.id)) {
-                console.log(`Filtering out current user ${getUserLabelById(userId)} from active users list.`);
+                console.log(`Filtering out current user ${userId} from active users list.`);
                 return;
             }
 
@@ -757,6 +761,7 @@ function setupChatSettingsDropdown() {
 
                     console.log('New nickname set:', newNickname, 'for user:', currentUser.id);
                     // Użyj alertu jako prostego powiadomienia, zgodnie z Twoim wcześniejszym kodem
+                    // Zastąp alert modalem w prawdziwej aplikacji
                     alert(`Nickname '${newNickname}' has been set successfully.`);
                     await loadAllProfiles(); // Reload profiles to update cache
                     // Update chat header if it's the current user's chat
@@ -960,35 +965,37 @@ async function initializeApp() {
             chatArea.classList.remove('active');
             logoScreen.classList.remove('hidden');
         }
-        if (sidebarWrapper) { // sidebar-wrapper zawiera main-nav-icons i sidebar
-            // Na desktopie sidebar-wrapper jest zawsze widoczny
-            // Na mobile, kliknięcie backButton oznacza powrót do widoku listy rozmów, więc sidebar-wrapper staje się widoczny
-            sidebarWrapper.classList.add('visible');
-        }
-        backButton.classList.remove('show-on-mobile');
-    });
-
-    menuButton.addEventListener('click', (event) => {
-        event.stopPropagation(); // Prevent event bubbling
-        dropdownMenu.classList.toggle('hidden'); // Toggle main dropdown
-        const mq = window.matchMedia('(max-width: 768px)');
-        if (mq.matches) {
-            // On mobile, toggle sidebar visibility
-            sidebarWrapper.classList.toggle('visible');
-            if (sidebarWrapper.classList.contains('visible')) {
-                // If sidebar becomes visible, hide chat area
-                chatArea.classList.remove('active');
-                logoScreen.classList.remove('hidden');
+        // Ensure sidebar is visible when back button is clicked on mobile
+        if (window.matchMedia('(max-width: 768px)').matches) {
+            if (sidebarWrapper) {
+                sidebarWrapper.classList.remove('hide-on-mobile'); // Show sidebar on mobile
+            }
+            if (backButton) {
+                backButton.classList.remove('show-on-mobile'); // Hide back button
             }
         }
     });
 
-    // Close dropdown when clicking outside
+    // Main menu button (top right)
+    menuButton.addEventListener('click', (event) => {
+        event.stopPropagation(); // Prevent event bubbling
+        dropdownMenu.classList.toggle('hidden'); // Toggle main dropdown
+
+        // On mobile, also toggle sidebar visibility (if it's not the chat view)
+        if (window.matchMedia('(max-width: 768px)').matches) {
+            if (!chatArea.classList.contains('active')) { // Only toggle if not in chat view
+                if (sidebarWrapper) {
+                    sidebarWrapper.classList.toggle('hide-on-mobile');
+                }
+            }
+        }
+    });
+
+    // Close dropdowns when clicking outside
     document.addEventListener('click', (event) => {
         if (!chatSettingsDropdown.classList.contains('hidden') && !chatSettingsButton.contains(event.target)) {
             chatSettingsDropdown.classList.add('hidden');
         }
-        // Również zamknij główne menu rozwijane, jeśli kliknięto poza nim
         if (!dropdownMenu.classList.contains('hidden') && !menuButton.contains(event.target)) {
             dropdownMenu.classList.add('hidden');
         }
@@ -1093,36 +1100,41 @@ async function initializeApp() {
     // Handle media query changes for responsive layout
     function handleMediaQueryChange(mq) {
         if (mq.matches) { // Mobile view (max-width: 768px)
-            console.log("Mobile view activated. Hiding chat area, showing sidebar wrapper.");
-            chatArea.classList.remove('active'); // Hide chat area
-            logoScreen.classList.remove('hidden'); // Show logo screen
-            sidebarWrapper.classList.add('visible'); // Show sidebar by default on mobile (but initially hidden by transform in CSS)
+            console.log("Mobile view activated. Adjusting initial visibility for mobile.");
+            // Na mobile, domyślnie ukrywamy chatArea i pokazujemy logoScreen
+            chatArea.classList.remove('active');
+            logoScreen.classList.remove('hidden');
 
+            // Prawy sidebar zawsze ukryty na mobile
             if (rightSidebarWrapper) {
-                rightSidebarWrapper.style.display = 'none'; // Hide right sidebar on mobile
+                rightSidebarWrapper.style.display = 'none'; // Możemy zostawić to w JS dla pewności, lub przenieść do CSS
+            }
+            // Back button jest pokazywany dynamicznie w handleConversationClick, więc domyślnie ukryty
+            if (backButton) {
+                backButton.classList.remove('show-on-mobile');
+            }
+            // SidebarWrapper domyślnie pokazany na starcie mobile (ukryje się po kliknięciu konwersacji)
+            if (sidebarWrapper) {
+                sidebarWrapper.classList.remove('hide-on-mobile'); // Upewnij się, że nie jest ukryty na starcie
             }
 
-            backButton.classList.remove('show-on-mobile'); // Initially hide back button on mobile until chat is active
-            // Usuń style gridowe, jeśli były aktywne na desktopie
-            if (container.style.display === 'grid') {
-                container.style.display = 'flex';
-                container.style.flexDirection = 'column';
-            }
         } else { // Desktop/Tablet view (min-width: 769px)
-            console.log("Desktop/Tablet view activated. Adjusting layout.");
-            sidebarWrapper.classList.add('visible'); // Always show sidebar on desktop
-            chatArea.classList.remove('active'); // Hide chat area (show logo screen by default)
-            logoScreen.classList.remove('hidden'); // Show logo screen
-
-            if (rightSidebarWrapper) {
-                rightSidebarWrapper.style.display = 'flex'; // Show right sidebar on desktop
+            console.log("Desktop/Tablet view activated. Adjusting initial visibility for desktop.");
+            // Na desktopie zawsze pokazujemy sidebar i prawy sidebar, ukrywamy logoScreen
+            if (sidebarWrapper) {
+                sidebarWrapper.classList.remove('hide-on-mobile'); // Upewnij się, że jest widoczny na desktopie
             }
-            backButton.classList.remove('show-on-mobile'); // Hide back button on desktop
+            if (rightSidebarWrapper) {
+                rightSidebarWrapper.style.display = 'flex'; // Zapewnij widoczność prawego sidebara na desktopie
+            }
+            // Zostawiamy chatArea i logoScreen w ich domyślnych stanach (logoScreen widoczne, chatArea ukryte),
+            // aż użytkownik wybierze konwersację.
+            chatArea.classList.remove('active');
+            logoScreen.classList.remove('hidden');
 
-            // Aktywuj layout grid dla desktopu zgodnie z media query
-            container.style.display = 'grid';
-            container.style.gridTemplateColumns = 'auto 1fr auto'; // To samo co w CSS
-            // Pamiętaj, że w tym trybie .main-nav-icons powinno być ukryte przez CSS
+            if (backButton) {
+                backButton.classList.remove('show-on-mobile'); // Back button niepotrzebny na desktopie
+            }
         }
     }
 
