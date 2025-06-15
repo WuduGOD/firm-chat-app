@@ -11,18 +11,18 @@ let logoutButton;
 
 let container;
 let sidebarWrapper;
-let mainNavIcons;
-let navIcons;
+let mainNavIcons; // Zaktualizowana referencja
+let navIcons; // Zaktualizowana referencja
 
 let sidebarEl;
-let searchInput;
+let searchInput; // Zaktualizowana referencja
 let contactsListEl; // Referencja do UL konwersacji
 let activeUsersContent; // Referencja do kontenera dla listy aktywnych użytkowników i komunikatu
 
 let logoScreen;
 let chatArea;
 
-let chatHeader;
+let chatHeader; // Zaktualizowana referencja (będzie chatHeaderMain)
 let backButton;
 let chatUserName;
 let userStatusSpan;
@@ -34,26 +34,16 @@ let typingStatusDiv;
 let messageContainer;
 let typingIndicatorDiv;
 
-let chatFooter;
-let attachButton;
+let chatFooter; // Zaktualizowana referencja (będzie chatFooterMain)
+let attachButton; // Zaktualizowana referencja
 let messageInput;
-let emojiButton;
+let emojiButton; // Zaktualizowana referencja
 let sendButton;
 
 // Zmienne dla prawego sidebara (Aktywni Użytkownicy)
 let rightSidebar;
 let activeUsersListEl; // Referencja do UL aktywnych użytkowników
 let noActiveUsersText; // Referencja do DIV z tekstem 'Brak aktywnych użytkowników.'
-
-// Zmienne czatu
-let allConversations = [];
-let currentUser = null; // Używamy tego obiektu z Supabase
-let currentChatUser = null;
-let currentRoom = null;
-let socket = null;
-let reconnectAttempts = 0;
-let typingTimeout;
-let currentActiveConvoItem = null;
 
 // Funkcja resetująca widok czatu
 function resetChatView() {
@@ -550,7 +540,7 @@ function initWebSocket() {
 // NOWA FUNKCJA: Ładowanie aktywnych użytkowników
 async function loadActiveUsers() {
     console.log("Loading active users for right sidebar...");
-    if (!activeUsersListEl || !noActiveUsersText || !activeUsersContent) { // Dodaj activeUsersContent do walidacji
+    if (!activeUsersListEl || !noActiveUsersText || !activeUsersContent) { 
         console.error("activeUsersListEl, noActiveUsersText or activeUsersContent not found, cannot load active users.");
         return;
     }
@@ -706,18 +696,18 @@ async function initializeApp() {
 
     container = document.querySelector('.container');
     sidebarWrapper = document.querySelector('.sidebar-wrapper');
-    mainNavIcons = document.querySelector('.main-nav-icons');
-    navIcons = document.querySelectorAll('.nav-icon');
+    mainNavIcons = document.getElementById('mainNavIcons'); 
+    navIcons = document.querySelectorAll('.nav-icon'); 
 
     sidebarEl = document.getElementById('sidebar');
-    searchInput = sidebarEl.querySelector('.search-bar input');
-    contactsListEl = document.getElementById('contactsList'); // POPRAWKA: Prawidłowa referencja do listy kontaktów
-    activeUsersContent = document.getElementById('activeUsersContent'); // REFERENCJA DO KONTENERA AKTYWNYCH UŻYTKOWNIKÓW
+    searchInput = document.getElementById('searchInput'); 
+    contactsListEl = document.getElementById('contactsList'); 
+    activeUsersContent = document.getElementById('activeUsersContent'); 
 
     logoScreen = document.getElementById('logoScreen');
     chatArea = document.getElementById('chatArea');
 
-    chatHeader = chatArea.querySelector('.chat-header');
+    chatHeader = document.getElementById('chatHeaderMain'); 
     backButton = chatHeader.querySelector('#backButton');
     chatUserName = chatHeader.querySelector('#chatUserName');
     userStatusSpan = chatHeader.querySelector('#userStatus');
@@ -730,14 +720,14 @@ async function initializeApp() {
     messageContainer = chatArea.querySelector('#messageContainer');
     typingIndicatorDiv = chatArea.querySelector('#typingIndicator');
 
-    chatFooter = chatArea.querySelector('.chat-footer');
-    attachButton = chatFooter.querySelector('.attach-button');
+    chatFooter = document.getElementById('chatFooterMain'); 
+    attachButton = chatFooter.querySelector('#attachButton'); 
     messageInput = chatFooter.querySelector('#messageInput');
-    emojiButton = chatFooter.querySelector('.emoji-button');
+    emojiButton = chatFooter.querySelector('#emojiButton'); 
     sendButton = chatFooter.querySelector('#sendButton');
 
     rightSidebar = document.getElementById('rightSidebar');
-    activeUsersListEl = document.getElementById('activeUsersList'); // Prawidłowa referencja do UL aktywnych użytkowników
+    activeUsersListEl = document.getElementById('activeUsersList'); 
     noActiveUsersText = document.getElementById('noActiveUsersText'); 
 
     // 2. Walidacja, czy kluczowe elementy UI zostały znalezione
@@ -750,14 +740,39 @@ async function initializeApp() {
         !chatFooter || !attachButton || !messageInput || !emojiButton || !sendButton ||
         !rightSidebar || !activeUsersListEl || !noActiveUsersText) { 
         console.error('Error: One or more critical UI elements not found. Please check your HTML selectors. Missing elements:', {
-            mainHeader, menuButton, dropdownMenu, themeToggle, logoutButton,
-            container, sidebarWrapper, mainNavIcons, navIcons: navIcons.length > 0,
-            sidebarEl, searchInput, contactsListEl, activeUsersContent,
-            logoScreen, chatArea,
-            chatHeader, backButton, chatUserName, userStatusSpan, chatHeaderActions, chatSettingsButton, chatSettingsDropdown, typingStatusDiv,
-            messageContainer, typingIndicatorDiv,
-            chatFooter, attachButton, messageInput, emojiButton, sendButton,
-            rightSidebar, activeUsersListEl, noActiveUsersText
+            mainHeader: !!mainHeader, 
+            menuButton: !!menuButton,
+            dropdownMenu: !!dropdownMenu,
+            themeToggle: !!themeToggle,
+            logoutButton: !!logoutButton,
+            container: !!container,
+            sidebarWrapper: !!sidebarWrapper,
+            mainNavIcons: !!mainNavIcons,
+            navIconsLength: navIcons.length, 
+            sidebarEl: !!sidebarEl,
+            searchInput: !!searchInput,
+            contactsListEl: !!contactsListEl,
+            activeUsersContent: !!activeUsersContent,
+            logoScreen: !!logoScreen,
+            chatArea: !!chatArea,
+            chatHeader: !!chatHeader,
+            backButton: !!backButton,
+            chatUserName: !!chatUserName,
+            userStatusSpan: !!userStatusSpan,
+            chatHeaderActions: !!chatHeaderActions,
+            chatSettingsButton: !!chatSettingsButton,
+            chatSettingsDropdown: !!chatSettingsDropdown,
+            typingStatusDiv: !!typingStatusDiv,
+            messageContainer: !!messageContainer,
+            typingIndicatorDiv: !!typingIndicatorDiv,
+            chatFooter: !!chatFooter,
+            attachButton: !!attachButton,
+            messageInput: !!messageInput,
+            emojiButton: !!emojiButton,
+            sendButton: !!sendButton,
+            rightSidebar: !!rightSidebar,
+            activeUsersListEl: !!activeUsersListEl,
+            noActiveUsersText: !!noActiveUsersText
         });
         return;
     } else {
@@ -881,13 +896,16 @@ async function initializeApp() {
         }
     });
 
-    navIcons.forEach(icon => {
-        icon.addEventListener('click', () => {
-            navIcons.forEach(i => i.classList.remove('active'));
-            icon.classList.add('active');
-            console.log('Nav icon clicked:', icon.title);
+    // Zaktualizowana pętla dla navIcons
+    if (navIcons) { 
+        navIcons.forEach(icon => {
+            icon.addEventListener('click', () => {
+                navIcons.forEach(i => i.classList.remove('active'));
+                icon.classList.add('active');
+                console.log('Nav icon clicked:', icon.title);
+            });
         });
-    });
+    }
 
     setupChatSettingsDropdown();
 

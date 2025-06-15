@@ -33,13 +33,20 @@
             <aside class="sidebar-wrapper visible">
                 <div class="sidebar" id="sidebar">
                     <div class="search-bar">
-                        <input type="text" placeholder="Szukaj kontaktów...">
+                        <input type="text" id="searchInput" placeholder="Szukaj kontaktów...">
                     </div>
                     <ul class="contacts-list" id="contactsList">
                         <!-- Kontakty będą ładowane dynamicznie tutaj -->
                     </ul>
                 </div>
             </aside>
+
+            <!-- Główna nawigacja z ikonami (Dodano) -->
+            <div class="main-nav-icons" id="mainNavIcons">
+                <button class="nav-icon active" title="Czaty"><i class="fas fa-comments"></i></button>
+                <button class="nav-icon" title="Połączenia"><i class="fas fa-phone"></i></button>
+                <button class="nav-icon" title="Ustawienia"><i class="fas fa-cog"></i></button>
+            </div>
 
             <!-- Główny obszar czatu -->
             <main class="chat-area" id="chatArea">
@@ -50,7 +57,7 @@
                 </div>
 
                 <div class="chat-main-view">
-                    <div class="chat-header">
+                    <div class="chat-header" id="chatHeaderMain">
                         <button id="backButton" class="back-button" title="Wróć">
                             <i class="fas fa-arrow-left"></i>
                         </button>
@@ -99,10 +106,10 @@
                     <div class="message-container" id="messageContainer">
                         <!-- Wiadomości będą ładowane dynamicznie tutaj -->
                     </div>
-                    <div class="chat-footer">
-                        <button class="attach-button" title="Załącz plik"><i class="fas fa-paperclip"></i></button>
+                    <div class="chat-footer" id="chatFooterMain">
+                        <button id="attachButton" class="attach-button" title="Załącz plik"><i class="fas fa-paperclip"></i></button>
                         <input type="text" id="messageInput" placeholder="Napisz wiadomość...">
-                        <button class="emoji-button" title="Wstaw emoji"><i class="fas fa-smile"></i></button>
+                        <button id="emojiButton" class="emoji-button" title="Wstaw emoji"><i class="fas fa-smile"></i></button>
                         <button class="send-button" id="sendButton" title="Wyślij"><i class="fas fa-paper-plane"></i></button>
                     </div>
                 </div>
