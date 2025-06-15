@@ -587,9 +587,9 @@ body {
     right: 0;
     top: 100%;
     /* ZNACZĄCO ZWIĘKSZAMY SZEROKOŚĆ, aby zapewnić miejsce na poziome ułożenie 4 elementów */
-    width: 250px; /* Zwiększona szerokość */
-    min-width: 250px;
-    max-width: 280px; /* Zwiększam max-width dla większej elastyczności */
+    width: 280px !important; /* Bardzo szerokie, żeby na pewno się zmieściło */
+    min-width: 280px !important;
+    max-width: 300px !important; /* Lekkie ograniczenie */
     padding: 0.8rem; /* Zwiększam padding, aby okienko nie było za ciasne */
     border-top-right-radius: 0;
     z-index: 101;
@@ -651,9 +651,10 @@ body {
 
 /* Opcje kolorów/tła */
 .color-options, .background-options {
-    display: grid; /* Używamy grid zamiast flex, aby być bardziej precyzyjnym */
-    grid-template-columns: repeat(auto-fit, minmax(32px, 1fr)); /* 4 kolumny, każda min 32px */
-    gap: 8px; /* Odstęp między elementami siatki */
+    display: flex !important; /* Wymuszamy flexbox */
+    flex-direction: row !important; /* Wymuszamy układ poziomy */
+    flex-wrap: wrap !important; /* Wymuszamy zawijanie */
+    gap: 8px !important; /* Odstęp między elementami */
     margin: 0.4rem 0; 
     justify-content: flex-start; /* Wyrównanie do lewej */
     width: 100%; 
@@ -666,7 +667,8 @@ body {
     cursor: pointer;
     border: 2px solid transparent;
     transition: border-color 0.2s;
-    /* Usunięto flex-shrink, flex-grow, margin-right, margin-bottom */
+    flex-shrink: 0 !important; /* Ważne: zapobiega kurczeniu się */
+    flex-grow: 0 !important; /* Ważne: zapobiega rozrastaniu się */
 }
 
 .color-box.active, .bg-box.active {
