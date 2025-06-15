@@ -159,18 +159,13 @@ body {
     flex: 1;
     display: flex;
     overflow: hidden;
-    border-radius: 12px;
-    /* margin: 0.5rem 1rem 1rem 1rem; */ /* Usunięto marginesy zewnętrzne, aby rozciągał się na całą szerokość */
-    box-shadow: var(--shadow-medium);
+    /* ZMODYFIKOWANE: Przywrócenie border-radius i box-shadow na kontenerze głównym */
+    border-radius: 12px; /* Zaokrąglenie całego bloku */
+    box-shadow: var(--shadow-medium); /* Cień całego bloku */
     align-items: stretch;
-    /* ZMIENIONE: Usunięto ograniczenie maksymalnej szerokości i centrowanie, aby komunikator rozciągał się na całą szerokość */
-    /* max-width: 1400px; */
-    /* margin-left: auto; */
-    /* margin-right: auto; */
     width: 100%; /* Upewnia się, że kontener zajmuje całą dostępną szerokość */
     margin: 0; /* Usuwa marginesy, aby przylegał do krawędzi okna */
-    border-radius: 0; /* Usuwa zaokrąglenia, gdy jest pełna szerokość */
-    box-shadow: none; /* Usuwa cień, gdy jest pełna szerokość */
+    /* Usunięto: max-width i auto-margins, aby rozciągał się na całą szerokość */
 }
 
 /* Sidebar Wrapper (lewy pasek - rozmowy + ikony) */
@@ -183,6 +178,9 @@ body {
     background: var(--bg-color-sidebar-wrapper);
     border-right: 1px solid var(--border-color-light);
     flex-shrink: 0; /* Zapobiega kurczeniu się poniżej flex-basis */
+    /* ZMODYFIKOWANE: Usunięcie zaokrągleń, będą one obsługiwane przez .container */
+    border-top-left-radius: 0; 
+    border-bottom-left-radius: 0; /* Choć border-radius na .container i tak to obejmie */
 }
 
 /* Main Nav Icons (pionowy pasek ikon) */
@@ -194,8 +192,9 @@ body {
     align-items: center;
     padding-top: 1rem;
     padding-bottom: 0.5rem;
-    border-top-left-radius: 12px;
-    border-bottom-left-radius: 12px;
+    /* ZMODYFIKOWANE: Usunięcie zaokrągleń, będą one obsługiwane przez .container na poziomie rodzica */
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
     flex-shrink: 0;
     gap: 0.8rem;
 }
@@ -443,8 +442,11 @@ body {
     flex-direction: column;
     position: relative;
     background: var(--bg-color-lighter);
-    border-top-right-radius: 12px;
-    border-bottom-right-radius: 12px;
+    /* ZMODYFIKOWANE: Usunięcie zaokrągleń, będą one obsługiwane przez .container */
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    /* NOWE: Upewnienie się, że również lewy górny róg jest prosty, aby pasował do .container */
+    border-top-left-radius: 0;
     flex-shrink: 0;
 }
 
@@ -976,8 +978,9 @@ body {
     flex-direction: column;
     padding: 1rem;
     overflow-y: auto;
-    border-top-right-radius: 12px;
-    border-bottom-right-radius: 12px;
+    /* ZMODYFIKOWANE: Usunięcie zaokrągleń, będą one obsługiwane przez .container */
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
     flex-shrink: 0;
     /* NOWE: Upewnienie się, że prawy sidebar jest widoczny na większych ekranach */
     display: flex !important; /* Użycie !important dla pewności, ale staraj się unikać, jeśli to możliwe */
@@ -1305,7 +1308,19 @@ body.dark-mode .nav-icon::after {
 @media (max-width: 1024px) {
     .container {
         margin: 0.5rem;
+        /* ZMODYFIKOWANE: Przywrócenie zaokrągleń i cienia dla całego kontenera, gdy nie jest pełna szerokość */
+        border-radius: 12px;
+        box-shadow: var(--shadow-medium);
     }
+    /* ZMODYFIKOWANE: Usunięcie zaokrągleń z wewnętrznych elementów */
+    .sidebar-wrapper, .chat-area-wrapper, .right-sidebar-wrapper {
+        border-radius: 0 !important; /* Ważne: usuń wszelkie zaokrąglenia, aby kontener nadrzędny je zdefiniował */
+    }
+    .main-nav-icons {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+    }
+
 
     .sidebar-wrapper {
         min-width: 250px;
