@@ -42,6 +42,7 @@ let sendButton;
 // Zmienne dla prawego sidebara (Aktywni Użytkownicy)
 let rightSidebar;
 let activeUsersListEl;
+let noActiveUsersText; // NOWA ZMIENNA: do przechowywania referencji do elementu tekstu 'Brak aktywnych użytkowników.'
 
 // Zmienne czatu
 let allConversations = [];
@@ -339,8 +340,7 @@ function addMessageToChat(msg) {
 
         if (previewEl && timeEl) {
             const senderName = String(msg.username) === String(currentUser.id) ? "Ja" : (getUserLabelById(msg.username) || msg.username);
-            // POPRAWKA: Zamiast przypisywać do niezadeklarowanej zmiennej, przypisz bezpośrednio do textContent
-            previewEl.textContent = `${senderName}: ${msg.text}`; 
+            previewEl.textContent = `${senderName}: ${msg.text}`;
 
             const lastMessageTime = new Date(msg.inserted_at || Date.now());
             timeEl.textContent = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
@@ -395,6 +395,16 @@ function updateUserStatusIndicator(userId, isOnline) {
 
     // Aktualizacja statusu w liście aktywnych użytkowników (prawy sidebar)
     if (activeUsersListEl) {
+        // Usuń użytkownika z listy, jeśli jest już offline i ma element
+        if (!isOnline && String(userId) !== String(currentUser.id)) { // Upewnij się, że nie usuwasz siebie
+            const userListItem = activeUsersListEl.querySelector(`li[data-user-id="${userId}"]`);
+            if (userListItem) {
+                userListItem.remove();
+                console.log(`Removed offline user ${getUserLabelById(userId)} from active list.`);
+            }
+            return; // Zakończ, jeśli użytkownik jest offline
+        }
+
         const userListItem = activeUsersListEl.querySelector(`li[data-user-id="${userId}"]`);
         if (userListItem) {
             const statusIndicator = userListItem.querySelector('.status-indicator');
@@ -461,7 +471,7 @@ function initWebSocket() {
                 name: currentUser.id,
                 room: currentRoom,
             }));
-            console.log(`Joined room ${currentRoom} on WebSocket open.`);
+            console.log(`Sent join message to WebSocket for room: ${currentRoom}`);
         } else {
             console.warn("WebSocket opened but currentRoom or currentUser is not set. Cannot join room yet.");
         }
@@ -504,10 +514,11 @@ function initWebSocket() {
                 }
                 break;
             case 'status':
+                console.log(`Received status update for user ${data.user}: ${data.online ? 'online' : 'offline'}`);
                 updateUserStatusIndicator(data.user, data.online);
                 break;
             case 'active_users':
-                console.log('Received active users list:', data.users);
+                console.log('Received initial active users list:', data.users);
                 displayActiveUsers(data.users);
                 break;
             default:
@@ -538,8 +549,8 @@ function initWebSocket() {
 // NOWA FUNKCJA: Ładowanie aktywnych użytkowników
 async function loadActiveUsers() {
     console.log("Loading active users for right sidebar...");
-    if (!activeUsersListEl) {
-        console.error("activeUsersListEl not found, cannot load active users.");
+    if (!activeUsersListEl || !noActiveUsersText) { // Dodaj noActiveUsersText do walidacji
+        console.error("activeUsersListEl or noActiveUsersText not found, cannot load active users.");
         return;
     }
 
@@ -554,51 +565,31 @@ async function loadActiveUsers() {
 
 // NOWA FUNKCJA: Wyświetlanie aktywnych użytkowników
 function displayActiveUsers(activeUsersData) {
-    if (!activeUsersListEl) return;
+    if (!activeUsersListEl || !noActiveUsersText) return; // Upewnij się, że elementy istnieją
 
-    // Utwórz mapę bieżących użytkowników, aby zidentyfikować tych, którzy się rozłączyli
-    const currentActiveUserIds = new Set();
-    Array.from(activeUsersListEl.children).forEach(item => {
-        if (item.dataset.userId) {
-            currentActiveUserIds.add(item.dataset.userId);
-        }
-    });
+    activeUsersListEl.innerHTML = ''; // Wyczyść poprzednie elementy listy użytkowników
 
-    activeUsersListEl.innerHTML = ''; // Wyczyść poprzednią listę
+    const filteredUsers = activeUsersData.filter(user => String(user.id) !== String(currentUser.id));
 
-    if (activeUsersData.length === 0) {
-        const li = document.createElement('li');
-        li.textContent = "Brak aktywnych użytkowników.";
-        activeUsersListEl.appendChild(li);
-        return;
+    if (filteredUsers.length === 0) {
+        noActiveUsersText.style.display = 'block'; // Pokaż wiadomość 'Brak aktywnych użytkowników'
+    } else {
+        noActiveUsersText.style.display = 'none'; // Ukryj wiadomość 'Brak aktywnych użytkowników'
+        filteredUsers.forEach(user => {
+            const li = document.createElement('li');
+            li.classList.add('active-user-item');
+            li.dataset.userId = user.id;
+
+            const avatarSrc = `https://i.pravatar.cc/150?img=${user.id.charCodeAt(0) % 70 + 1}`; // Tymczasowy losowy avatar
+
+            li.innerHTML = `
+                <img src="${avatarSrc}" alt="Avatar" class="avatar-small">
+                <span class="user-name">${getUserLabelById(user.id) || user.username}</span>
+                <span class="status-indicator ${user.online ? 'online' : 'offline'}"></span>
+            `;
+            activeUsersListEl.appendChild(li);
+        });
     }
-
-    activeUsersData.forEach(user => {
-        if (String(user.id) === String(currentUser.id)) {
-            console.log(`Filtering out current user ${getUserLabelById(user.id)} from active users list.`);
-            return; // Nie wyświetlaj samego siebie
-        }
-
-        const li = document.createElement('li');
-        li.classList.add('active-user-item');
-        li.dataset.userId = user.id;
-
-        const avatarSrc = `https://i.pravatar.cc/150?img=${user.id.charCodeAt(0) % 70 + 1}`; // Tymczasowy losowy avatar
-
-        li.innerHTML = `
-            <img src="${avatarSrc}" alt="Avatar" class="avatar-small">
-            <span class="user-name">${getUserLabelById(user.id) || user.username}</span>
-            <span class="status-indicator ${user.online ? 'online' : 'offline'}"></span>
-        `;
-        activeUsersListEl.appendChild(li);
-        currentActiveUserIds.delete(user.id); // Usuń z setu, jeśli użytkownik jest nadal online
-    });
-
-    // Użytkownicy pozostali w currentActiveUserIds set są teraz offline i powinni zostać usunięci z listy.
-    // To jest już załatwione przez `activeUsersListEl.innerHTML = '';` na początku funkcji.
-    // Jednak jeśli chcielibyśmy pokazywać offline, musielibyśmy to obsłużyć inaczej,
-    // np. aktualizując tylko status dla istniejących elementów.
-    // W obecnej implementacji lista jest po prostu przebudowywana.
 }
 
 
@@ -740,7 +731,7 @@ async function initializeApp() {
 
     rightSidebar = document.getElementById('rightSidebar');
     activeUsersListEl = document.getElementById('activeUsersList');
-
+    noActiveUsersText = document.getElementById('noActiveUsersText'); // NOWA REFERENCJA
 
     // 2. Walidacja, czy kluczowe elementy UI zostały znalezione
     if (!mainHeader || !menuButton || !dropdownMenu || !themeToggle || !logoutButton ||
@@ -750,7 +741,7 @@ async function initializeApp() {
         !chatHeader || !backButton || !chatUserName || !userStatusSpan || !chatHeaderActions || !chatSettingsButton || !chatSettingsDropdown || !typingStatusDiv ||
         !messageContainer || !typingIndicatorDiv ||
         !chatFooter || !attachButton || !messageInput || !emojiButton || !sendButton ||
-        !rightSidebar || !activeUsersListEl) {
+        !rightSidebar || !activeUsersListEl || !noActiveUsersText) { // Dodaj walidację dla nowego elementu
         console.error('Error: One or more critical UI elements not found. Please check your HTML selectors. Missing elements:', {
             mainHeader, menuButton, dropdownMenu, themeToggle, logoutButton,
             container, sidebarWrapper, mainNavIcons, navIcons: navIcons.length > 0,
@@ -759,7 +750,7 @@ async function initializeApp() {
             chatHeader, backButton, chatUserName, userStatusSpan, chatHeaderActions, chatSettingsButton, chatSettingsDropdown, typingStatusDiv,
             messageContainer, typingIndicatorDiv,
             chatFooter, attachButton, messageInput, emojiButton, sendButton,
-            rightSidebar, activeUsersListEl
+            rightSidebar, activeUsersListEl, noActiveUsersText
         });
         return;
     } else {
