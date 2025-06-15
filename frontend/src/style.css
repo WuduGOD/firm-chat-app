@@ -148,37 +148,36 @@ body {
     display: flex;
     overflow: hidden;
     border-radius: 12px;
+    /* Zmniejszony górny margines, reszta bez zmian */
     margin: 0.5rem 1rem 1rem 1rem;
     box-shadow: var(--shadow-medium);
-    /* DODANO: Domyślna minimalna wysokość dla kontenera, aby zapobiec kurczeniu się poniżej pewnego poziomu */
-    min-height: 550px; /* Przykład, dostosuj do minimalnej wysokości layoutu */
 }
 
 /* Sidebar Wrapper (lewy pasek - rozmowy + ikony) */
 .sidebar-wrapper {
     display: flex;
-    flex-direction: row; /* Zostawiamy row, jeśli ikony są obok listy */
-    /* ZMIANY: Użycie clamp dla bardziej elastycznej szerokości, ale z kontrolą min/max */
-    /* clamp(min-szerokość, preferowana-szerokość, max-szerokość) */
-    width: clamp(280px, 25vw, 350px);
+    flex-direction: row;
+    min-width: 280px;
+    width: 25%;
+    max-width: 350px;
     background: var(--bg-color-sidebar-wrapper);
     border-right: 1px solid var(--border-color-light);
-    flex-shrink: 0; /* Nie pozwól, aby się kurczył, chyba że absolutnie musi */
+    flex-shrink: 0;
 }
 
 /* Main Nav Icons (pionowy pasek ikon) */
 .main-nav-icons {
-    width: 60px; /* Stała szerokość dla paska ikon */
+    width: 60px;
     background: var(--primary-color);
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding-top: 1rem;
-    padding-bottom: 0.5rem;
-    gap: 0.5rem;
+    /* DOPASOWANIE: Zmniejszenie paddingu i gapu dla mniejszych przerw między ikonami */
+    padding-top: 1rem; /* Zmniejszono z 1.5rem */
+    padding-bottom: 0.5rem; /* Zmniejszono z 1rem */
     border-top-left-radius: 12px;
     border-bottom-left-radius: 12px;
-    flex-shrink: 0; /* Ważne, aby się nie kurczył */
+    flex-shrink: 0;
 }
 
 .nav-icon {
@@ -246,24 +245,26 @@ body {
 
 /* Sidebar (lista konwersacji) - teraz zajmuje resztę miejsca w .sidebar-wrapper */
 #sidebar.conversations-list {
-    flex-grow: 1; /* Rozciągnij się, aby wypełnić dostępną przestrzeń w wrapperze */
+    flex-grow: 1;
     background: var(--bg-color-sidebar);
-    padding: 0.5rem 1rem 1rem 1rem;
+    /* DOPASOWANIE: Zmniejszenie paddingu góra/dół dla mniejszych przerw */
+    padding: 0.5rem 1rem 1rem 1rem; /* Zmniejszono górny padding z 1rem na 0.5rem */
     overflow-y: auto;
-    flex-shrink: 1; /* Pozwól mu się kurczyć, jeśli trzeba */
-    min-width: 0; /* Ważne dla flexboxa, aby zawartość nie wychodziła poza ramy */
+    flex-shrink: 1;
 }
 
 #sidebar.conversations-list h2 {
-    margin-bottom: 0.5rem;
+    /* DOPASOWANIE: Zmniejszenie marginesu i paddingu nagłówka dla mniejszej przerwy */
+    margin-bottom: 0.5rem; /* Zmniejszono z 1rem */
     font-size: 1.3rem;
     color: var(--text-color-dark);
-    padding-top: 0.5rem;
+    padding-top: 0.5rem; /* Zmniejszono z 1rem */
 }
 
 .search-bar {
     position: relative;
-    margin-bottom: 0.5rem;
+    /* DOPASOWANIE: Zmniejszenie marginesu dolnego dla mniejszej przerwy */
+    margin-bottom: 0.5rem; /* Zmniejszono z 1rem */
 }
 .search-bar input {
     width: 100%;
@@ -427,8 +428,7 @@ body {
     background: var(--bg-color-lighter);
     border-top-right-radius: 12px;
     border-bottom-right-radius: 12px;
-    flex-shrink: 1; /* Pozwól mu się kurczyć, ale ma największy flex-grow */
-    min-width: 0; /* Ważne dla flexboxa, aby zapobiec "rozjechaniu" z powodu treści */
+    flex-shrink: 0;
 }
 
 .logo-screen {
@@ -494,7 +494,7 @@ body {
     gap: 2px;
     font-weight: bold;
     flex-grow: 1;
-    min-width: 0; /* Upewnij się, że ten min-width: 0 jest, pozwala tekstowi się kurczyć */
+    min-width: 0;
 }
 .user-info .username {
     white-space: nowrap;
@@ -506,9 +506,7 @@ body {
     display: flex;
     gap: 0.8rem;
     margin-left: auto;
-    /* ZMIANA: Pozwól tej grupie przycisków kurczyć się */
-    flex-shrink: 1; /* Było 0, zmieniono na 1, aby przyciski mogły się kurczyć */
-    min-width: 0; /* DODANO: Ważne dla flexboxa, aby zawartość nie "rozpychała" */
+    flex-shrink: 0;
 }
 .chat-header-actions button {
     background: none;
@@ -870,8 +868,9 @@ body {
 
 /* PRAWY SIDEBAR (AKTYWNI UŻYTKOWNICY) */
 .right-sidebar-wrapper {
-    /* ZMIANY: Użycie clamp dla elastycznej szerokości */
-    width: clamp(180px, 15vw, 300px); /* Zmienione z 20% na 15vw */
+    min-width: 200px;
+    width: 20%;
+    max-width: 300px;
     border-left: 1px solid var(--border-color-light);
     background-color: var(--bg-color-sidebar-wrapper);
     display: flex;
@@ -880,8 +879,7 @@ body {
     overflow-y: auto;
     border-top-right-radius: 12px;
     border-bottom-right-radius: 12px;
-    flex-shrink: 0; /* Nie kurcz się, jeśli jest miejsce */
-    min-width: 0; /* Ważne dla flexboxa */
+    flex-shrink: 0;
 }
 
 .right-sidebar h4 {
@@ -1202,17 +1200,18 @@ body.dark-mode .nav-icon::after {
 @media (max-width: 1024px) {
     .container {
         margin: 0.5rem;
-        min-height: unset; /* DODANO: Pozwól kontenerowi na kurczenie się na mniejszych ekranach */
     }
 
     .sidebar-wrapper {
-        /* ZMIANY: Dostosowane wartości clamp dla mniejszych ekranów */
-        width: clamp(250px, 30vw, 300px);
+        min-width: 250px;
+        width: 30%;
+        max-width: 300px;
     }
 
     .right-sidebar-wrapper {
-        /* ZMIANY: Dostosowane wartości clamp dla mniejszych ekranów */
-        width: clamp(180px, 20vw, 250px);
+        min-width: 180px;
+        width: 20%;
+        max-width: 250px;
         padding: 0.8rem;
     }
 
@@ -1235,7 +1234,6 @@ body.dark-mode .nav-icon::after {
         border-radius: 0;
         box-shadow: none;
         height: auto;
-        min-height: unset; /* DODANO: Usuń minimalną wysokość, aby strona była w pełni responsywna pionowo */
     }
 
     .main-header {
@@ -1253,8 +1251,6 @@ body.dark-mode .nav-icon::after {
         border-top-left-radius: 0;
         border-bottom-left-radius: 0;
         padding: 0;
-        /* ZMIANY: Usunięcie sztywnych szerokości, pozwolenie na elastyczność */
-        width: 100%; /* Domyślnie na całą szerokość */
     }
 
     .main-nav-icons {
@@ -1271,8 +1267,6 @@ body.dark-mode .nav-icon::after {
         padding: 0.8rem;
         overflow-y: auto;
         height: 100%;
-        /* DODANO: Zapewnienie, że lista ma sensowną minimalną wysokość, aby nie zniknęła */
-        min-height: 200px;
     }
 
     .chat-area-wrapper {
@@ -1281,19 +1275,113 @@ body.dark-mode .nav-icon::after {
         border-bottom-left-radius: 0;
         border-top-right-radius: 0;
         border-bottom-right-radius: 0;
-        min-height: calc(100vh - 60px); /* Nadal ważne na małych ekranach, dla głównego obszaru */
+        min-height: calc(100vh - 60px);
     }
 
     .right-sidebar-wrapper {
-        display: none; /* ZMIANY: Ukryj prawy pasek na małych ekranach */
+        display: none;
     }
 
     .back-button {
-        display: block; /* ZMIANY: Upewnij się, że przycisk wstecz jest widoczny na mobile */
+        display: block;
     }
     .chat-header .user-info {
         flex-grow: 1;
         text-align: left;
+    }
+    .chat-header-actions.right-aligned {
+        margin-left: 0;
+        gap: 0.5rem;
+    }
+
+    .message {
+        max-width: 85%;
+    }
+}
+
+@media (max-width: 480px) {
+    .main-header {
+        padding: 0.6rem 0.8rem;
+    }
+    .app-title {
+        font-size: 1.1rem;
+    }
+    .user-menu button {
+        font-size: 1.1rem;
+    }
+
+    .main-nav-icons {
+        width: 50px;
+        padding-top: 0.8rem;
+        gap: 0.6rem;
+    }
+    .nav-icon {
+        font-size: 1.3rem;
+        width: 40px;
+        height: 40px;
+    }
+    .nav-icon.add-new-button {
+        font-size: 1.5rem;
+    }
+
+    #sidebar.conversations-list {
+        padding: 0.6rem;
+    }
+    .search-bar input {
+        padding: 0.5rem 0.7rem 0.5rem 2.2rem;
+        font-size: 0.85rem;
+    }
+    .search-bar i {
+        left: 0.8rem;
+    }
+    .contact {
+        padding: 0.6rem;
+    }
+    .contact img.avatar {
+        width: 40px;
+        height: 40px;
+        margin-right: 0.6rem;
+    }
+    .contact .contact-name {
+        font-size: 0.9rem;
+    }
+    .contact .last-message {
+        font-size: 0.75rem;
+    }
+
+    .chat-header {
+        padding: 0.6rem 0.8rem;
+    }
+    .chat-header-actions button {
+        font-size: 1.1rem;
+    }
+
+    .chat-footer {
+        padding: 0.6rem 0.8rem;
+    }
+    .chat-footer input {
+        padding: 0.6rem 0.8rem;
+        font-size: 0.85rem;
+    }
+    .chat-footer button {
+        padding: 0.6rem 1rem;
+        font-size: 0.9rem;
+    }
+    .chat-footer .attach-button,
+    .chat-footer .emoji-button {
+        font-size: 1.3rem;
+    }
+
+    .messages {
+        padding: 0.8rem;
+    }
+    .message {
+        padding: 0.6rem 0.8rem;
+        min-width: 50px;
+        max-width: 90%;
+    }
+    .timestamp {
+        font-size: 0.65rem;
     }
 }
 
