@@ -803,33 +803,51 @@ body {
     }
 
     .main-content-wrapper {
-        display: grid; /* Używamy grid dla 3 kolumn */
-        grid-template-columns: 350px 1fr 300px; /* Lewy sidebar, czat, prawy sidebar */
-        position: static; /* Resetujemy pozycjonowanie dla sidebara */
+        display: grid; /* Używamy grid dla 4 kolumn */
+        /* POPRAWKA: Zmieniono z 3 kolumn na 4, aby uwzględnić ikony nawigacji */
+        grid-template-columns: 350px 70px 1fr 300px; /* Lewy sidebar, ikony, czat, prawy sidebar */
+        position: static; /* Resetujemy pozycjonowanie */
     }
 
+    /* Upewniamy się, że każdy element zajmuje właściwą kolumnę */
     .sidebar-wrapper {
-        position: static; /* Powrót do standardowego przepływu dokumentu */
-        transform: translateX(0) !important; /* Zapewnia widoczność na desktopie */
+        grid-column: 1; /* Pierwsza kolumna */
+        position: static;
+        transform: translateX(0) !important;
         border-right: 1px solid var(--border-color);
+        /* Zapewniamy, że sidebar-wrapper zawsze jest widoczny i ma pełną wysokość,
+           gdy jest w trybie desktopowym i jest częścią gridu. */
+        display: flex; /* Zapewnia flexbox dla jego dzieci (sidebar) */
+        flex-direction: column;
+        height: 100%;
     }
 
     .main-nav-icons {
-        display: flex; /* Zawsze widoczny na desktopie */
-        flex-direction: column;
+        grid-column: 2; /* Druga kolumna */
+        display: flex !important; /* Nadpisujemy display: none z media query na mobilne */
+        flex-direction: column; /* Zapewniamy układ pionowy ikon */
+        height: 100%; /* Rozciągamy na pełną wysokość dostępną w komórce gridu */
+    }
+
+    .chat-area {
+        grid-column: 3; /* Trzecia kolumna */
+        position: static; /* Resetujemy pozycjonowanie z mobilnego, jeśli było absolute/fixed */
+        width: auto; /* Pozwalamy gridowi zarządzać szerokością */
     }
 
     .right-sidebar-wrapper {
-        display: flex; /* Zawsze widoczny na desktopie */
-    }
-
-    .chat-area.active .chat-main-view {
-        opacity: 1; /* Zawsze widoczne na desktopie, gdy jest aktywne */
+        grid-column: 4; /* Czwarta kolumna */
+        display: flex !important; /* Nadpisujemy display: none z media query na mobilne */
+        position: static;
+        border-left: 1px solid var(--border-color);
+        height: 100%; /* Rozciągamy na pełną wysokość dostępną w komórce gridu */
     }
 
     .logo-screen {
-        display: flex; /* Zawsze widoczne na desktopie, jeśli nie ma aktywnego czatu */
+        /* W trybie desktop, logoScreen powinno zawsze być na wierzchu, dopóki nie ma aktywnego czatu */
+        z-index: 10;
     }
+
 
     /* Ukryj przycisk "Wróć" na desktopie */
     .back-button {
@@ -844,8 +862,19 @@ body {
 
 /* Tryb tablet/desktop (2 kolumny) */
 @media (min-width: 768px) and (max-width: 1024px) {
+    /* Na tabletach można ukryć prawy sidebar, aby zwolnić miejsce */
     .main-content-wrapper {
-        grid-template-columns: 250px 1fr 250px; /* Węższe sidebary na tabletach */
+        grid-template-columns: 250px 1fr; /* Tylko lewy sidebar i czat */
+        /* prawy sidebar będzie ukryty */
+    }
+
+    .main-nav-icons {
+        /* Na tabletach mogą być ukryte lub przesunięte, jeśli nie ma dla nich miejsca */
+        display: none !important; /* Ukrywamy ikony na tabletach, aby skupić się na czacie */
+    }
+
+    .right-sidebar-wrapper {
+        display: none !important; /* Ukrywamy prawy sidebar na tabletach */
     }
 
     .main-header h1 {
@@ -857,10 +886,11 @@ body {
         font-size: 1.3em;
     }
 
-    .sidebar-wrapper, .right-sidebar-wrapper {
+    .sidebar-wrapper {
         max-width: none; /* Pozwól gridowi kontrolować szerokość */
     }
 }
+
 
 /* Tryb mobilny (jedna kolumna z przełączaniem) */
 @media (max-width: 768px) {
@@ -891,6 +921,9 @@ body {
         left: 0;
         transform: translateX(-100%); /* Domyślnie ukryty */
         box-shadow: var(--shadow);
+        /* Zapewniamy, że sidebar-wrapper jest flex, aby jego zawartość (sidebar) była pionowo */
+        display: flex;
+        flex-direction: column;
     }
 
     .sidebar-wrapper.visible {
