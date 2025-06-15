@@ -651,24 +651,21 @@ body {
 
 /* Opcje kolorów/tła */
 .color-options, .background-options {
-    display: flex !important; /* Wymuszamy flexbox */
-    flex-direction: row !important; /* Wymuszamy układ poziomy */
-    flex-wrap: wrap !important; /* Wymuszamy zawijanie */
-    gap: 8px !important; /* Odstęp między elementami */
+    display: grid; /* Używamy grid zamiast flex */
+    grid-template-columns: repeat(4, 1fr); /* 4 równe kolumny, aby zmieściły 4 kółka */
+    gap: 8px; /* Stały odstęp między elementami siatki */
     margin: 0.4rem 0; 
-    justify-content: flex-start; /* Wyrównanie do lewej */
     width: 100%; 
     box-sizing: border-box; 
 }
 .color-box, .bg-box {
-    width: 32px; 
-    height: 32px;
+    width: 32px; /* Stała szerokość kółek */
+    height: 32px; /* Stała wysokość kółek */
     border-radius: 50%;
     cursor: pointer;
     border: 2px solid transparent;
     transition: border-color 0.2s;
-    flex-shrink: 0 !important; /* Ważne: zapobiega kurczeniu się */
-    flex-grow: 0 !important; /* Ważne: zapobiega rozrastaniu się */
+    /* Usunięto !important z flex-shrink/grow - grid sam kontroluje rozłożenie */
 }
 
 .color-box.active, .bg-box.active {
