@@ -586,27 +586,27 @@ body {
 .chat-settings-dropdown {
     right: 0;
     top: 100%;
-    /* ZMIANA: Zmniejszamy szerokość, aby zminimalizować puste przestrzenie */
-    width: 250px; /* Nowa, bardziej kompaktowa szerokość */
-    padding: 0.6rem; /* Delikatne zmniejszenie paddingu */
+    /* ZMIANA: Jeszcze większa szerokość, aby z pewnością pomieścić 4 kółka w linii */
+    width: 280px; 
+    padding: 0.5rem; /* Zmniejszony padding, aby zaoszczędzić miejsce wewnątrz */
     border-top-right-radius: 0;
     z-index: 101;
     box-sizing: border-box;
     display: flex;
     flex-direction: column; 
-    /* ZMIANA: Zmniejszamy globalny odstęp między sekcjami w dropdownie */
-    gap: 0.2rem; /* Jeszcze mniejszy odstęp */
+    /* ZMIANA: Mniejszy odstęp między sekcjami */
+    gap: 0.2rem; 
     overflow-y: hidden; /* Upewniamy się, że nie ma scrolla */
     max-height: none; /* Pozwalamy na naturalną wysokość */
 }
 .chat-settings-dropdown h3 {
-    font-size: 0.9rem; /* Lekko mniejsza czcionka */
-    margin-bottom: 0.2rem; /* Zmniejszony margines */
+    font-size: 0.85rem; /* Mniejsza czcionka */
+    margin-bottom: 0.1rem; /* Mniejszy margines */
     color: var(--text-color-dark);
 }
 .chat-settings-dropdown .setting-group {
-    margin-bottom: 0.2rem; /* Zmniejszony margines */
-    padding-bottom: 0.2rem; /* Zmniejszony padding */
+    margin-bottom: 0.1rem; /* Mniejszy margines */
+    padding-bottom: 0.1rem; /* Mniejszy padding */
     border-bottom: 1px solid var(--border-color-light);
 }
 .chat-settings-dropdown .setting-group:last-child {
@@ -615,17 +615,17 @@ body {
     padding-bottom: 0;
 }
 .chat-settings-dropdown h4 {
-    font-size: 0.8rem; /* Lekko mniejsza czcionka */
+    font-size: 0.75rem; /* Mniejsza czcionka */
     color: var(--text-color-medium);
-    margin-bottom: 0.1rem; /* Zmniejszony margines */
+    margin-bottom: 0.05rem; /* Minimalny margines */
 }
 .chat-settings-dropdown input[type="text"] {
     width: 100%;
-    padding: 0.3rem; /* Zmniejszony padding */ 
+    padding: 0.2rem; /* Bardzo mały padding */ 
     border: 1px solid var(--border-color-medium);
     border-radius: 6px;
-    margin-bottom: 0.1rem; /* Zmniejszony margines */
-    font-size: 0.75rem; /* Zmniejszona czcionka */
+    margin-bottom: 0.05rem; /* Minimalny margines */
+    font-size: 0.7rem; /* Bardzo mała czcionka */
     background-color: var(--bg-color-search-input);
     color: var(--text-color-dark);
 }
@@ -634,10 +634,10 @@ body {
 }
 .chat-settings-dropdown button {
     width: auto;
-    padding: 0.3rem 0.6rem; /* Zmniejszony padding */ 
-    font-size: 0.8rem; /* Zmniejszona czcionka */
+    padding: 0.2rem 0.4rem; /* Bardzo mały padding */ 
+    font-size: 0.75rem; /* Bardzo mała czcionka */
     display: block;
-    margin-top: 0.1rem; /* Zmniejszony margines */
+    margin-top: 0.05rem; /* Minimalny margines */
     background: var(--primary-color);
     color: var(--text-color-light);
     border: none;
@@ -653,16 +653,16 @@ body {
 .color-options, .background-options {
     display: grid; 
     /* KLUCZOWA ZMIANA: Używamy stałej szerokości dla każdej kolumny, aby zapewnić, że się zmieszczą */
-    grid-template-columns: repeat(4, 35px); /* 4 kolumny, każda po 35px szerokości */
-    gap: 5px; /* Zmniejszony odstęp między kółkami */
-    margin: 0.1rem 0; /* Zmniejszony margines */
+    grid-template-columns: repeat(4, 28px); /* 4 kolumny, każda po 28px szerokości */
+    gap: 4px; /* Bardzo mały odstęp między kółkami */
+    margin: 0.05rem 0; /* Minimalny margines */
     width: auto; /* Pozwalamy gridowi na dopasowanie do zawartości, ale z ustalonymi kolumnami */
     box-sizing: border-box; 
     justify-content: space-around; /* Rozłóż równomiernie kółka w linii */
 }
 .color-box, .bg-box {
-    width: 30px; /* ZMIANA: Zmniejszone kółka */
-    height: 30px; /* ZMIANA: Zmniejszone kółka */
+    width: 25px; /* ZMIANA: Jeszcze bardziej zmniejszone kółka */
+    height: 25px; /* ZMIANA: Jeszcze bardziej zmniejszone kółka */
     border-radius: 50%;
     cursor: pointer;
     border: 2px solid transparent;
