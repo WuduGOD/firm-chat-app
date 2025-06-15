@@ -586,27 +586,27 @@ body {
 .chat-settings-dropdown {
     right: 0;
     top: 100%;
-    /* ZMIANA: Jeszcze większa szerokość, aby z pewnością pomieścić 4 kółka w linii */
-    width: 280px; 
-    padding: 0.5rem; /* Zmniejszony padding, aby zaoszczędzić miejsce wewnątrz */
+    /* ZMIANA: Zwiększona szerokość dropdownu */
+    width: 300px; 
+    padding: 0.6rem; /* Minimalny padding */
     border-top-right-radius: 0;
     z-index: 101;
     box-sizing: border-box;
     display: flex;
     flex-direction: column; 
     /* ZMIANA: Mniejszy odstęp między sekcjami */
-    gap: 0.2rem; 
+    gap: 0.4rem; 
     overflow-y: hidden; /* Upewniamy się, że nie ma scrolla */
     max-height: none; /* Pozwalamy na naturalną wysokość */
 }
 .chat-settings-dropdown h3 {
-    font-size: 0.85rem; /* Mniejsza czcionka */
-    margin-bottom: 0.1rem; /* Mniejszy margines */
+    font-size: 0.95rem; /* Mniejsza czcionka, ale czytelna */
+    margin-bottom: 0.2rem; 
     color: var(--text-color-dark);
 }
 .chat-settings-dropdown .setting-group {
-    margin-bottom: 0.1rem; /* Mniejszy margines */
-    padding-bottom: 0.1rem; /* Mniejszy padding */
+    margin-bottom: 0.2rem; 
+    padding-bottom: 0.2rem; 
     border-bottom: 1px solid var(--border-color-light);
 }
 .chat-settings-dropdown .setting-group:last-child {
@@ -615,17 +615,17 @@ body {
     padding-bottom: 0;
 }
 .chat-settings-dropdown h4 {
-    font-size: 0.75rem; /* Mniejsza czcionka */
+    font-size: 0.85rem; 
     color: var(--text-color-medium);
-    margin-bottom: 0.05rem; /* Minimalny margines */
+    margin-bottom: 0.1rem; 
 }
 .chat-settings-dropdown input[type="text"] {
     width: 100%;
-    padding: 0.2rem; /* Bardzo mały padding */ 
+    padding: 0.4rem; 
     border: 1px solid var(--border-color-medium);
     border-radius: 6px;
-    margin-bottom: 0.05rem; /* Minimalny margines */
-    font-size: 0.7rem; /* Bardzo mała czcionka */
+    margin-bottom: 0.2rem; 
+    font-size: 0.85rem; 
     background-color: var(--bg-color-search-input);
     color: var(--text-color-dark);
 }
@@ -634,10 +634,10 @@ body {
 }
 .chat-settings-dropdown button {
     width: auto;
-    padding: 0.2rem 0.4rem; /* Bardzo mały padding */ 
-    font-size: 0.75rem; /* Bardzo mała czcionka */
+    padding: 0.4rem 0.8rem; 
+    font-size: 0.9rem; 
     display: block;
-    margin-top: 0.05rem; /* Minimalny margines */
+    margin-top: 0.2rem; 
     background: var(--primary-color);
     color: var(--text-color-light);
     border: none;
@@ -652,17 +652,17 @@ body {
 /* Opcje kolorów/tła */
 .color-options, .background-options {
     display: grid; 
-    /* KLUCZOWA ZMIANA: Używamy stałej szerokości dla każdej kolumny, aby zapewnić, że się zmieszczą */
-    grid-template-columns: repeat(4, 28px); /* 4 kolumny, każda po 28px szerokości */
-    gap: 4px; /* Bardzo mały odstęp między kółkami */
-    margin: 0.05rem 0; /* Minimalny margines */
-    width: auto; /* Pozwalamy gridowi na dopasowanie do zawartości, ale z ustalonymi kolumnami */
+    /* KLUCZOWA ZMIANA: Stała szerokość kolumn dla kółek */
+    grid-template-columns: repeat(4, 45px); /* 4 kolumny, każda po 45px szerokości */
+    gap: 15px; /* ZWIĘKSZONY ODSTĘP między kółkami, aby lepiej wyglądały */
+    margin: 0.3rem 0; /* Odstęp od góry/dołu */
+    width: auto; /* Pozwalamy gridowi na dopasowanie do zawartości */
     box-sizing: border-box; 
-    justify-content: space-around; /* Rozłóż równomiernie kółka w linii */
+    justify-content: space-around; /* Równomierne rozłożenie kółek w linii */
 }
 .color-box, .bg-box {
-    width: 25px; /* ZMIANA: Jeszcze bardziej zmniejszone kółka */
-    height: 25px; /* ZMIANA: Jeszcze bardziej zmniejszone kółka */
+    width: 40px; /* ZWIĘKSZONE KÓŁKA */
+    height: 40px; /* ZWIĘKSZONE KÓŁKA */
     border-radius: 50%;
     cursor: pointer;
     border: 2px solid transparent;
