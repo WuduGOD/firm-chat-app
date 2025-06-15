@@ -339,7 +339,8 @@ function addMessageToChat(msg) {
 
         if (previewEl && timeEl) {
             const senderName = String(msg.username) === String(currentUser.id) ? "Ja" : (getUserLabelById(msg.username) || msg.username);
-            previewText = `${senderName}: ${msg.text}`;
+            // POPRAWKA: Zamiast przypisywać do niezadeklarowanej zmiennej, przypisz bezpośrednio do textContent
+            previewEl.textContent = `${senderName}: ${msg.text}`; 
 
             const lastMessageTime = new Date(msg.inserted_at || Date.now());
             timeEl.textContent = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
@@ -473,7 +474,10 @@ function initWebSocket() {
             }));
             console.log(`Sent 'online' status for user ${currentUser.id}`);
         }
-        // Usunięto: loadActiveUsers() jest teraz wywoływane bezpośrednio w initializeApp()
+        // WAŻNE: To wywołanie powinno być tylko tutaj w onopen,
+        // aby poprawnie zażądać listy od backendu po udanym połączeniu.
+        // Dalsze aktualizacje będą pochodzić z wiadomości 'active_users'.
+        loadActiveUsers(); 
     };
 
     socket.onmessage = (event) => {
@@ -792,42 +796,10 @@ async function initializeApp() {
     // 5. Inicjalizacja WebSocket
     initWebSocket();
 
-    // 6. NOWO DODANE: Załaduj aktywnych użytkowników od razu po inicjalizacji WebSocket
-    // Poczekaj chwilę, aby WebSocket miał szansę się otworzyć
-    // lub wywołaj loadActiveUsers w onopen WebSocket (co już jest)
-    // Bezpośrednie wywołanie tutaj zapewni, że żądanie zostanie wysłane
-    // niezależnie od tego, czy użytkownik kliknie w czat.
-    // Upewnij się, że loadActiveUsers() jest wywoływane dopiero po `socket.onopen`
-    // dla pierwszej inicjalizacji, a potem dla każdej zmiany statusu.
-    // Usuwamy loadActiveUsers z socket.onopen i zostawiamy tylko to jedno wywołanie po
-    // zainicjalizowaniu socketa.
-    socket.onopen = () => { // Sprawdź, czy ta sekcja jest wyżej, czy tu musi być powtórka
-      console.log('WebSocket połączony');
-      reconnectAttempts = 0;
-      if (currentRoom && currentUser) {
-          socket.send(JSON.stringify({
-              type: 'join',
-              name: currentUser.id,
-              room: currentRoom,
-          }));
-          console.log(`Joined room ${currentRoom} on WebSocket open.`);
-      } else {
-          console.warn("WebSocket opened but currentRoom or currentUser is not set. Cannot join room yet.");
-      }
-      if (currentUser) {
-          socket.send(JSON.stringify({
-              type: 'status',
-              user: currentUser.id,
-              online: true
-          }));
-          console.log(`Sent 'online' status for user ${currentUser.id}`);
-      }
-      // WAŻNE: To wywołanie powinno być tylko tutaj w onopen,
-      // aby poprawnie zażądać listy od backendu po udanym połączeniu.
-      // Dalsze aktualizacje będą pochodzić z wiadomości 'active_users'.
-      loadActiveUsers(); 
-    };
-
+    // 6. WAŻNE: `loadActiveUsers()` jest już wywoływane w `socket.onopen`,
+    // co zapewnia, że lista jest pobierana, gdy połączenie jest gotowe.
+    // Ponowne wywołanie tutaj nie jest konieczne i mogłoby być problematyczne,
+    // jeśli socket jeszcze się nie otworzył.
 
     // 7. Ustawienie obsługi wysyłania wiadomości
     setupSendMessage();
