@@ -16,8 +16,8 @@ let navIcons;
 
 let sidebarEl;
 let searchInput;
-let contactsListEl; // Referencja do UL
-let activeUsersContent; // NOWA ZMIENNA: Referencja do kontenera dla listy aktywnych użytkowników i komunikatu
+let contactsListEl; // Referencja do UL konwersacji
+let activeUsersContent; // Referencja do kontenera dla listy aktywnych użytkowników i komunikatu
 
 let logoScreen;
 let chatArea;
@@ -42,6 +42,7 @@ let sendButton;
 
 // Zmienne dla prawego sidebara (Aktywni Użytkownicy)
 let rightSidebar;
+let activeUsersListEl; // Referencja do UL aktywnych użytkowników
 let noActiveUsersText; // Referencja do DIV z tekstem 'Brak aktywnych użytkowników.'
 
 // Zmienne czatu
@@ -710,8 +711,8 @@ async function initializeApp() {
 
     sidebarEl = document.getElementById('sidebar');
     searchInput = sidebarEl.querySelector('.search-bar input');
-    contactsListEl = document.getElementById('activeUsersList'); // Upewnij się, że to jest UL z ID activeUsersList
-    activeUsersContent = document.getElementById('activeUsersContent'); // NOWA REFERENCJA
+    contactsListEl = document.getElementById('contactsList'); // POPRAWKA: Prawidłowa referencja do listy kontaktów
+    activeUsersContent = document.getElementById('activeUsersContent'); // REFERENCJA DO KONTENERA AKTYWNYCH UŻYTKOWNIKÓW
 
     logoScreen = document.getElementById('logoScreen');
     chatArea = document.getElementById('chatArea');
@@ -736,17 +737,18 @@ async function initializeApp() {
     sendButton = chatFooter.querySelector('#sendButton');
 
     rightSidebar = document.getElementById('rightSidebar');
-    noActiveUsersText = document.getElementById('noActiveUsersText'); // NOWA REFERENCJA
+    activeUsersListEl = document.getElementById('activeUsersList'); // Prawidłowa referencja do UL aktywnych użytkowników
+    noActiveUsersText = document.getElementById('noActiveUsersText'); 
 
     // 2. Walidacja, czy kluczowe elementy UI zostały znalezione
     if (!mainHeader || !menuButton || !dropdownMenu || !themeToggle || !logoutButton ||
         !container || !sidebarWrapper || !mainNavIcons || !navIcons.length ||
-        !sidebarEl || !searchInput || !contactsListEl || !activeUsersContent || // Dodaj activeUsersContent do walidacji
+        !sidebarEl || !searchInput || !contactsListEl || !activeUsersContent ||
         !logoScreen || !chatArea ||
         !chatHeader || !backButton || !chatUserName || !userStatusSpan || !chatHeaderActions || !chatSettingsButton || !chatSettingsDropdown || !typingStatusDiv ||
         !messageContainer || !typingIndicatorDiv ||
         !chatFooter || !attachButton || !messageInput || !emojiButton || !sendButton ||
-        !rightSidebar || !noActiveUsersText) { // Usuń activeUsersListEl stąd, bo jest już sprawdzane
+        !rightSidebar || !activeUsersListEl || !noActiveUsersText) { 
         console.error('Error: One or more critical UI elements not found. Please check your HTML selectors. Missing elements:', {
             mainHeader, menuButton, dropdownMenu, themeToggle, logoutButton,
             container, sidebarWrapper, mainNavIcons, navIcons: navIcons.length > 0,
@@ -755,7 +757,7 @@ async function initializeApp() {
             chatHeader, backButton, chatUserName, userStatusSpan, chatHeaderActions, chatSettingsButton, chatSettingsDropdown, typingStatusDiv,
             messageContainer, typingIndicatorDiv,
             chatFooter, attachButton, messageInput, emojiButton, sendButton,
-            rightSidebar, noActiveUsersText
+            rightSidebar, activeUsersListEl, noActiveUsersText
         });
         return;
     } else {

@@ -1067,20 +1067,6 @@ body {
     /* Domyślnie jest widoczny, JS go ukryje, jeśli są aktywni użytkownicy */
 }
 
-/* KLASA DO CAŁKOWITEGO UKRYCIA ELEMENTU */
-.hidden-element {
-    display: none !important;     /* Całkowicie usuwa element z przepływu dokumentu */
-    height: 0 !important;         /* Zapewnia zerową wysokość */
-    min-height: 0 !important;     /* Usuwa ewentualne minimalne wysokości */
-    max-height: 0 !important;     /* Usuwa ewentualne maksymalne wysokości */
-    overflow: hidden !important;  /* Ukrywa wszelkie przepełnienia zawartości */
-    padding: 0 !important;        /* Usuwa wszelkie paddingi */
-    margin: 0 !important;         /* Usuwa wszelkie marginesy */
-    border: 0 !important;         /* Usuwa wszelkie obramowania */
-    opacity: 0 !important;        /* Dodatkowo ustawia przezroczystość na 0 */
-    visibility: hidden !important; /* Sprawia, że element jest niewidoczny dla czytników ekranu itp. */
-}
-
 /* Dark mode overrides */
 body.dark-mode {
     --primary-color: #7f70ea;

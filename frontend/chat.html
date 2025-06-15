@@ -1,142 +1,133 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Komunikator</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <link rel="stylesheet" href="./src/style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Komunikator</title>
+    <!-- Link do Font Awesome dla ikon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Link do czcionki Inter z Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-  <header class="main-header">
-    <h1 class="app-title">🐒 Komunikator</h1>
-    <div class="user-menu">
-      <button id="menuButton" aria-haspopup="true" aria-expanded="false">
-        <i class="fas fa-bars"></i>
-      </button>
-      <div id="dropdownMenu" class="dropdown hidden">
-        <button id="themeToggle" title="Tryb dzień/noc">
-          <i class="fas fa-moon"></i> Tryb ciemny
-        </button>
-        <button id="logoutButton">Wyloguj się</button>
-      </div>
-    </div>
-  </header>
-
-  <div class="container">
-        <div class="sidebar-wrapper">
-      <div class="main-nav-icons">
-        <button class="nav-icon active" data-tooltip="Rozmowy"><i class="fas fa-comments"></i></button>
-        <button class="nav-icon" data-tooltip="Grupy"><i class="fas fa-users"></i></button>
-        <button class="nav-icon" data-tooltip="Praca"><i class="fa fa-suitcase" aria-hidden="true"></i></button>
-        <button class="nav-icon add-new-button" data-tooltip="Dodaj nowy kontakt/grupę"><i class="fas fa-plus"></i></button>
-      </div>
-      <div id="sidebar" class="conversations-list">
-        <h2>Konwersacje</h2>
-        <div class="search-bar">
-            <input type="text" placeholder="Szukaj..." />
-            <i class="fas fa-search"></i>
-        </div>
-
-        <ul id="contactsList">
-        </ul>
-      </div>
-    </div>
-
-        <div class="chat-area-wrapper">
-      <section id="logoScreen" class="logo-screen">
-        <h2>Witaj w Komunikatorze</h2>
-        <p>Wybierz kontakt z listy po lewej, aby rozpocząć rozmowę.</p>
-      </section>
-
-      <section id="chatArea" class="chat-area">
-        <header class="chat-header">
-          <button id="backButton" class="back-button"><i class="fas fa-arrow-left"></i></button>
-
-          <!-- NOWY ELEMENT WRAPUJĄCY DLA AVATARA, NICKU I STATUSU -->
-          <div class="user-info-wrapper">
-            <img src="https://i.pravatar.cc/150?img=68" alt="User Avatar" class="avatar"> <!-- PRZYKŁADOWY AVATAR, ZASTĄP WŁASNYM LUB GENERUJ DYNAMICZNIE -->
-            <div class="user-info">
-              <span id="chatUserName"></span>
-              <span id="userStatus" class="status"></span>
+    <div class="container">
+        <!-- Główny nagłówek -->
+        <header class="main-header">
+            <div class="header-left">
+                <button id="menuButton" class="menu-button" title="Menu"><i class="fas fa-bars"></i></button>
+                <h1>Komunikator</h1>
             </div>
-          </div>
-          
-          <div class="chat-header-actions right-aligned">
-            <button><i class="fas fa-video"></i></button>
-            <button><i class="fas fa-phone"></i></button>
-            <button id="chatSettingsButton"><i class="fas fa-ellipsis-v"></i></button>
-          </div>
-
-          <!-- PRZESUNIĘCIE: chatSettingsDropdown jest teraz bezpośrednim dzieckiem chat-header -->
-          <div id="chatSettingsDropdown" class="dropdown hidden chat-settings-dropdown">
-              <h3>Ustawienia czatu</h3>
-              <div class="setting-group">
-                  <h4>Motyw wiadomości:</h4>
-                  <div class="color-options">
-                      <span class="color-box default-theme active" data-color="default"></span>
-                      <span class="color-box blue-theme" data-color="blue"></span>
-                      <span class="color-box green-theme" data-color="green"></span>
-                      <span class="color-box red-theme" data-color="red"></span>
-                  </div>
-              </div>
-              <div class="setting-group">
-                  <h4>Tło czatu:</h4>
-                  <div class="background-options">
-                      <span class="bg-box default-bg active" data-bg="default"></span>
-                      <span class="bg-box dark-bg" data-bg="dark"></span>
-                      <span class="bg-box pattern-bg" data-bg="pattern"></span>
-                  </div>
-              </div>
-              <div class="setting-group">
-                  <h4>Własny nick:</h4>
-                  <input type="text" id="nicknameInput" placeholder="Nadaj nick..." />
-                  <button id="setNicknameButton">Ustaw</button>
-              </div>
-              <div class="setting-group">
-                  <h4>Wyszukaj wiadomości:</h4>
-                  <input type="text" id="messageSearchInput" placeholder="Wyszukaj w czacie..." />
-                  <button id="searchMessagesButton">Szukaj</button>
-              </div>
-          </div>
-          <div id="typingStatus" class="typing-status"></div>
+            <div class="header-right">
+                <!-- Dropdown menu -->
+                <div id="dropdownMenu" class="dropdown-menu hidden">
+                    <button id="themeToggle"><i class="fas fa-moon"></i> Tryb ciemny</button>
+                    <button id="logoutButton"><i class="fas fa-sign-out-alt"></i> Wyloguj</button>
+                </div>
+            </div>
         </header>
 
-        <div id="messageContainer" class="messages">
-        </div>
+        <!-- Sidebar i główna zawartość czatu -->
+        <div class="main-content-wrapper">
+            <!-- Lewy Sidebar (Kontakty) -->
+            <aside class="sidebar-wrapper visible">
+                <div class="sidebar" id="sidebar">
+                    <div class="search-bar">
+                        <input type="text" placeholder="Szukaj kontaktów...">
+                    </div>
+                    <ul class="contacts-list" id="contactsList">
+                        <!-- Kontakty będą ładowane dynamicznie tutaj -->
+                    </ul>
+                </div>
+            </aside>
 
-        <div class="typing-indicator hidden" id="typingIndicator">
-            <div class="dot"></div>
-            <div class="dot"></div>
-            <div class="dot"></div>
-        </div>
+            <!-- Główny obszar czatu -->
+            <main class="chat-area" id="chatArea">
+                <div id="logoScreen" class="logo-screen">
+                    <img src="https://placehold.co/200x200/cccccc/ffffff?text=Komunikator" alt="Logo Komunikatora">
+                    <h2>Witaj w Komunikatorze!</h2>
+                    <p>Wybierz kontakt z listy, aby rozpocząć czat.</p>
+                </div>
 
-        <div class="chat-footer">
-          <button class="attach-button"><i class="fas fa-paperclip"></i></button>
-          <input id="messageInput" type="text" placeholder="Wpisz wiadomość..." disabled />
-          <button class="emoji-button"><i class="fas fa-smile"></i></button>
-          <button id="sendButton" disabled>Wyślij</button>
+                <div class="chat-main-view">
+                    <div class="chat-header">
+                        <button id="backButton" class="back-button" title="Wróć">
+                            <i class="fas fa-arrow-left"></i>
+                        </button>
+                        <img src="https://placehold.co/40x40/cccccc/ffffff?text=AV" alt="Avatar" class="avatar-small">
+                        <span id="chatUserName" class="chat-user-name"></span>
+                        <span id="userStatus" class="user-status"></span>
+                        <div class="chat-header-actions">
+                            <button id="chatSettingsButton" class="chat-settings-button" title="Ustawienia czatu"><i class="fas fa-ellipsis-v"></i></button>
+                            <div id="chatSettingsDropdown" class="chat-settings-dropdown hidden">
+                                <h3>Ustawienia czatu</h3>
+                                <div class="setting-group">
+                                    <h4>Kolor wiadomości</h4>
+                                    <div class="color-options">
+                                        <div class="color-box default" data-color="default" title="Domyślny"></div>
+                                        <div class="color-box blue" data-color="blue" title="Niebieski"></div>
+                                        <div class="color-box green" data-color="green" title="Zielony"></div>
+                                        <div class="color-box red" data-color="red" title="Czerwony"></div>
+                                    </div>
+                                </div>
+                                <div class="setting-group">
+                                    <h4>Tło czatu</h4>
+                                    <div class="bg-options">
+                                        <div class="bg-box default" data-bg="default" title="Domyślne"></div>
+                                        <div class="bg-box dark-bg" data-bg="dark-bg" title="Ciemne tło"></div>
+                                        <div class="bg-box pattern-bg" data-bg="pattern-bg" title="Wzorzyste tło"></div>
+                                    </div>
+                                </div>
+                                <div class="setting-group">
+                                    <h4>Ustawienia profilu</h4>
+                                    <input type="text" id="nicknameInput" placeholder="Nowy nick">
+                                    <button id="setNicknameButton">Ustaw nick</button>
+                                </div>
+                                <div class="setting-group">
+                                    <h4>Wyszukiwanie wiadomości</h4>
+                                    <input type="text" id="messageSearchInput" placeholder="Szukaj w wiadomościach...">
+                                    <button id="searchMessagesButton">Szukaj</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="typingStatus" class="typing-status hidden">
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                    </div>
+                    <div class="message-container" id="messageContainer">
+                        <!-- Wiadomości będą ładowane dynamicznie tutaj -->
+                    </div>
+                    <div class="chat-footer">
+                        <button class="attach-button" title="Załącz plik"><i class="fas fa-paperclip"></i></button>
+                        <input type="text" id="messageInput" placeholder="Napisz wiadomość...">
+                        <button class="emoji-button" title="Wstaw emoji"><i class="fas fa-smile"></i></button>
+                        <button class="send-button" id="sendButton" title="Wyślij"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Prawy Sidebar (Aktywni Użytkownicy) -->
+            <aside class="right-sidebar-wrapper">
+                <div class="right-sidebar" id="rightSidebar">
+                    <h4>Aktywni użytkownicy</h4>
+                    <!-- Kontener dla listy i komunikatu -->
+                    <div id="activeUsersContent">
+                        <ul class="active-users-list" id="activeUsersList">
+                            <!-- Aktywni użytkownicy będą ładowani dynamicznie tutaj -->
+                        </ul>
+                        <!-- Komunikat o braku aktywnych użytkowników - początkowo ukryty -->
+                        <div id="noActiveUsersText" style="display: none; text-align: center; color: var(--text-color-medium); font-size: 0.9em; margin-top: 10px;">Brak aktywnych użytkowników.</div>
+                    </div>
+                </div>
+            </aside>
         </div>
-      </section>
     </div>
-
-	<aside class="right-sidebar-wrapper">
-		<div class="right-sidebar" id="rightSidebar">
-			<h4>Aktywni użytkownicy</h4>
-			<!-- NOWY ELEMENT OWIJAJĄCY LISTĘ I KOMUNIKAT -->
-			<div id="activeUsersContent">
-				<ul class="active-users-list" id="activeUsersList">
-                <!-- Tutaj będą dynamicznie dodawane aktywne osoby -->
-				</ul>
-				<!-- WAŻNA ZMIANA: Dodaj styl display: none; na początku -->
-				<div id="noActiveUsersText" style="display: none; text-align: center; color: var(--text-color-medium); font-size: 0.9em; margin-top: 10px;">Brak aktywnych użytkowników.</div>
-			</div>
-		</div>
-	</aside>
-  </div>
-
-  <script type="module" src="./src/chat-entry.js"></script>
-
+    
+    <!-- Moduły JavaScript -->
+    <script type="module" src="supabaseClient.js"></script>
+    <script type="module" src="profiles.js"></script>
+    <script type="module" src="chat-entry.js"></script>
 </body>
 </html>
