@@ -586,27 +586,27 @@ body {
 .chat-settings-dropdown {
     right: 0;
     top: 100%;
-    /* KLUCZOWA ZMIANA: Zwiększona szerokość, aby pomieścić elementy poziomo */
-    width: 180px; /* Szerokość dobrana tak, aby pomieścić 3-4 kółka z odstępami */
-    min-width: 180px;
-    max-width: 200px; /* Lekkie ograniczenie, aby nie było za szeroko */
-    padding: 0.6rem; /* Odpowiedni padding */
+    /* ZNACZĄCO ZWIĘKSZAMY SZEROKOŚĆ, aby zapewnić miejsce na poziome ułożenie 4 elementów */
+    width: 220px; /* Teraz powinno być wystarczająco szeroko */
+    min-width: 220px;
+    max-width: 250px; /* Zwiększam max-width dla większej elastyczności */
+    padding: 0.8rem; /* Zwiększam padding, aby okienko nie było za ciasne */
     border-top-right-radius: 0;
     z-index: 101;
     box-sizing: border-box;
     display: flex;
     flex-direction: column; /* Układ głównych sekcji (nagłówki, inputy) nadal pionowy */
-    gap: 0.5rem; /* Odstęp między głównymi sekcjami */
-    overflow: visible; /* Zostawiamy visible, żeby paski przewijania się nie pojawiały, jeśli nie ma potrzeby */
+    gap: 0.6rem; /* Odstęp między głównymi sekcjami */
+    overflow: visible; 
 }
 .chat-settings-dropdown h3 {
-    font-size: 1rem; /* Przywracamy nieco większą czcionkę */
-    margin-bottom: 0.4rem;
+    font-size: 1.05rem; /* Lekko większa czcionka dla lepszej czytelności */
+    margin-bottom: 0.5rem;
     color: var(--text-color-dark);
 }
 .chat-settings-dropdown .setting-group {
-    margin-bottom: 0.4rem;
-    padding-bottom: 0.4rem;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
     border-bottom: 1px solid var(--border-color-light);
 }
 .chat-settings-dropdown .setting-group:last-child {
@@ -615,16 +615,16 @@ body {
     padding-bottom: 0;
 }
 .chat-settings-dropdown h4 {
-    font-size: 0.9rem; /* Przywracamy nieco większą czcionkę */
+    font-size: 0.95rem; /* Lekko większa czcionka */
     color: var(--text-color-medium);
-    margin-bottom: 0.2rem;
+    margin-bottom: 0.3rem;
 }
 .chat-settings-dropdown input[type="text"] {
     width: 100%;
-    padding: 0.5rem; /* Przywracamy nieco większy padding */
+    padding: 0.6rem; 
     border: 1px solid var(--border-color-medium);
     border-radius: 6px;
-    margin-bottom: 0.3rem;
+    margin-bottom: 0.4rem;
     font-size: 0.9rem;
     background-color: var(--bg-color-search-input);
     color: var(--text-color-dark);
@@ -634,10 +634,10 @@ body {
 }
 .chat-settings-dropdown button {
     width: auto;
-    padding: 0.5rem 1rem; /* Przywracamy nieco większy padding */
-    font-size: 0.9rem;
+    padding: 0.6rem 1.2rem; 
+    font-size: 0.95rem;
     display: block;
-    margin-top: 0.3rem;
+    margin-top: 0.4rem;
     background: var(--primary-color);
     color: var(--text-color-light);
     border: none;
@@ -652,25 +652,36 @@ body {
 /* Opcje kolorów/tła */
 .color-options, .background-options {
     display: flex;
-    flex-direction: row; /* Wymuszamy układ poziomy */
-    flex-wrap: wrap; /* Pozwalamy na zawijanie, gdy braknie miejsca */
-    gap: 0.4rem; /* Odstęp między kółkami */
-    margin-top: 0.4rem;
+    flex-direction: row; /* KLUCZOWE: Wymuszamy układ poziomy */
+    flex-wrap: wrap; /* KLUCZOWE: Pozwalamy na zawijanie, jeśli zabraknie miejsca */
+    /* ZASTĘPUJEMY 'gap' TRADYCYJNYM MARGINESEM DLA LEPSZEJ KONTROLI */
+    margin: 0.4rem 0; /* Mały margines góra/dół */
     justify-content: flex-start; /* Wyrównanie do lewej */
-    width: 100%; /* Ważne, aby kontener wypełnił dostępną szerokość */
-    box-sizing: border-box; /* Zapewnia, że padding i border nie zwiększają szerokości */
+    width: 100%; /* Zapewniamy, że kontener wypełnia dostępną szerokość */
+    box-sizing: border-box; 
 }
 .color-box, .bg-box {
-    width: 28px; /* Przywracamy nieco większy rozmiar kółek */
-    height: 28px;
+    width: 32px; /* Zwiększam rozmiar kółek, żeby były bardziej widoczne */
+    height: 32px;
     border-radius: 50%;
     cursor: pointer;
     border: 2px solid transparent;
     transition: border-color 0.2s;
-    flex-shrink: 0; /* Zapobiega kurczeniu się */
-    flex-grow: 0; /* Zapobiega rozrastaniu się */
-    /* Usunięto flex-basis: auto; tutaj, aby rely na width/height i gap */
+    flex-shrink: 0; 
+    flex-grow: 0; 
+    margin-right: 8px; /* ODSTĘP MIĘDZY KÓŁKAMI - WYNOSI 8px */
+    margin-bottom: 8px; /* ODSTĘP PIONOWY PRZY ZAWINIĘCIU - WYNOSI 8px */
 }
+.color-box:last-child, .bg-box:last-child {
+    margin-right: 0; /* Usuwamy margines z ostatniego elementu w rzędzie */
+}
+/* Selektor dla ostatniego elementu w rzędzie, jeśli znamy ich liczbę (np. 4) */
+.color-options .color-box:nth-child(4n),
+.background-options .bg-box:nth-child(4n) {
+    margin-right: 0; /* Resetuj margin-right dla 4. elementu w rzędzie, jeśli chcemy 4 na linię */
+}
+
+
 .color-box.active, .bg-box.active {
     border-color: var(--primary-color);
 }
