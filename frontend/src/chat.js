@@ -404,46 +404,52 @@ function setupSendMessage() {
  * Adds a message to the chat view and updates the conversation preview in the list.
  * @param {Object} msg - The message object.
  */
-function addMessageToChat(msg) {
+async function addMessageToChat(msg) { // Changed to async
     console.log("Adding message to UI:", msg);
     console.log("Room comparison: msg.room =", msg.room, ", currentRoom =", currentRoom);
 
     // Find the conversation item by room ID to update last-message and timestamp
-    const convoItemToUpdate = contactsListEl.querySelector(`.contact[data-room-id="${msg.room}"]`);
+    let convoItemToUpdate = contactsListEl.querySelector(`.contact[data-room-id="${msg.room}"]`);
 
-    if (convoItemToUpdate) {
-        const previewEl = convoItemToUpdate.querySelector('.last-message');
-        const timeEl = convoItemToUpdate.querySelector('.message-time'); // Użyj .message-time zgodnie z HTML
-
-        if (previewEl && timeEl) {
-            const senderName = String(msg.username) === String(currentUser.id) ? "Ja" : (getUserLabelById(msg.username) || msg.username);
-            // Bezpośrednia aktualizacja textContent na elemencie DOM
-            previewEl.textContent = `${senderName}: ${msg.text}`; // Użyj textContent, nie innerHTML dla bezpieczeństwa
-
-            const lastMessageTime = new Date(msg.inserted_at);
-            timeEl.textContent = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+    // If the conversation item is not found, it means it's a new conversation or the contacts list is outdated.
+    // In this case, reload all contacts to ensure the new conversation appears and the list is sorted.
+    if (!convoItemToUpdate) {
+        console.warn(`Conversation item for room ${msg.room} not found. Reloading contacts.`);
+        await loadContacts(); // Re-load all contacts, this will re-render and sort them
+        // After reloading, try to find the conversation item again
+        convoItemToUpdate = contactsListEl.querySelector(`.contact[data-room-id="${msg.room}"]`);
+        if (!convoItemToUpdate) {
+            console.error(`Conversation item for room ${msg.room} still not found after reloading contacts. Cannot update UI.`);
+            return; // Exit if still not found
         }
+    }
 
-        // Move the item to the top to reflect most recent activity
-        contactsListEl.prepend(convoItemToUpdate);
-        console.log(`Moved conversation for room ${msg.room} to top.`);
+    // Now that we're sure convoItemToUpdate exists (or we've exited), proceed with updates
+    const previewEl = convoItemToUpdate.querySelector('.last-message');
+    const timeEl = convoItemToUpdate.querySelector('.message-time');
 
-        // Increment unread count ONLY if the message is for a DIFFERENT room AND it's not from the current user (sent by self)
-        if (msg.room !== currentRoom && String(msg.username) !== String(currentUser.id)) {
-            const unreadCountEl = convoItemToUpdate.querySelector('.unread-count');
-            if (unreadCountEl) {
-                let currentUnread = parseInt(unreadCountEl.textContent, 10);
-                if (isNaN(currentUnread)) currentUnread = 0;
-                unreadCountEl.textContent = currentUnread + 1;
-                unreadCountEl.classList.remove('hidden'); // Make unread count visible
-                console.log(`Unread count for room ${msg.room} incremented to: ${unreadCountEl.textContent}`);
-            }
+    if (previewEl && timeEl) {
+        const senderName = String(msg.username) === String(currentUser.id) ? "Ja" : (getUserLabelById(msg.username) || msg.username);
+        previewEl.textContent = `${senderName}: ${msg.text}`;
+
+        const lastMessageTime = new Date(msg.inserted_at);
+        timeEl.textContent = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+    }
+
+    // Move the item to the top to reflect most recent activity
+    contactsListEl.prepend(convoItemToUpdate);
+    console.log(`Moved conversation for room ${msg.room} to top.`);
+
+    // Increment unread count ONLY if the message is for a DIFFERENT room AND it's not from the current user (sent by self)
+    if (msg.room !== currentRoom && String(msg.username) !== String(currentUser.id)) {
+        const unreadCountEl = convoItemToUpdate.querySelector('.unread-count');
+        if (unreadCountEl) {
+            let currentUnread = parseInt(unreadCountEl.textContent, 10);
+            if (isNaN(currentUnread)) currentUnread = 0;
+            unreadCountEl.textContent = currentUnread + 1;
+            unreadCountEl.classList.remove('hidden'); // Make unread count visible
+            console.log(`Unread count for room ${msg.room} incremented to: ${unreadCountEl.textContent}`);
         }
-    } else {
-        console.warn(`Conversation item for room ${msg.room} not found. Cannot update preview or unread count.`);
-        // If a message arrives for a contact not currently loaded (e.g., a new contact),
-        // we might need to trigger a full `loadContacts()` or add a new entry.
-        // For now, we just log a warning.
     }
 
     // Display message in the active chat only if it belongs to the current room
@@ -489,7 +495,7 @@ function updateUserStatusIndicator(userId, isOnline) {
             userStatusSpan.classList.toggle('offline', !isOnline);
             console.log(`[Status Update Debug] Chat header status updated for ${getUserLabelById(userId)} to: ${isOnline ? 'Online' : 'Offline'}`);
         } else {
-            console.log(`[Status Update Debug] userId ${userId} does not match currentChatUser.id ${currentChatUser.id}. Header not updated.`);
+            console.log("[Status Update Debug] userId " + userId + " does not match currentChatUser.id " + currentChatUser.id + ". Header not updated.");
         }
     } else {
         console.log("[Status Update Debug] currentChatUser or userStatusSpan is null/undefined. Cannot update header.");
