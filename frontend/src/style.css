@@ -114,7 +114,7 @@ body {
     padding: 0.5rem;
     border-radius: 6px;
     box-shadow: var(--shadow-medium);
-    z-index: 100;
+    z-index: 1000; /* Zwiększono z-index, aby było na wierzchu */
     min-width: 180px;
     display: flex;
     flex-direction: column;
