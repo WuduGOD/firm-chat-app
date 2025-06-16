@@ -603,9 +603,9 @@ function updateUserStatusIndicator(userId, isOnline) {
                     if (userProfile) {
                         // Stwórz mockowy element clickedConvoItemElement
                         const mockConvoItem = document.createElement('li');
-                        mockConvoItem.dataset.convoId = userId;
+                        mockConvoItem.dataset.convoId = user.id; // Corrected: use user.id from the current loop
                         mockConvoItem.dataset.email = userProfile.email;
-                        mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(userId));
+                        mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(user.id)); // Corrected: use user.id
                         handleConversationClick(userProfile, mockConvoItem);
                     }
                 });
@@ -828,9 +828,9 @@ function displayActiveUsers(activeUsersData) {
                 const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(user.id));
                 if (userProfile) {
                     const mockConvoItem = document.createElement('li');
-                    mockConvoItem.dataset.convoId = userId;
+                    mockConvoItem.dataset.convoId = user.id; // Corrected: use user.id from the current loop
                     mockConvoItem.dataset.email = userProfile.email;
-                    mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(user.id));
+                    mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(user.id)); // Corrected: use user.id
                     handleConversationClick(userProfile, mockConvoItem);
                 }
             });
