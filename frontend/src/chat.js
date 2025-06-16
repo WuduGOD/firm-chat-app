@@ -437,13 +437,17 @@ async function addMessageToChat(msg) { // Changed to async
     const timeEl = convoItemToUpdate.querySelector('.message-time');
     const unreadCountEl = convoItemToUpdate.querySelector('.unread-count'); // Get reference here once
 
+    // ZMIANA TUTAJ: Deklaracja previewText na początku funkcji
+    let previewText = "Brak wiadomości"; 
+
     if (previewEl && timeEl) {
         const senderId = String(msg.username);
         const senderName = senderId === String(currentUser.id) ? "Ja" : (getUserLabelById(senderId) || senderId);
-        previewText = `${senderName}: ${msg.text}`;
+        previewText = `${senderName}: ${msg.text}`; // Przypisanie wartości, zmienna już zadeklarowana
         const lastMessageTime = new Date(msg.inserted_at);
         timeEl.textContent = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
-        console.log(`Updated preview and time for room ${msg.room}. Preview: "${previewText}"`);
+        console.log(`Updated preview and time for room ${msg.room}. Preview: "${previewText}"`); 
+        previewEl.textContent = previewText; // Upewnij się, że tekst jest ustawiony na elemencie
     } else {
         console.warn(`Could not find previewEl or timeEl for room ${msg.room}.`);
     }
@@ -1142,7 +1146,7 @@ async function initializeApp() {
         event.stopPropagation(); // Prevent event bubbling
         dropdownMenu.classList.toggle('hidden'); // Toggle main dropdown
 
-        // USUNIĘTO: Ta linia powodowała ukrywanie sidebara na mobile przy kliknięciu menu.
+        // USUNIĘTO: Ta linia powodowała ukrywanie sidebara na mobile pri kliknięciu menu.
         // if (window.matchMedia('(max-width: 768px)').matches) {
         //     if (!chatAreaWrapper.classList.contains('active-on-mobile')) {
         //         if (sidebarWrapper) {
