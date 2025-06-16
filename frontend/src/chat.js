@@ -255,7 +255,7 @@ async function loadContacts() {
  * @param {HTMLElement} clickedConvoItemElement - The clicked list item element.
  */
 async function handleConversationClick(user, clickedConvoItemElement) {
-    console.log('Conversation item clicked, user:', user);
+    console.log('[handleConversationClick] Conversation item clicked for user:', user.email);
 
     // Deactivate previously active conversation item
     if (currentActiveConvoItem) {
@@ -263,6 +263,16 @@ async function handleConversationClick(user, clickedConvoItemElement) {
     }
     clickedConvoItemElement.classList.add('active'); // Activate clicked item
     currentActiveConvoItem = clickedConvoItemElement;
+
+    // KROK 1: Wyślij wiadomość 'leave' dla poprzedniego pokoju, jeśli istnieje i jest różny od nowego
+    if (socket && socket.readyState === WebSocket.OPEN && currentRoom && currentRoom !== 'global') {
+        socket.send(JSON.stringify({
+            type: 'leave',
+            name: currentUser.id,
+            room: currentRoom // Opuszczamy poprzedni pokój
+        }));
+        console.log(`[handleConversationClick] Sent LEAVE message for room: ${currentRoom}`);
+    }
 
     resetChatView(); // Reset the chat display before loading new conversation
 
@@ -273,7 +283,7 @@ async function handleConversationClick(user, clickedConvoItemElement) {
     };
     const newRoom = getRoomName(String(currentUser.id), String(currentChatUser.id));
     currentRoom = newRoom; // Ustaw globalną zmienną currentRoom
-    console.log(`Starting chat with ${currentChatUser.username}, room ID: ${currentRoom}`);
+    console.log(`[handleConversationClick] New chat session initiated. User: ${currentChatUser.username}, Setting currentRoom to: ${currentRoom}`);
 
     if (chatUserName && messageInput && sendButton && userStatusSpan) {
         chatUserName.textContent = currentChatUser.username;
@@ -282,7 +292,7 @@ async function handleConversationClick(user, clickedConvoItemElement) {
         userStatusSpan.textContent = isUserOnline ? 'Online' : 'Offline';
         userStatusSpan.classList.toggle('online', isUserOnline); 
         userStatusSpan.classList.toggle('offline', !isUserOnline); 
-        console.log(`Initial status for active chat user ${currentChatUser.username} (from onlineUsers map): ${isUserOnline ? 'Online' : 'Offline'}`);
+        console.log(`[handleConversationClick] Initial status for active chat user ${currentChatUser.username} (from onlineUsers map): ${isUserOnline ? 'Online' : 'Offline'}`);
 
         messageInput.disabled = false;
         sendButton.disabled = false;
@@ -334,16 +344,16 @@ async function handleConversationClick(user, clickedConvoItemElement) {
         unreadCount.classList.add('hidden');
     }
 
-    // Dołącz do nowego pokoju na serwerze WebSocket
+    // KROK 2: Dołącz do nowego pokoju na serwerze WebSocket
     if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({
             type: 'join',
             name: currentUser.id,
             room: currentRoom, // Teraz wysyłamy konkretny pokój czatu
         }));
-        console.log(`Sent join message to WebSocket for room: ${currentRoom}`);
+        console.log(`[handleConversationClick] Sent JOIN message to WebSocket for room: ${currentRoom}`);
     } else {
-        console.warn("WebSocket not open, attempting to re-initialize and join on open.");
+        console.warn("[handleConversationClick] WebSocket not open, attempting to re-initialize. JOIN message will be sent on 'open' event.");
         initWebSocket(); // Re-initialize WebSocket if not open, join on 'open' event
     }
 }
@@ -376,7 +386,7 @@ function setupSendMessage() {
             return;
         }
         if (!currentRoom) {
-            console.error("Cannot send message: currentRoom is not set.");
+            console.error("Cannot send message: currentRoom is not set. Please select a contact first.");
             return;
         }
 
@@ -388,7 +398,7 @@ function setupSendMessage() {
             inserted_at: new Date().toISOString()
         };
 
-        console.log("Sending message via WS:", msgData);
+        console.log("[setupSendMessage] Sending message via WS:", msgData);
         socket.send(JSON.stringify(msgData)); 
         
         // Przenieś konwersację na górę dla wysłanych wiadomości
@@ -417,19 +427,18 @@ function setupSendMessage() {
  * @param {Object} msg - The message object.
  */
 async function addMessageToChat(msg) { 
-    console.log("addMessageToChat called for msg:", msg);
-    console.log("Current active room (currentRoom global variable):", currentRoom);
+    console.log(`[addMessageToChat] Processing message: sender=${msg.username}, room=${msg.room}. Global currentRoom (active chat): ${currentRoom}`);
 
     let convoItemToUpdate = contactsListEl.querySelector(`.contact[data-room-id="${msg.room}"]`);
-    console.log("Initial convoItemToUpdate found:", !!convoItemToUpdate ? "Yes" : "No");
+    console.log("[addMessageToChat] convoItemToUpdate found:", !!convoItemToUpdate ? "Yes" : "No", `for room ${msg.room}`);
 
     if (!convoItemToUpdate) {
-        console.warn(`Conversation item for room ${msg.room} not found initially. This might be a new conversation or an out-of-sync list. Reloading contacts...`);
+        console.warn(`[addMessageToChat] Conversation item for room ${msg.room} not found initially. Reloading contacts to sync list.`);
         await loadContacts(); 
         convoItemToUpdate = contactsListEl.querySelector(`.contact[data-room-id="${msg.room}"]`);
-        console.log("convoItemToUpdate found after loadContacts:", !!convoItemToUpdate ? "Yes" : "No");
+        console.log("[addMessageToChat] convoItemToUpdate found AFTER loadContacts:", !!convoItemToUpdate ? "Yes" : "No", `for room ${msg.room}`);
         if (!convoItemToUpdate) { 
-            console.error(`Conversation item for room ${msg.room} still NOT found after reloading contacts. Cannot update UI.`);
+            console.error(`[addMessageToChat] Conversation item for room ${msg.room} still NOT found after reloading contacts. Cannot update UI.`);
             return; 
         }
     }
@@ -446,10 +455,10 @@ async function addMessageToChat(msg) {
         previewText = `${senderName}: ${msg.text}`; 
         const lastMessageTime = new Date(msg.inserted_at);
         timeEl.textContent = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
-        console.log(`Updated preview and time for room ${msg.room}. Preview: "${previewText}"`); 
+        console.log(`[addMessageToChat] Updated preview and time for room ${msg.room}. Preview: "${previewText}"`); 
         previewEl.textContent = previewText; 
     } else {
-        console.warn(`Could not find previewEl or timeEl for room ${msg.room}.`);
+        console.warn(`[addMessageToChat] Could not find previewEl or timeEl for room ${msg.room}. Preview/time not updated.`);
     }
 
     // Increment unread count ONLY if the message is for a DIFFERENT room AND it's not from the current user (sent by self)
@@ -459,21 +468,22 @@ async function addMessageToChat(msg) {
             if (isNaN(currentUnread)) currentUnread = 0;
             unreadCountEl.textContent = currentUnread + 1;
             unreadCountEl.classList.remove('hidden'); 
-            console.log(`Unread count for room ${msg.room} incremented to: ${unreadCountEl.textContent}`);
+            console.log(`[addMessageToChat] Unread count for room ${msg.room} incremented to: ${unreadCountEl.textContent}`);
         } else {
-            console.warn(`Could not find unreadCountEl for room ${msg.room}.`);
+            console.warn(`[addMessageToChat] Could not find unreadCountEl for room ${msg.room}. Unread count not updated.`);
         }
     } else if (String(msg.username) === String(currentUser.id) || msg.room === currentRoom) {
-        console.log("Message is from current user OR for the active room. Ensuring unread count is hidden.");
+        console.log(`[addMessageToChat] Message is from current user (${String(msg.username) === String(currentUser.id)}) OR for the active room (${msg.room === currentRoom}). Ensuring unread count is hidden.`);
         if (unreadCountEl) {
             unreadCountEl.textContent = '0';
             unreadCountEl.classList.add('hidden');
         }
     } else {
-        console.log("Unhandled unread count scenario for room:", msg.room, "currentRoom:", currentRoom, "msg.username:", msg.username, "currentUser.id:", currentUser.id);
+        console.log("[addMessageToChat] Unhandled unread count scenario. room:", msg.room, "currentRoom:", currentRoom, "msg.username:", msg.username, "currentUser.id:", currentUser.id);
     }
 
     // Display message in the active chat only if it belongs to the current room
+    console.log(`[addMessageToChat Display Check] Comparing msg.room (${msg.room}) with currentRoom (${currentRoom}). Match: ${msg.room === currentRoom}`);
     if (msg.room === currentRoom) { 
         const div = document.createElement('div');
         div.classList.add('message', String(msg.username) === String(currentUser.id) ? 'sent' : 'received');
@@ -488,12 +498,12 @@ async function addMessageToChat(msg) {
         if (messageContainer) {
             messageContainer.appendChild(div);
             messageContainer.scrollTop = messageContainer.scrollHeight; 
-            console.log(`Message displayed in active chat for room: ${msg.room}`);
+            console.log(`[addMessageToChat] Message displayed in active chat for room: ${msg.room}`);
         } else {
-            console.error("messageContainer is null when trying to add message to active chat.");
+            console.error("[addMessageToChat] messageContainer is null when trying to add message to active chat.");
         }
     } else {
-        console.log("Message is not for the active room, not adding to chat view (but sidebar updated).");
+        console.log(`[addMessageToChat] Message is NOT for the active room (${currentRoom}), not adding to chat view. (Sidebar updated for room: ${msg.room})`);
     }
 }
 
@@ -646,14 +656,14 @@ function initWebSocket() {
     const wsUrl = import.meta.env.VITE_CHAT_WS_URL || "wss://firm-chat-app-backend.onrender.com";
 
     if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
-        console.log("WebSocket connection already open or connecting.");
+        console.log("[initWebSocket] WebSocket connection already open or connecting. Skipping new connection attempt.");
         return;
     }
 
     socket = new WebSocket(wsUrl);
 
     socket.onopen = () => {
-        console.log('WebSocket connected');
+        console.log('[initWebSocket] WebSocket connected successfully.');
         reconnectAttempts = 0; 
         if (currentUser) { 
             // ZAWSZE dołączamy do "global" pokoju po otwarciu WS
@@ -662,7 +672,7 @@ function initWebSocket() {
                 name: currentUser.id,
                 room: 'global', // Dołącz do globalnego pokoju dla statusów i ogólnego bycia "online"
             }));
-            console.log(`Sent global join message to WebSocket for user: ${currentUser.id}`);
+            console.log(`[initWebSocket] Sent global JOIN message for user: ${currentUser.id}`);
 
             // Wyślij status "online" po podłączeniu
             socket.send(JSON.stringify({
@@ -670,9 +680,19 @@ function initWebSocket() {
                 user: currentUser.id,
                 online: true
             }));
-            console.log(`Sent 'online' status for user ${currentUser.id}`);
+            console.log(`[initWebSocket] Sent 'online' status for user ${currentUser.id}`);
+
+            // Jeśli użytkownik był w trakcie czatu i WebSocket się rozłączył/ponownie połączył, dołącz ponownie do ostatniego pokoju
+            if (currentRoom && currentRoom !== 'global') {
+                socket.send(JSON.stringify({
+                    type: 'join',
+                    name: currentUser.id,
+                    room: currentRoom
+                }));
+                console.log(`[initWebSocket] Re-joining previous room (${currentRoom}) after reconnection.`);
+            }
         } else {
-            console.warn("WebSocket opened but currentUser is not set. Cannot join room yet.");
+            console.warn("[initWebSocket] WebSocket opened but currentUser is not set. Cannot join room yet.");
         }
         // Request active users list after successful connection
         loadActiveUsers();
@@ -680,7 +700,7 @@ function initWebSocket() {
 
     socket.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        console.log('Received via WS (full data object):', data);
+        console.log(`[WS MESSAGE] Incoming message: type=${data.type}, room=${data.room}. Current client room (currentRoom global var): ${currentRoom}`);
 
         switch (data.type) {
             case 'message':
@@ -700,38 +720,40 @@ function initWebSocket() {
                 }
                 break;
             case 'typing':
+                console.log(`[WS MESSAGE] Received typing from ${data.username} in room ${data.room}.`);
                 showTypingIndicator(data.username);
                 break;
             case 'history':
-                console.log("Loading message history. History room:", data.room, "Current room:", currentRoom);
+                console.log(`[WS MESSAGE] Loading message history for room: ${data.room}. Global currentRoom: ${currentRoom}`);
                 if (messageContainer) {
-                    messageContainer.innerHTML = ''; 
-                    data.messages.forEach((msg) => addMessageToChat(msg)); 
+                    messageContainer.innerHTML = ''; // Clear current messages
+                    data.messages.forEach((msg) => addMessageToChat(msg)); // Add historical messages
+                    messageContainer.scrollTop = messageContainer.scrollHeight; // Scroll to bottom after history loads
                 }
                 break;
             case 'status':
-                console.log(`Received status update for user ${data.user}: ${data.online ? 'online' : 'offline'}`);
+                console.log(`[WS MESSAGE] Received status update for user ${data.user}: ${data.online ? 'online' : 'offline'}`);
                 updateUserStatusIndicator(data.user, data.online);
                 break;
             case 'active_users':
-                console.log('Received initial active users list:', data.users);
+                console.log('[WS MESSAGE] Received initial active users list:', data.users);
                 displayActiveUsers(data.users); 
                 break;
             default:
-                console.warn("Unknown WS message type:", data.type, data);
+                console.warn("[WS MESSAGE] Unknown WS message type:", data.type, data);
         }
     };
 
     socket.onclose = (event) => {
-        console.log('WebSocket disconnected. Code:', event.code, 'Reason:', event.reason);
+        console.log(`[initWebSocket] WebSocket disconnected. Code: ${event.code}, Reason: ${event.reason}`);
         if (event.code !== 1000) { 
-            console.log('Attempting to reconnect...');
+            console.log('[initWebSocket] Attempting to reconnect...');
             setTimeout(initWebSocket, Math.min(1000 * ++reconnectAttempts, 10000)); 
         }
     };
 
     socket.onerror = (error) => {
-        console.error('WebSocket Error:', error);
+        console.error('[initWebSocket] WebSocket Error:', error);
         if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
             socket.close(); 
         }
@@ -742,17 +764,17 @@ function initWebSocket() {
  * Loads and displays the list of active users in the right sidebar.
  */
 async function loadActiveUsers() {
-    console.log("Loading active users for right sidebar and mobile...");
+    console.log("[loadActiveUsers] Loading active users for right sidebar and mobile...");
     if (!activeUsersListEl || !noActiveUsersText || !onlineUsersMobile) {
-        console.error("Critical active user list elements not found, cannot load active users.");
+        console.error("[loadActiveUsers] Critical active user list elements not found, cannot load active users.");
         return;
     }
 
     if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({ type: 'get_active_users' }));
-        console.log("Requested active users list from WebSocket server.");
+        console.log("[loadActiveUsers] Requested active users list from WebSocket server.");
     } else {
-        console.warn("WebSocket not open, cannot request active users.");
+        console.warn("[loadActiveUsers] WebSocket not open, cannot request active users.");
     }
 }
 
@@ -761,7 +783,10 @@ async function loadActiveUsers() {
  * @param {Array<Object>} activeUsersData - An array of active user objects.
  */
 function displayActiveUsers(activeUsersData) {
-    if (!activeUsersListEl || !noActiveUsersText || !onlineUsersMobile) return;
+    if (!activeUsersListEl || !noActiveUsersText || !onlineUsersMobile) {
+        console.error("[displayActiveUsers] Missing UI elements for displaying active users.");
+        return;
+    }
 
     activeUsersListEl.innerHTML = ''; 
     onlineUsersMobile.innerHTML = ''; 
@@ -1033,11 +1058,11 @@ async function initializeApp() {
 
     window.addEventListener('beforeunload', () => {
         if (socket && socket.readyState === WebSocket.OPEN && currentUser) {
-            console.log(`Sending 'leave' signal for user ${currentUser.id} before unload.`);
+            console.log(`[App] Sending 'leave' signal for user ${currentUser.id} before unload.`);
             socket.send(JSON.stringify({
                 type: 'leave',
                 name: currentUser.id,
-                room: currentRoom || 'global' // Wyślij ostatni znany pokój lub 'global'
+                room: currentRoom || 'global' 
             }));
         }
     });
@@ -1054,16 +1079,16 @@ async function initializeApp() {
     sendButton.disabled = true;
 
     backButton.addEventListener('click', () => {
-        console.log('Back button clicked (UI)');
+        console.log('[Back Button] Back button clicked (UI)');
         
         // Wysyłamy wiadomość 'leave' do serwera, informując go, że opuszczamy obecny pokój czatu
-        if (socket && socket.readyState === WebSocket.OPEN && currentRoom) {
+        if (socket && socket.readyState === WebSocket.OPEN && currentRoom && currentRoom !== 'global') {
             socket.send(JSON.stringify({
                 type: 'leave',
                 name: currentUser.id,
                 room: currentRoom // Wyślij nazwę opuszczanego pokoju
             }));
-            console.log(`Sent leave message to WebSocket for room: ${currentRoom}`);
+            console.log(`[Back Button] Sent LEAVE message to WebSocket for room: ${currentRoom}`);
         }
         
         resetChatView(); 
@@ -1156,7 +1181,7 @@ async function initializeApp() {
 
     function handleMediaQueryChange(mq) {
         if (mq.matches) { 
-            console.log("Mobile view activated. Adjusting initial visibility for mobile.");
+            console.log("[MediaQuery] Mobile view activated. Adjusting initial visibility for mobile.");
             if (sidebarWrapper) {
                 sidebarWrapper.classList.remove('hidden-on-mobile'); 
             }
@@ -1174,7 +1199,7 @@ async function initializeApp() {
             }
 
         } else { 
-            console.log("Desktop/Tablet view activated. Adjusting initial visibility for desktop.");
+            console.log("[MediaQuery] Desktop/Tablet view activated. Adjusting initial visibility for desktop.");
             if (sidebarWrapper) {
                 sidebarWrapper.classList.remove('hidden-on-mobile'); 
             }
