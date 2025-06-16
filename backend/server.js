@@ -42,7 +42,8 @@ wss.on('connection', (ws) => {
     ws.on('message', async (message) => {
         try {
             const data = JSON.parse(message);
-            console.log('Received WebSocket message:', data);
+            // DODANY LOG: Zawsze loguj odebrane dane, niezależnie od typu
+            console.log('Parsed incoming WebSocket data:', data);
 
             if (data.type === 'join') {
                 // Save user data for this WS connection
@@ -73,6 +74,10 @@ wss.on('connection', (ws) => {
 
             }
             else if (data.type === 'message' && userData) {
+                // DODANY LOG: Wkroczenie do bloku obsługi wiadomości
+                console.log('Processing MESSAGE type:', data);
+                console.log('UserData for message:', userData);
+
                 const inserted_at = await saveMessage(userData.username, userData.room, data.text);
                 const msgObj = {
                     type: 'message',
@@ -81,6 +86,8 @@ wss.on('connection', (ws) => {
                     inserted_at,
                     room: userData.room,
                 };
+                // DODANY LOG: Wiadomość gotowa do rozgłoszenia
+                console.log('Message saved to DB, attempting to broadcast:', msgObj);
                 broadcastToRoom(userData.room, JSON.stringify(msgObj));
             }
 
