@@ -42,7 +42,6 @@ wss.on('connection', (ws) => {
     ws.on('message', async (message) => {
         try {
             const data = JSON.parse(message);
-            // DODANY LOG: Zawsze loguj odebrane dane, niezależnie od typu
             console.log('Parsed incoming WebSocket data:', data);
 
             if (data.type === 'join') {
@@ -59,59 +58,71 @@ wss.on('connection', (ws) => {
                 broadcastUserStatus(userData.username, true);
 
                 // 3. Send message history to the newly connected client for their current room
-                const history = await getLastMessages(data.room);
-                ws.send(JSON.stringify({
-                    type: 'history',
-                    room: data.room,
-                    messages: history.map(msg => ({
-                        username: msg.username,
-                        text: msg.text,
-                        inserted_at: msg.inserted_at,
-                        room: data.room
-                    })),
-                }));
-                console.log(`Sent history to room ${data.room}:`, history.length, 'messages.');
+                // ONLY send history if the room is not 'global'
+                if (data.room !== 'global') {
+                    const history = await getLastMessages(data.room);
+                    ws.send(JSON.stringify({
+                        type: 'history',
+                        room: data.room,
+                        messages: history.map(msg => ({
+                            username: msg.username,
+                            text: msg.text,
+                            inserted_at: msg.inserted_at,
+                            room: data.room
+                        })),
+                    }));
+                    console.log(`Sent history to room ${data.room}:`, history.length, 'messages.');
+                } else {
+                    console.log("Joined global room, not sending history.");
+                }
 
             }
             else if (data.type === 'message' && userData) {
-                // DODANY LOG: Wkroczenie do bloku obsługi wiadomości
-                console.log('Processing MESSAGE type:', data);
-                console.log('UserData for message:', userData);
+                // Ważne: data.room dla wiadomości powinien być już ustawiony poprawnie z frontendu (czyli konkretny pokój czatu)
+                // Użyj data.room zamiast userData.room, aby mieć pewność, że to pokój z wysyłanej wiadomości
+                const targetRoom = data.room; 
+                console.log('Processing MESSAGE type for room:', targetRoom, 'Data:', data);
+                console.log('UserData for this WebSocket connection:', userData);
 
-                const inserted_at = await saveMessage(userData.username, userData.room, data.text);
+                const inserted_at = await saveMessage(userData.username, targetRoom, data.text);
                 const msgObj = {
                     type: 'message',
                     username: userData.username,
                     text: data.text,
                     inserted_at,
-                    room: userData.room,
+                    room: targetRoom, // Użyj targetRoom, nie userData.room
                 };
-                // DODANY LOG: Wiadomość gotowa do rozgłoszenia
                 console.log('Message saved to DB, attempting to broadcast:', msgObj);
-                broadcastToRoom(userData.room, JSON.stringify(msgObj));
+                broadcastToRoom(targetRoom, JSON.stringify(msgObj)); // Rozgłoś do konkretnego pokoju
             }
 
             // Handle typing messages
             else if (data.type === 'typing' && userData) {
                 // Broadcast the typing message only to clients in the same room, excluding sender
+                // Użyj data.room dla typingu również
                 const typingMsg = {
                     type: 'typing',
                     username: userData.username,
-                    room: userData.room
+                    room: data.room // Użyj data.room
                 };
-                // To avoid sending to sender, loop through clients explicitly
                 for (const [client, clientData] of clients.entries()) {
-                    if (client.readyState === WebSocket.OPEN && clientData.room === userData.room && client !== ws) {
+                    if (client.readyState === WebSocket.OPEN && clientData.room === data.room && client !== ws) {
                         client.send(JSON.stringify(typingMsg));
                     }
                 }
+                console.log(`Broadcasted typing status for user ${userData.username} in room ${data.room}.`);
             }
 
             // Optional: Handle 'leave' message (from frontend)
             else if (data.type === 'leave' && userData) {
                 // Clients are deleted on 'close' event for reliability, but we can log it.
-                console.log(`User ${userData.username} reported leaving room ${userData.room || 'unknown'}.`);
-                // No need to update status to offline here; 'onclose' handles it more reliably.
+                // If a user explicitly leaves a room, update their 'room' in the map if they are still connected
+                // This is important for correct message routing in broadcastToRoom
+                if (data.room !== 'global') { // Don't reset if leaving 'global' as it's a special case
+                    userData.room = 'global'; // Reset to global or null if leaving a specific chat
+                    clients.set(ws, userData); // Update the map
+                    console.log(`User ${userData.username} reported leaving room ${data.room}. Updated WS state to global.`);
+                }
             }
 
             // ***** KLUCZOWY DODATEK: Obsługa żądania 'get_active_users' *****
@@ -135,21 +146,22 @@ wss.on('connection', (ws) => {
                 const userId = data.user;
                 const isOnline = data.online;
 
-                // Ustaw userData dla tego połączenia WebSocket, jeśli jeszcze nie jest ustawione (dla początkowej wiadomości 'status')
-                // Jest to kluczowe, ponieważ późniejsze wiadomości 'get_active_users' lub 'leave' mogą polegać na userData
                 if (!userData) {
-                    userData = { username: userId, room: 'global' }; // Przypisz domyślny pokój 'global' lub null
+                    userData = { username: userId, room: 'global' }; // Domyślny pokój 'global' dla statusów
                     clients.set(ws, userData);
                 } else {
-                    // Zaktualizuj nazwę użytkownika (ID Supabase) w userData, jeśli się zmieni (mało prawdopodobne)
+                    // Update username in userData if needed (unlikely)
                     userData.username = userId;
-                    clients.set(ws, userData); // Upewnij się, że mapa jest zaktualizowana, jeśli obiekt userData został zastąpiony
+                    // If this status message is part of initial connection, ensure room is 'global'
+                    if (!userData.room) {
+                        userData.room = 'global';
+                    }
+                    clients.set(ws, userData); 
                 }
-
+                
                 await updateProfileStatus(userId, isOnline);
                 console.log(`User ${userId} status updated to ${isOnline}. (from 'status' message)`);
 
-                // Rozgłoś tę zmianę statusu do wszystkich innych klientów
                 broadcastUserStatus(userId, isOnline);
             }
             else {
@@ -221,12 +233,23 @@ async function getOnlineStatusesFromDb() {
 
 // Broadcasts message to all clients in a specific room
 function broadcastToRoom(room, msg) {
+    console.log(`Attempting to broadcast message to room: ${room}`);
+    let sentCount = 0;
     for (const [client, data] of clients.entries()) {
-        if (client.readyState === WebSocket.OPEN && data.room === room) {
-            client.send(msg);
+        if (client.readyState === WebSocket.OPEN) {
+            // Logika dla wiadomości: wysyłaj tylko do klientów, którzy są w tym SAMYM pokoju czatu
+            // To jest kluczowe, aby zapobiec wysyłaniu wiadomości do "global" room
+            // chyba że wiadomość rzeczywiście ma iść do "global" (co nie powinno mieć miejsca dla czatu 1:1)
+            if (data.room === room) {
+                client.send(msg);
+                sentCount++;
+                console.log(`Sent message to client ${data.username} in room ${data.room}`);
+            } else {
+                console.log(`Client ${data.username} is in room ${data.room}, not sending to ${room}.`);
+            }
         }
     }
-    console.log(`Broadcasted message to room ${room}.`);
+    console.log(`Broadcasted message to room ${room}. Sent to ${sentCount} clients.`);
 }
 
 // Broadcasts user status change to ALL connected clients

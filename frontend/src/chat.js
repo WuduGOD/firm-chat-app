@@ -281,8 +281,8 @@ async function handleConversationClick(user, clickedConvoItemElement) {
         // Jeśli użytkownik jest w mapie i jest online, to jest online. W przeciwnym razie offline.
         const isUserOnline = onlineUsers.get(String(user.id)) === true; 
         userStatusSpan.textContent = isUserOnline ? 'Online' : 'Offline';
-        userStatusSpan.classList.toggle('online', isUserOnline);
-        userStatusSpan.classList.toggle('offline', !isUserOnline);
+        userStatusSpan.classList.toggle('online', isOnline);
+        userStatusSpan.classList.toggle('offline', !isOnline);
         console.log(`Initial status for active chat user ${currentChatUser.username} (from onlineUsers map): ${isUserOnline ? 'Online' : 'Offline'}`);
 
         messageInput.disabled = false;
@@ -340,7 +340,7 @@ async function handleConversationClick(user, clickedConvoItemElement) {
         socket.send(JSON.stringify({
             type: 'join',
             name: currentUser.id,
-            room: currentRoom,
+            room: currentRoom, // Wysyłamy konkretny pokój, nie 'global'
         }));
         console.log(`Sent join message to WebSocket for room: ${currentRoom}`);
     } else {
@@ -364,7 +364,7 @@ function setupSendMessage() {
             socket.send(JSON.stringify({
                 type: 'typing',
                 username: currentUser.id,
-                room: currentRoom,
+                room: currentRoom, // Wysyłamy do konkretnego pokoju
             }));
         }
     });
@@ -376,12 +376,18 @@ function setupSendMessage() {
             console.warn("Cannot send message: empty, no recipient, or WebSocket not open.");
             return;
         }
+        // Upewnij się, że currentRoom jest ustawione PRZED wysłaniem wiadomości
+        if (!currentRoom) {
+            console.error("Cannot send message: currentRoom is not set.");
+            // Można tu dodać jakiś komunikat dla użytkownika, np. "Wybierz kontakt"
+            return;
+        }
 
         const msgData = {
             type: 'message',
             username: currentUser.id,
             text,
-            room: currentRoom,
+            room: currentRoom, // Używamy currentRoom (konkretny pokój czatu)
             inserted_at: new Date().toISOString() // Add timestamp
         };
 
@@ -432,11 +438,12 @@ async function addMessageToChat(msg) { // Changed to async
     const unreadCountEl = convoItemToUpdate.querySelector('.unread-count'); // Get reference here once
 
     if (previewEl && timeEl) {
-        const senderName = String(msg.username) === String(currentUser.id) ? "Ja" : (getUserLabelById(msg.username) || msg.username);
-        previewEl.textContent = `${senderName}: ${msg.text}`;
+        const senderId = String(msg.username);
+        const senderName = senderId === String(currentUser.id) ? "Ja" : (getUserLabelById(senderId) || senderId);
+        previewText = `${senderName}: ${msg.text}`;
         const lastMessageTime = new Date(msg.inserted_at);
         timeEl.textContent = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
-        console.log(`Updated preview and time for room ${msg.room}. Preview: "${previewEl.textContent}"`);
+        console.log(`Updated preview and time for room ${msg.room}. Preview: "${previewText}"`);
     } else {
         console.warn(`Could not find previewEl or timeEl for room ${msg.room}.`);
     }
@@ -460,19 +467,15 @@ async function addMessageToChat(msg) { // Changed to async
         } else {
             console.warn(`Could not find unreadCountEl for room ${msg.room}.`);
         }
-    } else if (String(msg.username) === String(currentUser.id)) {
-        console.log("Message is from current user, not incrementing unread count. Ensuring it's hidden.");
-        // If it's a message sent by the current user, ensure the unread count is hidden if it was somehow shown
+    } else if (String(msg.username) === String(currentUser.id) || msg.room === currentRoom) {
+        console.log("Message is from current user OR for the active room. Ensuring unread count is hidden.");
+        // If it's a message sent by the current user OR for the active room, ensure the unread count is hidden
         if (unreadCountEl) {
             unreadCountEl.textContent = '0';
             unreadCountEl.classList.add('hidden');
         }
     } else {
-        console.log("Message is for the current active room, not incrementing unread count (and it should be hidden).");
-        if (unreadCountEl) {
-            unreadCountEl.textContent = '0';
-            unreadCountEl.classList.add('hidden');
-        }
+        console.log("Unhandled unread count scenario for room:", msg.room, "currentRoom:", currentRoom, "msg.username:", msg.username, "currentUser.id:", currentUser.id);
     }
 
     // Display message in the active chat only if it belongs to the current room
@@ -661,7 +664,7 @@ function initWebSocket() {
         console.log('WebSocket connected');
         reconnectAttempts = 0; // Reset reconnect attempts
         if (currentUser) { // Only attempt to join if currentUser is defined
-            // Zawsze dołączamy do "global" pokoju po otwarciu WS,
+            // ZAWSZE dołączamy do "global" pokoju po otwarciu WS,
             // aby otrzymywać ogólne statusy. Specyficzne pokoje będą dołączane w handleConversationClick.
             socket.send(JSON.stringify({
                 type: 'join',
@@ -694,7 +697,7 @@ function initWebSocket() {
                     username: data.username,
                     text: data.text,
                     inserted_at: data.inserted_at,
-                    room: data.room,
+                    room: data.room, // Ważne: używamy data.room
                 });
                 break;
             case 'typing':
@@ -1096,7 +1099,7 @@ async function initializeApp() {
             socket.send(JSON.stringify({
                 type: 'leave',
                 name: currentUser.id,
-                room: currentRoom
+                room: currentRoom // Send the specific room being left
             }));
             console.log(`Sent leave message for room: ${currentRoom}`);
         }
