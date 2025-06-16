@@ -5,6 +5,10 @@
     box-sizing: border-box;
 }
 
+html, body { /* Dodano wysokość dla html i body */
+    height: 100%;
+}
+
 :root {
     /* Kolory bazowe */
     --primary-color: #6a5acd;
@@ -58,7 +62,7 @@ body {
     font-family: 'Segoe UI', sans-serif;
     background: var(--bg-color-light);
     color: var(--text-color-dark);
-    height: 100vh;
+    height: 100%; /* Zmieniono na 100% */
     display: flex;
     flex-direction: column;
     overflow: hidden; /* Zapobiega przewijaniu się całej strony */
@@ -163,6 +167,7 @@ body {
     box-shadow: var(--shadow-medium);
     width: 100%;
     margin: 0;
+    height: 100%; /* Upewnij się, że kontener zajmuje całą dostępną wysokość */
 }
 
 /* Sidebar Wrapper (lewy pasek - rozmowy + ikony) */
@@ -1338,7 +1343,6 @@ body.dark-mode .nav-icon::after {
 
 @media (max-width: 768px) {
     body {
-        /* Przewijanie będzie obsługiwane przez poszczególne elementy */
         overflow: hidden;
     }
 
@@ -1357,8 +1361,8 @@ body.dark-mode .nav-icon::after {
         margin: 0;
         border-radius: 0;
         box-shadow: none;
-        height: auto; /* Zmienione na auto, aby nie obcinało zawartości */
-        min-height: 100vh; /* Zapewnia, że kontener zajmuje co najmniej 100% widocznej wysokości */
+        height: 100%; /* Zmieniono z auto na 100% */
+        min-height: auto; /* Zmieniono z 100vh na auto, aby nie kolidowało z paskiem adresu */
         position: relative;
     }
 
