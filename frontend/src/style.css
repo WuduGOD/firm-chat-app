@@ -55,7 +55,7 @@
 }
 
 body {
-    font-family: 'Segoe UI', sans-serif; /* Twoja oryginalna czcionka */
+    font-family: 'Segoe UI', sans-serif;
     background: var(--bg-color-light);
     color: var(--text-color-dark);
     height: 100vh;
@@ -103,7 +103,7 @@ body {
 /* Dropdown (dla menu głównego i czatu) */
 .dropdown {
     position: absolute;
-    right: 0; /* Zmieniono na right: 0 aby drop-down pojawial sie po prawej */
+    right: 0;
     top: var(--dropdown-top-offset);
     background: var(--bg-color-dropdown);
     border: 1px solid var(--border-color-medium);
@@ -159,11 +159,10 @@ body {
     display: flex;
     align-items: stretch;
     overflow: hidden;
-    /* ZMODYFIKOWANE: Przywrócenie border-radius i box-shadow na kontenerze głównym */
-    border-radius: 12px; /* Zaokrąglenie całego bloku */
-    box-shadow: var(--shadow-medium); /* Cień całego bloku */
-    width: 100%; /* Upewnia się, że kontener zajmuje całą dostępną szerokość */
-    margin: 0; /* Usuwa marginesy, aby przylegał do krawędzi okna */
+    border-radius: 12px;
+    box-shadow: var(--shadow-medium);
+    width: 100%;
+    margin: 0;
 }
 
 /* Sidebar Wrapper (lewy pasek - rozmowy + ikony) */
@@ -303,7 +302,7 @@ body {
 }
 
 /* Kategorie sortowania kontaktów */
-.contact-categories { /* Ta klasa nie jest używana w `index.html` */
+.contact-categories {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
@@ -794,7 +793,7 @@ body {
 .message {
     max-width: 65%;
     padding: 0.8rem 1rem;
-    border-radius: var(--border-radius-message); /* Użycie zmiennej */
+    border-radius: var(--border-radius-message);
     background: var(--bg-color-message-received);
     position: relative;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
@@ -1339,9 +1338,10 @@ body.dark-mode .nav-icon::after {
 
 @media (max-width: 768px) {
     body {
-        /* Usuwamy overflow-y: auto; tutaj, aby zachować globalne overflow: hidden; */
-        /* To zapewni, że cała aplikacja nie będzie przewijana, a tylko poszczególne sekcje */
+        /* Przewijanie będzie obsługiwane przez poszczególne elementy */
+        overflow: hidden;
     }
+
     .main-header {
         padding: 0.8rem 1rem;
     }
@@ -1357,7 +1357,8 @@ body.dark-mode .nav-icon::after {
         margin: 0;
         border-radius: 0;
         box-shadow: none;
-        /* USUNIĘTO: height: 100vh; - Kontener będzie rozciągał się elastycznie */
+        height: auto; /* Zmienione na auto, aby nie obcinało zawartości */
+        min-height: 100vh; /* Zapewnia, że kontener zajmuje co najmniej 100% widocznej wysokości */
         position: relative;
     }
 
@@ -1367,13 +1368,13 @@ body.dark-mode .nav-icon::after {
         max-width: unset !important;
         width: 100%;
         flex-direction: column;
-        height: 100%; /* Ważne: pełna wysokość kontenera, gdy sidebar jest aktywny */
+        height: 100%;
         border-right: none;
         display: flex;
-        position: absolute; /* Umożliwia nakładanie na inne elementy */
+        position: absolute;
         top: 0;
         left: 0;
-        z-index: 200; /* Wyższy niż główny widok czatu, ale niższy niż menu główne */
+        z-index: 200;
     }
 
     /* Klasa do ukrywania sidebar-wrapper na mobile, gdy czat jest aktywny */
@@ -1453,7 +1454,7 @@ body.dark-mode .nav-icon::after {
     .chat-area-wrapper {
         flex-grow: 1;
         width: 100%;
-        height: 100%;
+        height: 100%; /* Zapewnia, że wrapper zajmuje całą dostępną wysokość */
         position: absolute;
         top: 0;
         left: 0;
@@ -1477,7 +1478,7 @@ body.dark-mode .nav-icon::after {
         flex-direction: column;
     }
 
-    /* Dodaj te style do .chat-main-view na mobile */
+    /* Kluczowe zmiany dla .chat-main-view, aby poprawnie zarządzać przestrzenią */
     .chat-main-view {
         display: flex;
         flex-direction: column;
@@ -1517,13 +1518,13 @@ body.dark-mode .nav-icon::after {
         padding: 0.6rem 1rem 0.6rem 2.5rem;
         font-size: 0.85rem;
     }
-    .contact { /* Zmiana na globalny selektor, aby upewnić się, że działa */
+    .contact {
         padding: 0.6rem;
     }
-    .contact-name { /* Zmiana na globalny selektor, aby upewnić się, że działa */
+    .contact-name {
         font-size: 0.95rem;
     }
-    .last-message { /* Zmiana na globalny selektor, aby upewnić się, że działa */
+    .last-message {
         font-size: 0.8rem;
     }
     .chat-footer {
