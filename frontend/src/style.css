@@ -1339,8 +1339,8 @@ body.dark-mode .nav-icon::after {
 
 @media (max-width: 768px) {
     body {
-        /* Upewnij się, że body pozwala na przewijanie, jeśli zawartość jest większa */
-        overflow-y: auto;
+        /* Usuwamy overflow-y: auto; tutaj, aby zachować globalne overflow: hidden; */
+        /* To zapewni, że cała aplikacja nie będzie przewijana, a tylko poszczególne sekcje */
     }
     .main-header {
         padding: 0.8rem 1rem;
@@ -1357,7 +1357,7 @@ body.dark-mode .nav-icon::after {
         margin: 0;
         border-radius: 0;
         box-shadow: none;
-        height: 100vh; /* Użyj 100vh, ale będziemy to korygować JS, jeśli problem się powtórzy */
+        /* USUNIĘTO: height: 100vh; - Kontener będzie rozciągał się elastycznie */
         position: relative;
     }
 
@@ -1453,7 +1453,6 @@ body.dark-mode .nav-icon::after {
     .chat-area-wrapper {
         flex-grow: 1;
         width: 100%;
-        /* Użyj height: 100% i pozwól flexboxowi zarządzać resztą */
         height: 100%;
         position: absolute;
         top: 0;
