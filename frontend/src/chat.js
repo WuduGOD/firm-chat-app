@@ -394,6 +394,14 @@ function setupSendMessage() {
 
         console.log("Sending message via WS:", msgData);
         socket.send(JSON.stringify(msgData)); // Send message via WebSocket
+        
+        // NOWA LOGIKA: Przenieś konwersację na górę dla wysłanych wiadomości
+        const convoItemToMove = contactsListEl.querySelector(`.contact[data-room-id="${currentRoom}"]`);
+        if (convoItemToMove && contactsListEl.firstChild !== convoItemToMove) {
+            contactsListEl.prepend(convoItemToMove);
+            console.log(`[Reorder] Moved conversation for room ${currentRoom} to top due to sent message.`);
+        }
+
         messageInput.value = ''; // Clear input
         messageInput.focus(); // Keep focus on input
     };
@@ -409,6 +417,7 @@ function setupSendMessage() {
 
 /**
  * Adds a message to the chat view and updates the conversation preview in the list.
+ * This function will NO LONGER reorder the list.
  * @param {Object} msg - The message object.
  */
 async function addMessageToChat(msg) { // Changed to async
@@ -438,28 +447,27 @@ async function addMessageToChat(msg) { // Changed to async
     const timeEl = convoItemToUpdate.querySelector('.message-time');
     const unreadCountEl = convoItemToUpdate.querySelector('.unread-count'); // Get reference here once
 
-    // ZMIANA TUTAJ: Deklaracja previewText na początku funkcji
     let previewText = "Brak wiadomości"; 
 
     if (previewEl && timeEl) {
         const senderId = String(msg.username);
         const senderName = senderId === String(currentUser.id) ? "Ja" : (getUserLabelById(senderId) || senderId);
-        previewText = `${senderName}: ${msg.text}`; // Przypisanie wartości, zmienna już zadeklarowana
+        previewText = `${senderName}: ${msg.text}`; 
         const lastMessageTime = new Date(msg.inserted_at);
         timeEl.textContent = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
         console.log(`Updated preview and time for room ${msg.room}. Preview: "${previewText}"`); 
-        previewEl.textContent = previewText; // Upewnij się, że tekst jest ustawiony na elemencie
+        previewEl.textContent = previewText; 
     } else {
         console.warn(`Could not find previewEl or timeEl for room ${msg.room}.`);
     }
 
-    // Always move the item to the top to reflect most recent activity, unless it's already the first child
-    if (contactsListEl.firstChild !== convoItemToUpdate) {
-        contactsListEl.prepend(convoItemToUpdate);
-        console.log(`Moved conversation for room ${msg.room} to top.`);
-    } else {
-        console.log(`Conversation for room ${msg.room} is already at the top.`);
-    }
+    // USUNIĘTO: Bezwarunkowa logika przestawiania na górę
+    // if (contactsListEl.firstChild !== convoItemToUpdate) {
+    //     contactsListEl.prepend(convoItemToUpdate);
+    //     console.log(`Moved conversation for room ${msg.room} to top.`);
+    // } else {
+    //     console.log(`Conversation for room ${msg.room} is already at the top.`);
+    // }
 
     // Increment unread count ONLY if the message is for a DIFFERENT room AND it's not from the current user (sent by self)
     if (msg.room !== currentRoom && String(msg.username) !== String(currentUser.id)) {
@@ -704,6 +712,12 @@ function initWebSocket() {
                     inserted_at: data.inserted_at,
                     room: data.room, // Ważne: używamy data.room
                 });
+                // NOWA LOGIKA: Przenieś konwersację na górę tylko dla nowych wiadomości
+                const convoItemToMove = contactsListEl.querySelector(`.contact[data-room-id="${data.room}"]`);
+                if (convoItemToMove && contactsListEl.firstChild !== convoItemToMove) {
+                    contactsListEl.prepend(convoItemToMove);
+                    console.log(`[Reorder] Moved conversation for room ${data.room} to top due to new message.`);
+                }
                 break;
             case 'typing':
                 showTypingIndicator(data.username);
