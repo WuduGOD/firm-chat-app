@@ -769,8 +769,8 @@ function displayActiveUsers(activeUsersData) {
                 <img src="${avatarSrc}" alt="Avatar" class="avatar">
                 <span class="username">${getUserLabelById(user.id) || user.username}</span>
             `;
-
-            // Dodaj listener kliknięcia dla elementów mobilnych
+            
+            // Add click listener for mobile item
             divMobile.addEventListener('click', async () => {
                 const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(user.id));
                 if (userProfile) {
@@ -1102,15 +1102,14 @@ async function initializeApp() {
         event.stopPropagation(); // Prevent event bubbling
         dropdownMenu.classList.toggle('hidden'); // Toggle main dropdown
 
-        // On mobile, also toggle sidebar visibility (if it's not the chat view)
-        if (window.matchMedia('(max-width: 768px)').matches) {
-            // If we are currently in chat view, clicking menu button won't reveal sidebar
-            if (!chatAreaWrapper.classList.contains('active-on-mobile')) { // Only toggle if not in chat view
-                 if (sidebarWrapper) {
-                    sidebarWrapper.classList.toggle('hidden-on-mobile'); // This should make it visible/hidden
-                }
-            }
-        }
+        // USUNIĘTO: Ta linia powodowała ukrywanie sidebara na mobile przy kliknięciu menu.
+        // if (window.matchMedia('(max-width: 768px)').matches) {
+        //     if (!chatAreaWrapper.classList.contains('active-on-mobile')) {
+        //         if (sidebarWrapper) {
+        //             sidebarWrapper.classList.toggle('hidden-on-mobile');
+        //         }
+        //     }
+        // }
     });
 
     // Close dropdowns when clicking outside
