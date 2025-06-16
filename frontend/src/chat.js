@@ -67,7 +67,7 @@ let onlineUsers = new Map();
  * Resets the chat view to its initial state.
  */
 function resetChatView() {
-    console.log("Resetting chat view...");
+    console.log("[resetChatView] Resetting chat view...");
     if (messageContainer) {
         messageContainer.innerHTML = ""; // Clear messages
         // Remove all theme classes for messages container
@@ -96,6 +96,7 @@ function resetChatView() {
 
     currentChatUser = null; // Reset current chat user
     currentRoom = null; // Reset current room
+    console.log("[resetChatView] currentChatUser and currentRoom reset to null.");
 
     // logoScreen is completely hidden on mobile, so no need to show it back on mobile
     if (window.matchMedia('(min-width: 769px)').matches) { // Only show logo screen on desktop
@@ -179,22 +180,22 @@ function sortConversations(conversations) {
  * Fetches other users from Supabase, retrieves their last message, and displays them.
  */
 async function loadContacts() {
-    console.log("Loading contacts...");
+    console.log("[loadContacts] Loading contacts...");
     if (!currentUser || !currentUser.email) {
-        console.error("Current user is not defined, cannot load contacts.");
+        console.error("[loadContacts] Current user is not defined, cannot load contacts.");
         return;
     }
 
     const { data: users, error } = await supabase.rpc('get_other_users', { current_email: currentUser.email });
     if (error) {
-        console.error('Error loading contacts:', error);
+        console.error('[loadContacts] Error loading contacts:', error);
         return;
     }
 
     if (contactsListEl) {
         contactsListEl.innerHTML = ''; // Clear existing contacts
     } else {
-        console.error("contactsListEl element not found!");
+        console.error("[loadContacts] contactsListEl element not found!");
         return;
     }
 
@@ -245,7 +246,7 @@ async function loadContacts() {
 
         contactsListEl.appendChild(convoItem);
     });
-    console.log("Contacts loaded and rendered with last messages (and sorted).");
+    console.log("[loadContacts] Contacts loaded and rendered with last messages (and sorted).");
 }
 
 /**
@@ -296,7 +297,11 @@ async function handleConversationClick(user, clickedConvoItemElement) {
 
         messageInput.disabled = false;
         sendButton.disabled = false;
+        console.log(`[handleConversationClick] messageInput.disabled set to ${messageInput.disabled}, sendButton.disabled set to ${sendButton.disabled}`);
+
         messageInput.focus();
+    } else {
+        console.error("[handleConversationClick] Missing critical UI elements for chat area. Cannot enable input/button.");
     }
 
     // NEW LOGIC FOR MOBILE/DESKTOP VIEW SWITCHING
@@ -353,7 +358,7 @@ async function handleConversationClick(user, clickedConvoItemElement) {
         }));
         console.log(`[handleConversationClick] Sent JOIN message to WebSocket for room: ${currentRoom}`);
     } else {
-        console.warn("[handleConversationClick] WebSocket not open, attempting to re-initialize. JOIN message will be sent on 'open' event.");
+        console.warn("[handleConversationClick] WebSocket not open. Attempting to re-initialize. JOIN message will be sent on 'open' event.");
         initWebSocket(); // Re-initialize WebSocket if not open, join on 'open' event
     }
 }
@@ -362,34 +367,44 @@ async function handleConversationClick(user, clickedConvoItemElement) {
  * Sets up event listeners for sending messages.
  */
 function setupSendMessage() {
+    console.log("[setupSendMessage] Setting up message send event listeners.");
     if (!messageInput || !sendButton || !messageContainer) {
-        console.error("Message input or send button or messageContainer not found for setup.");
+        console.error("[setupSendMessage] Message input or send button or messageContainer not found for setup. Cannot attach listeners.");
         return;
     }
 
     // Send typing indicator on input
     messageInput.addEventListener('input', () => {
+        console.log("[setupSendMessage] Message input 'input' event detected.");
         if (currentRoom && socket && socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify({
                 type: 'typing',
                 username: currentUser.id,
                 room: currentRoom, // Wysyłamy do konkretnego pokoju
             }));
+            console.log(`[setupSendMessage] Sent typing message for room: ${currentRoom}`);
+        } else {
+            console.warn(`[setupSendMessage] Cannot send typing status: currentRoom=${currentRoom}, socket status=${socket ? socket.readyState : 'N/A'}`);
         }
     });
 
     // Send message on button click
     sendButton.onclick = () => {
-        // --- NOWY LOG DEBUGOWANIA: Sprawdzamy, czy event listener działa ---
-        console.log("[DEBUG: SEND BUTTON] Send button clicked or Enter pressed.");
-        // --- KONIEC NOWEGO LOGU ---
-
+        console.log("[DEBUG: SEND BUTTON] Send button clicked or Enter pressed."); // Ten log musi się pojawić!
+        
         const text = messageInput.value.trim();
+        console.log(`[DEBUG: SEND BUTTON] Message text length: ${text.length}`);
+        
         if (!text || !currentChatUser || !socket || socket.readyState !== WebSocket.OPEN) {
-            console.warn("Cannot send message: empty, no recipient, or WebSocket not open.");
+            console.warn("Cannot send message: check conditions below.");
             
             // Dodatkowe logi do zdiagnozowania warunku
-            console.log(`Debug conditions: text=${!!text}, currentChatUser=${!!currentChatUser}, socket=${!!socket}, socket.readyState=${socket ? socket.readyState : 'N/A'}`);
+            console.log(`Debug conditions: text=${!!text}, currentChatUser=${!!currentChatUser ? currentChatUser.id : 'null'}, socket=${!!socket}, socket.readyState=${socket ? socket.readyState : 'N/A'}`);
+
+            if (!text) console.log("Reason: Message text is empty.");
+            if (!currentChatUser) console.log("Reason: currentChatUser is not set (no chat selected).");
+            if (!socket) console.log("Reason: WebSocket is null.");
+            if (socket && socket.readyState !== WebSocket.OPEN) console.log(`Reason: WebSocket is not OPEN (current state: ${socket.readyState}).`);
 
             return;
         }
@@ -424,9 +439,11 @@ function setupSendMessage() {
     messageInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault(); 
+            console.log("[DEBUG: SEND BUTTON] Enter key pressed."); // Ten log też musi się pojawić!
             sendButton.click(); 
         }
     });
+    console.log("[setupSendMessage] Message send event listeners attached.");
 }
 
 /**
@@ -611,9 +628,9 @@ function updateUserStatusIndicator(userId, isOnline) {
                     if (userProfile) {
                         // Stwórz mockowy element clickedConvoItemElement
                         const mockConvoItem = document.createElement('li');
-                        mockConvoItem.dataset.convoId = user.id; // Corrected: use user.id from the current loop
+                        mockConvoItem.dataset.convoId = user.id; 
                         mockConvoItem.dataset.email = userProfile.email;
-                        mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(user.id)); // Corrected: use user.id
+                        mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(user.id)); 
                         handleConversationClick(userProfile, mockConvoItem);
                     }
                 });
@@ -638,22 +655,28 @@ function showTypingIndicator(usernameId) {
         // Pokaż wskaźnik pisania w nagłówku
         if (typingStatusHeader) {
             typingStatusHeader.classList.remove('hidden'); 
+            console.log(`[showTypingIndicator] Typing status header shown for ${getUserLabelById(usernameId)}`);
         }
         // Pokaż animowane kropki w obszarze wiadomości
         if (typingIndicatorMessages) {
             typingIndicatorMessages.classList.remove('hidden'); 
+            console.log(`[showTypingIndicator] Typing indicator messages shown for ${getUserLabelById(usernameId)}`);
         }
 
         clearTimeout(typingTimeout); 
         typingTimeout = setTimeout(() => {
             if (typingStatusHeader) {
                 typingStatusHeader.classList.add('hidden');
+                console.log(`[showTypingIndicator] Typing status header hidden for ${getUserLabelById(usernameId)}`);
             }
             if (typingIndicatorMessages) {
                 typingIndicatorMessages.classList.add('hidden');
+                console.log(`[showTypingIndicator] Typing indicator messages hidden for ${getUserLabelById(usernameId)}`);
             }
         }, 3000); 
         console.log(`${getUserLabelById(usernameId)} is typing...`);
+    } else {
+        console.log(`[showTypingIndicator] Typing update for ${getUserLabelById(usernameId)}, but not current chat user. Ignoring.`);
     }
 }
 
@@ -669,6 +692,7 @@ function initWebSocket() {
     }
 
     socket = new WebSocket(wsUrl);
+    console.log(`[initWebSocket] Attempting to connect to WebSocket at: ${wsUrl}`);
 
     socket.onopen = () => {
         console.log('[initWebSocket] WebSocket connected successfully.');
@@ -854,16 +878,22 @@ function displayActiveUsers(activeUsersData) {
  * Sets up the functionality for the chat settings dropdown menu.
  */
 function setupChatSettingsDropdown() {
-    if (!chatSettingsButton || !chatSettingsDropdown) return;
+    console.log("[setupChatSettingsDropdown] Setting up chat settings dropdown.");
+    if (!chatSettingsButton || !chatSettingsDropdown) {
+        console.warn("[setupChatSettingsDropdown] Chat settings button or dropdown not found.");
+        return;
+    }
 
     chatSettingsButton.addEventListener('click', (event) => {
         event.stopPropagation(); 
         chatSettingsDropdown.classList.toggle('hidden');
+        console.log(`[setupChatSettingsDropdown] Chat settings dropdown toggled. Hidden: ${chatSettingsDropdown.classList.contains('hidden')}`);
     });
 
     document.addEventListener('click', (event) => {
         if (!chatSettingsDropdown.classList.contains('hidden') && !chatSettingsButton.contains(event.target)) {
             chatSettingsDropdown.classList.add('hidden');
+            console.log("[setupChatSettingsDropdown] Chat settings dropdown hidden due to outside click.");
         }
     });
 
@@ -879,7 +909,7 @@ function setupChatSettingsDropdown() {
                     messageContainer.classList.add(`${colorTheme}-theme`); 
                 }
             }
-            console.log('Message theme changed to:', colorTheme);
+            console.log('[setupChatSettingsDropdown] Message theme changed to:', colorTheme);
         });
     });
 
@@ -895,7 +925,7 @@ function setupChatSettingsDropdown() {
                     messageContainer.classList.add(`${bgTheme}-bg`); 
                 }
             }
-            console.log('Chat background changed to:', bgTheme);
+            console.log('[setupChatSettingsDropdown] Chat background changed to:', bgTheme);
         });
     });
 
@@ -903,6 +933,7 @@ function setupChatSettingsDropdown() {
     const setNicknameButton = document.getElementById('setNicknameButton');
     if (nicknameInput && setNicknameButton) {
         setNicknameButton.addEventListener('click', async () => {
+            console.log("[setupChatSettingsDropdown] Set nickname button clicked.");
             const newNickname = nicknameInput.value.trim();
             if (newNickname && currentUser) {
                 try {
@@ -916,7 +947,8 @@ function setupChatSettingsDropdown() {
                     }
 
                     console.log('New nickname set:', newNickname, 'for user:', currentUser.id);
-                    alert(`Nickname '${newNickname}' has been set successfully.`);
+                    // Zamiast alert(), można dodać wizualny komunikat w UI
+                    // alert(`Nickname '${newNickname}' has been set successfully.`); 
                     await loadAllProfiles(); 
                     if (chatUserName && currentChatUser && String(currentUser.id) === String(currentChatUser.id)) {
                         chatUserName.textContent = newNickname;
@@ -925,10 +957,14 @@ function setupChatSettingsDropdown() {
 
                 } catch (error) {
                     console.error('Error updating nickname:', error.message);
-                    alert(`Error setting nickname: ${error.message}`);
+                    // Zamiast alert(), można dodać wizualny komunikat w UI
+                    // alert(`Error setting nickname: ${error.message}`);
                 }
             } else if (!currentUser) {
-                alert("Error: You are not logged in to set a nickname.");
+                console.warn("[setupChatSettingsDropdown] Cannot set nickname: currentUser not logged in.");
+                // alert("Error: You are not logged in to set a nickname.");
+            } else {
+                console.warn("[setupChatSettingsDropdown] Nickname input is empty.");
             }
         });
     }
@@ -937,9 +973,10 @@ function setupChatSettingsDropdown() {
     const searchMessagesButton = document.getElementById('searchMessagesButton');
     if (messageSearchInput && searchMessagesButton) {
         searchMessagesButton.addEventListener('click', () => {
+            console.log("[setupChatSettingsDropdown] Search messages button clicked.");
             const searchTerm = messageSearchInput.value.trim();
             console.log('Searching messages for:', searchTerm, '(functionality to be implemented)');
-            alert(`Searching messages for '${searchTerm}' (functionality to be implemented).`);
+            // alert(`Searching messages for '${searchTerm}' (functionality to be implemented).`);
         });
     }
 }
@@ -951,50 +988,50 @@ function setupChatSettingsDropdown() {
 async function initializeApp() {
     console.log("Initializing Komunikator application...");
 
-    mainHeader = document.querySelector('.main-header');
-    menuButton = document.getElementById('menuButton');
-    dropdownMenu = document.getElementById('dropdownMenu');
-    themeToggle = document.getElementById('themeToggle');
-    logoutButton = document.getElementById('logoutButton');
+    // Logowanie statusu elementów UI
+    mainHeader = document.querySelector('.main-header'); console.log(`UI Element: mainHeader found: ${!!mainHeader}`);
+    menuButton = document.getElementById('menuButton'); console.log(`UI Element: menuButton found: ${!!menuButton}`);
+    dropdownMenu = document.getElementById('dropdownMenu'); console.log(`UI Element: dropdownMenu found: ${!!dropdownMenu}`);
+    themeToggle = document.getElementById('themeToggle'); console.log(`UI Element: themeToggle found: ${!!themeToggle}`);
+    logoutButton = document.getElementById('logoutButton'); console.log(`UI Element: logoutButton found: ${!!logoutButton}`);
 
-    container = document.querySelector('.container');
-    sidebarWrapper = document.querySelector('.sidebar-wrapper');
-    mainNavIcons = document.querySelector('.main-nav-icons');
-    navIcons = document.querySelectorAll('.nav-icon');
+    container = document.querySelector('.container'); console.log(`UI Element: container found: ${!!container}`);
+    sidebarWrapper = document.querySelector('.sidebar-wrapper'); console.log(`UI Element: sidebarWrapper found: ${!!sidebarWrapper}`);
+    mainNavIcons = document.querySelector('.main-nav-icons'); console.log(`UI Element: mainNavIcons found: ${!!mainNavIcons}`);
+    navIcons = document.querySelectorAll('.nav-icon'); console.log(`UI Element: navIcons found: ${navIcons.length > 0}`);
 
-    onlineUsersMobile = document.getElementById('onlineUsersMobile'); 
+    onlineUsersMobile = document.getElementById('onlineUsersMobile'); console.log(`UI Element: onlineUsersMobile found: ${!!onlineUsersMobile}`);
 
-    sidebarEl = document.getElementById('sidebar');
-    searchInput = sidebarEl.querySelector('.search-bar input[type="text"]');
-    contactsListEl = document.getElementById('contactsList');
+    sidebarEl = document.getElementById('sidebar'); console.log(`UI Element: sidebarEl found: ${!!sidebarEl}`);
+    searchInput = sidebarEl ? sidebarEl.querySelector('.search-bar input[type="text"]') : null; console.log(`UI Element: searchInput found: ${!!searchInput}`);
+    contactsListEl = document.getElementById('contactsList'); console.log(`UI Element: contactsListEl found: ${!!contactsListEl}`);
 
-    chatAreaWrapper = document.querySelector('.chat-area-wrapper');
-    logoScreen = document.getElementById('logoScreen');
-    chatArea = document.getElementById('chatArea');
+    chatAreaWrapper = document.querySelector('.chat-area-wrapper'); console.log(`UI Element: chatAreaWrapper found: ${!!chatAreaWrapper}`);
+    logoScreen = document.getElementById('logoScreen'); console.log(`UI Element: logoScreen found: ${!!logoScreen}`);
+    chatArea = document.getElementById('chatArea'); console.log(`UI Element: chatArea found: ${!!chatArea}`);
 
-    chatHeader = document.querySelector('.chat-header');
-    backButton = document.getElementById('backButton');
-    chatUserName = document.getElementById('chatUserName');
-    userStatusSpan = document.getElementById('userStatus');
-    chatHeaderActions = chatHeader.querySelector('.chat-header-actions');
-    chatSettingsButton = document.getElementById('chatSettingsButton');
-    chatSettingsDropdown = document.getElementById('chatSettingsDropdown');
-    typingStatusHeader = document.getElementById('typingStatus'); 
-    typingIndicatorMessages = document.getElementById('typingIndicator'); 
+    chatHeader = document.querySelector('.chat-header'); console.log(`UI Element: chatHeader found: ${!!chatHeader}`);
+    backButton = document.getElementById('backButton'); console.log(`UI Element: backButton found: ${!!backButton}`);
+    chatUserName = document.getElementById('chatUserName'); console.log(`UI Element: chatUserName found: ${!!chatUserName}`);
+    userStatusSpan = document.getElementById('userStatus'); console.log(`UI Element: userStatusSpan found: ${!!userStatusSpan}`);
+    chatHeaderActions = chatHeader ? chatHeader.querySelector('.chat-header-actions') : null; console.log(`UI Element: chatHeaderActions found: ${!!chatHeaderActions}`);
+    chatSettingsButton = document.getElementById('chatSettingsButton'); console.log(`UI Element: chatSettingsButton found: ${!!chatSettingsButton}`);
+    chatSettingsDropdown = document.getElementById('chatSettingsDropdown'); console.log(`UI Element: chatSettingsDropdown found: ${!!chatSettingsDropdown}`);
+    typingStatusHeader = document.getElementById('typingStatus'); console.log(`UI Element: typingStatusHeader found: ${!!typingStatusHeader}`);
+    typingIndicatorMessages = document.getElementById('typingIndicator'); console.log(`UI Element: typingIndicatorMessages found: ${!!typingIndicatorMessages}`);
 
-    messageContainer = document.getElementById('messageContainer');
+    messageContainer = document.getElementById('messageContainer'); console.log(`UI Element: messageContainer found: ${!!messageContainer}`);
 
-    chatFooter = document.querySelector('.chat-footer');
-    attachButton = chatFooter.querySelector('.attach-button');
-    messageInput = document.getElementById('messageInput');
-    emojiButton = chatFooter.querySelector('.emoji-button');
-    sendButton = document.getElementById('sendButton');
+    chatFooter = document.querySelector('.chat-footer'); console.log(`UI Element: chatFooter found: ${!!chatFooter}`);
+    attachButton = chatFooter ? chatFooter.querySelector('.attach-button') : null; console.log(`UI Element: attachButton found: ${!!attachButton}`);
+    messageInput = document.getElementById('messageInput'); console.log(`UI Element: messageInput found: ${!!messageInput}`);
+    emojiButton = chatFooter ? chatFooter.querySelector('.emoji-button') : null; console.log(`UI Element: emojiButton found: ${!!emojiButton}`);
+    sendButton = document.getElementById('sendButton'); console.log(`UI Element: sendButton found: ${!!sendButton}`);
 
-    rightSidebarWrapper = document.querySelector('.right-sidebar-wrapper');
-    rightSidebar = document.getElementById('rightSidebar');
-    activeUsersListEl = document.getElementById('activeUsersList');
-    noActiveUsersText = document.getElementById('noActiveUsersText');
-
+    rightSidebarWrapper = document.querySelector('.right-sidebar-wrapper'); console.log(`UI Element: rightSidebarWrapper found: ${!!rightSidebarWrapper}`);
+    rightSidebar = document.getElementById('rightSidebar'); console.log(`UI Element: rightSidebar found: ${!!rightSidebar}`);
+    activeUsersListEl = document.getElementById('activeUsersList'); console.log(`UI Element: activeUsersListEl found: ${!!activeUsersListEl}`);
+    noActiveUsersText = document.getElementById('noActiveUsersText'); console.log(`UI Element: noActiveUsersText found: ${!!noActiveUsersText}`);
 
     const missingElements = {
         mainHeader: mainHeader,
@@ -1051,7 +1088,7 @@ async function initializeApp() {
         console.error('Initialization failed due to missing UI elements. Please check your HTML selectors. Details:', missingElements);
         return; 
     } else {
-        console.log('All critical UI elements found.');
+        console.log('All critical UI elements found. Proceeding with app initialization.');
     }
 
 
@@ -1080,11 +1117,13 @@ async function initializeApp() {
 
     initWebSocket();
 
-    setupSendMessage();
+    setupSendMessage(); // Ta funkcja jest wywoływana tutaj
 
     chatArea.classList.remove('active'); 
     messageInput.disabled = true;
     sendButton.disabled = true;
+    console.log(`[initializeApp] Initially, messageInput.disabled=${messageInput.disabled}, sendButton.disabled=${sendButton.disabled}`);
+
 
     backButton.addEventListener('click', () => {
         console.log('[Back Button] Back button clicked (UI)');
@@ -1134,6 +1173,7 @@ async function initializeApp() {
     menuButton.addEventListener('click', (event) => {
         event.stopPropagation(); 
         dropdownMenu.classList.toggle('hidden'); 
+        console.log(`[initializeApp] Menu dropdown toggled. Hidden: ${dropdownMenu.classList.contains('hidden')}`);
     });
 
     document.addEventListener('click', (event) => {
@@ -1150,9 +1190,11 @@ async function initializeApp() {
         if (document.body.classList.contains('dark-mode')) {
             localStorage.setItem('theme', 'dark');
             themeToggle.innerHTML = '<i class="fas fa-sun"></i> Tryb jasny';
+            console.log("[initializeApp] Switched to dark mode.");
         } else {
             localStorage.setItem('theme', 'light');
             themeToggle.innerHTML = '<i class="fas fa-moon"></i> Tryb ciemny';
+            console.log("[initializeApp] Switched to light mode.");
         }
     });
 
