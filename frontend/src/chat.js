@@ -479,7 +479,8 @@ async function addMessageToChat(msg) {
         const senderName = senderId === String(currentUser.id) ? "Ja" : (getUserLabelById(senderId) || senderId);
         previewText = `${senderName}: ${msg.text}`; 
         const lastMessageTime = new Date(msg.inserted_at);
-        timeText = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+        const timeString = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" }); // Explicitly declare timeString
+        timeEl.textContent = timeString; // Use timeString
         console.log(`[addMessageToChat] Updated preview and time for room ${msg.room}. Preview: "${previewText}"`); 
         previewEl.textContent = previewText; 
     } else {
@@ -859,10 +860,11 @@ function displayActiveUsers(activeUsersData) {
             divMobile.addEventListener('click', async () => {
                 const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(userId));
                 if (userProfile) {
+                    // Stwórz mockowy element clickedConvoItemElement
                     const mockConvoItem = document.createElement('li');
-                    mockConvoItem.dataset.convoId = userProfile.id; 
+                    mockConvoItem.dataset.convoId = userProfile.id; // Corrected: use userProfile.id
                     mockConvoItem.dataset.email = userProfile.email;
-                    mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(userProfile.id)); 
+                    mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(userProfile.id)); // Corrected: use userProfile.id
                     handleConversationClick(userProfile, mockConvoItem);
                 }
             });
