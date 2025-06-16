@@ -97,12 +97,29 @@ function resetChatView() {
     currentChatUser = null; // Reset current chat user
     currentRoom = null; // Reset current room
 
-    if (logoScreen) {
-        logoScreen.classList.remove('hidden'); // Show logo screen
+    // logoScreen is completely hidden on mobile, so no need to show it back on mobile
+    if (window.matchMedia('(min-width: 769px)').matches) { // Only show logo screen on desktop
+        if (logoScreen) {
+            logoScreen.classList.remove('hidden'); // Show logo screen
+        }
+    } else { // On mobile, ensure it stays hidden
+        if (logoScreen) {
+            logoScreen.classList.add('hidden');
+        }
     }
+
     if (chatArea) {
         chatArea.classList.remove('active'); // Deactivate chat area
     }
+    if (chatAreaWrapper) { // Ensure chatAreaWrapper is also hidden on mobile reset
+        if (window.matchMedia('(max-width: 768px)').matches) {
+            chatAreaWrapper.classList.remove('active-on-mobile'); // Hide wrapper on mobile
+        } else {
+            chatAreaWrapper.style.display = 'flex'; // Ensure it's visible on desktop (contains logoScreen)
+            chatAreaWrapper.classList.remove('active-on-mobile'); // Remove mobile-specific class
+        }
+    }
+
 
     if (currentActiveConvoItem) {
         currentActiveConvoItem.classList.remove('active'); // Deactivate active conversation item
@@ -273,27 +290,41 @@ async function handleConversationClick(user, clickedConvoItemElement) {
         messageInput.focus();
     }
 
-    if (logoScreen) {
-        logoScreen.classList.add('hidden'); // Hide logo screen
-    }
-    if (chatArea) {
-        chatArea.classList.add('active'); // Show chat area
-    }
-
-    // Handle responsive back button and sidebar visibility on mobile
+    // NEW LOGIC FOR MOBILE/DESKTOP VIEW SWITCHING
     if (window.matchMedia('(max-width: 768px)').matches) {
-        if (backButton) {
-            backButton.classList.add('show-on-mobile'); // Show back button on mobile
-        }
+        // Mobile view: Hide sidebar, show chat area (full screen)
         if (sidebarWrapper) {
-            sidebarWrapper.classList.add('hide-on-mobile'); // Hide sidebar on mobile
+            sidebarWrapper.classList.add('hidden-on-mobile'); // Ukryj sidebar
+        }
+        if (chatAreaWrapper) {
+            chatAreaWrapper.classList.add('active-on-mobile'); // Pokaż wrapper czatu
+        }
+        if (chatArea) {
+            chatArea.classList.add('active'); // Aktywuj sam obszar czatu
+        }
+        if (backButton) {
+            backButton.style.display = 'block'; // Pokaż przycisk Wstecz
+        }
+        if (logoScreen) {
+            logoScreen.classList.add('hidden'); // Ensure logo screen is hidden on mobile
         }
     } else {
-        if (backButton) {
-            backButton.classList.remove('show-on-mobile'); // Hide back button on desktop
-        }
+        // Desktop view: Sidebar remains visible, chat area shows normally
         if (sidebarWrapper) {
-            sidebarWrapper.classList.remove('hide-on-mobile'); // Ensure sidebar is visible on desktop
+            sidebarWrapper.classList.remove('hidden-on-mobile'); // Upewnij się, że sidebar jest widoczny
+        }
+        if (chatAreaWrapper) {
+            chatAreaWrapper.classList.remove('active-on-mobile'); // Usuń klasę mobilną
+            chatAreaWrapper.style.display = 'flex'; // Upewnij się, że jest flex dla desktopu
+        }
+        if (chatArea) {
+            chatArea.classList.add('active'); // Aktywuj obszar czatu
+        }
+        if (logoScreen) {
+            logoScreen.classList.add('hidden'); // Ukryj logo screen, bo czat jest aktywny
+        }
+        if (backButton) {
+            backButton.style.display = 'none'; // Ukryj przycisk Wstecz
         }
     }
 
@@ -1013,7 +1044,7 @@ async function initializeApp() {
     setupSendMessage();
 
     // 7. Set default UI state on load
-    logoScreen.classList.remove('hidden');
+    // logoScreen.classList.remove('hidden'); // No longer needed, as it's display: none !important on mobile
     chatArea.classList.remove('active'); // Chat area should be hidden by default
     messageInput.disabled = true;
     sendButton.disabled = true;
@@ -1021,7 +1052,8 @@ async function initializeApp() {
     // 8. Add general event listeners for the application UI
     backButton.addEventListener('click', () => {
         console.log('Back button clicked (UI)');
-        resetChatView(); // Reset chat view
+        resetChatView(); // Reset chat view (clears messages, disables input)
+
         // Send leave message to WebSocket if in a room
         if (socket && socket.readyState === WebSocket.OPEN && currentRoom) {
             socket.send(JSON.stringify({
@@ -1032,18 +1064,35 @@ async function initializeApp() {
             console.log(`Sent leave message for room: ${currentRoom}`);
         }
 
-        // Adjust UI visibility
-        if (chatArea) {
-            chatArea.classList.remove('active');
-            logoScreen.classList.remove('hidden');
-        }
-        // Ensure sidebar is visible when back button is clicked on mobile
+        // Adjust UI visibility based on current view
         if (window.matchMedia('(max-width: 768px)').matches) {
+            // On mobile, show sidebar, hide chat area
             if (sidebarWrapper) {
-                sidebarWrapper.classList.remove('hide-on-mobile'); // Show sidebar on mobile
+                sidebarWrapper.classList.remove('hidden-on-mobile'); // Show sidebar
+            }
+            if (chatAreaWrapper) {
+                chatAreaWrapper.classList.remove('active-on-mobile'); // Hide chat area wrapper
+            }
+            if (chatArea) {
+                chatArea.classList.remove('active'); // Deactivate chat area itself
+            }
+            if (logoScreen) {
+                logoScreen.classList.add('hidden'); // Ensure logo screen remains hidden on mobile
             }
             if (backButton) {
-                backButton.classList.remove('show-on-mobile'); // Hide back button
+                backButton.style.display = 'none'; // Hide back button
+            }
+        } else {
+            // On desktop, show logo screen, hide chat area, sidebar remains visible
+            if (logoScreen) {
+                logoScreen.classList.remove('hidden'); // Show logo screen on desktop
+            }
+            if (chatArea) {
+                chatArea.classList.remove('active'); // Deactivate chat area
+            }
+            if (chatAreaWrapper) {
+                chatAreaWrapper.classList.remove('active-on-mobile'); // Remove mobile class for desktop
+                chatAreaWrapper.style.display = 'flex'; // Ensure it's displayed as flex on desktop
             }
         }
     });
@@ -1055,9 +1104,10 @@ async function initializeApp() {
 
         // On mobile, also toggle sidebar visibility (if it's not the chat view)
         if (window.matchMedia('(max-width: 768px)').matches) {
-            if (!chatArea.classList.contains('active')) { // Only toggle if not in chat view
-                if (sidebarWrapper) {
-                    sidebarWrapper.classList.toggle('hide-on-mobile');
+            // If we are currently in chat view, clicking menu button won't reveal sidebar
+            if (!chatAreaWrapper.classList.contains('active-on-mobile')) { // Only toggle if not in chat view
+                 if (sidebarWrapper) {
+                    sidebarWrapper.classList.toggle('hidden-on-mobile'); // This should make it visible/hidden
                 }
             }
         }
@@ -1124,39 +1174,45 @@ async function initializeApp() {
     function handleMediaQueryChange(mq) {
         if (mq.matches) { // Mobile view (max-width: 768px)
             console.log("Mobile view activated. Adjusting initial visibility for mobile.");
-            // Na mobile, domyślnie ukrywamy chatArea i pokazujemy logoScreen
-            chatArea.classList.remove('active');
-            logoScreen.classList.remove('hidden');
-
-            // Prawy sidebar zawsze ukryty na mobile (obsługiwane przez CSS: display: none !important)
-            if (rightSidebarWrapper) {
-                // rightSidebarWrapper.style.display = 'none'; // Niepotrzebne, skoro jest w CSS
-            }
-            // Back button jest pokazywany dynamicznie w handleConversationClick, więc domyślnie ukryty
-            if (backButton) {
-                backButton.classList.remove('show-on-mobile');
-            }
-            // SidebarWrapper domyślnie pokazany na starcie mobile (ukryje się po kliknięciu konwersacji)
+            // On mobile, initially show sidebar, hide chat area. Logo screen hidden.
             if (sidebarWrapper) {
-                sidebarWrapper.classList.remove('hide-on-mobile'); // Upewnij się, że nie jest ukryty na starcie
+                sidebarWrapper.classList.remove('hidden-on-mobile'); // Ensure sidebar is visible
             }
+            if (chatAreaWrapper) {
+                chatAreaWrapper.classList.remove('active-on-mobile'); // Ensure chat area is hidden
+            }
+            if (chatArea) {
+                chatArea.classList.remove('active'); // Ensure chat area itself is hidden
+            }
+            if (logoScreen) {
+                logoScreen.classList.add('hidden'); // Logo screen always hidden on mobile
+            }
+            if (backButton) {
+                backButton.style.display = 'none'; // Back button hidden initially
+            }
+            // Prawy sidebar zawsze ukryty na mobile (obsługiwane przez CSS: display: none !important)
 
         } else { // Desktop/Tablet view (min-width: 769px)
             console.log("Desktop/Tablet view activated. Adjusting initial visibility for desktop.");
-            // Na desktopie zawsze pokazujemy sidebar i prawy sidebar, ukrywamy logoScreen
+            // On desktop, show sidebar, logo screen initially, chat area hidden.
             if (sidebarWrapper) {
-                sidebarWrapper.classList.remove('hide-on-mobile'); // Upewnij się, że jest widoczny na desktopie
+                sidebarWrapper.classList.remove('hidden-on-mobile'); // Ensure visible
+            }
+            if (chatAreaWrapper) {
+                chatAreaWrapper.classList.remove('active-on-mobile'); // Remove mobile class
+                chatAreaWrapper.style.display = 'flex'; // Ensure it's visible to contain logo screen
+            }
+            if (logoScreen) {
+                logoScreen.classList.remove('hidden'); // Show logo screen
+            }
+            if (chatArea) {
+                chatArea.classList.remove('active'); // Chat area hidden
             }
             if (rightSidebarWrapper) {
-                rightSidebarWrapper.style.display = 'flex'; // Zapewnij widoczność prawego sidebara na desktopie
+                rightSidebarWrapper.style.display = 'flex'; // Ensure right sidebar is visible
             }
-            // Zostawiamy chatArea i logoScreen w ich domyślnych stanach (logoScreen widoczne, chatArea ukryte),
-            // aż użytkownik wybierze konwersację.
-            chatArea.classList.remove('active');
-            logoScreen.classList.remove('hidden');
-
             if (backButton) {
-                backButton.classList.remove('show-on-mobile'); // Back button niepotrzebny na desktopie
+                backButton.style.display = 'none'; // Back button not needed on desktop
             }
         }
     }

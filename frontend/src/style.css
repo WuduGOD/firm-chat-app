@@ -1356,14 +1356,23 @@ body.dark-mode .nav-icon::after {
         margin: 0;
         border-radius: 0;
         box-shadow: none;
+        height: 100vh; /* Zapewnij pełną wysokość na mobile */
+        position: relative; /* Potrzebne, bo chat-area-wrapper będzie absolutny */
     }
 
+    /* Sidebar Wrapper - widoczny domyślnie na mobile, zajmuje 100% szerokości i wysokości */
     .sidebar-wrapper {
         min-width: unset;
         width: 100%;
-        flex-direction: column; /* Główne elementy w sidebarze układamy pionowo */
-        height: auto; /* Pozwala zawartości określić wysokość */
+        flex-direction: column;
+        height: 100%; /* Ważne: pełna wysokość kontenera, gdy sidebar jest aktywny */
         border-right: none;
+        display: flex; /* Zapewnij, że jest to kontener flex */
+    }
+
+    /* Klasa do ukrywania sidebar-wrapper na mobile, gdy czat jest aktywny */
+    .sidebar-wrapper.hidden-on-mobile {
+        display: none;
     }
 
     .main-nav-icons {
@@ -1376,29 +1385,26 @@ body.dark-mode .nav-icon::after {
         justify-content: space-around;
         border-top-left-radius: 0;
         border-bottom-left-radius: 0;
-        height: auto; /* Dostosowuje wysokość do zawartości */
-        flex-shrink: 0; /* Nie kurczy się */
+        height: auto;
+        flex-shrink: 0;
     }
     .main-nav-icons .add-new-button {
         margin-top: 0;
     }
 
-    /* NOWE STYLE DLA AKTYWNYCH UŻYTKOWNIKÓW NA MOBILE */
+    /* Aktywni użytkownicy na mobile - widoczni, gdy sidebar-wrapper jest widoczny */
     .online-users-mobile {
         display: flex; /* Pokaż na mobile */
-        flex-direction: row; /* Avatary w rzędzie */
-        overflow-x: auto; /* Przewijanie poziome */
-        -webkit-overflow-scrolling: touch; /* Płynne przewijanie na iOS */
-        padding: 0.8rem 1rem; /* Padding z góry/dołu i z boku */
+        flex-direction: row;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 0.8rem 1rem;
         border-bottom: 1px solid var(--border-color-light);
         background: var(--bg-color-sidebar);
-        flex-shrink: 0; /* Nie kurczy się */
-        gap: 0.8rem; /* Odstęp między avatarami */
-        scroll-snap-type: x mandatory; /* Opcjonalnie: dla lepszego przewijania karuzeli */
+        flex-shrink: 0;
+        gap: 0.8rem;
+        scroll-snap-type: x mandatory;
     }
-    /* Ukryj na desktopie (reguła jest domyślnie poza media query) */
-    /* .online-users-mobile { display: none; } - Ta reguła powinna być globalna i nadpisywana poniżej */
-
 
     /* Style dla pojedynczego użytkownika w mobilnej liście online */
     .online-users-mobile .online-user-item-mobile {
@@ -1406,8 +1412,8 @@ body.dark-mode .nav-icon::after {
         flex-direction: column;
         align-items: center;
         gap: 0.3rem;
-        flex-shrink: 0; /* Ważne, aby się nie kurczyły w karuzeli */
-        min-width: 60px; /* Minimalna szerokość elementu */
+        flex-shrink: 0;
+        min-width: 60px;
         text-align: center;
         cursor: pointer;
     }
@@ -1416,13 +1422,13 @@ body.dark-mode .nav-icon::after {
         height: 50px;
         border-radius: 50%;
         object-fit: cover;
-        border: 2px solid var(--color-online); /* Zielona ramka dla online */
+        border: 2px solid var(--color-online);
         flex-shrink: 0;
     }
     .online-users-mobile .online-user-item-mobile .username {
         font-size: 0.75rem;
         color: var(--text-color-dark);
-        white-space: nowrap; /* Nie łam tekstu */
+        white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
         max-width: 100%;
@@ -1437,28 +1443,36 @@ body.dark-mode .nav-icon::after {
         min-height: 0;
     }
 
+    /* Chat Area Wrapper - ukryty domyślnie, staje się widoczny i pełnoekranowy po aktywacji czatu */
+    .chat-area-wrapper {
+        flex-grow: 1;
+        width: 100%; /* Rozciągnij na całą szerokość */
+        height: 100%; /* Zajmij całą wysokość */
+        position: absolute; /* Umożliwia zakrycie sidebar-wrapper */
+        top: 0;
+        left: 0;
+        z-index: 210; /* ChatArea na wierzchu, gdy aktywny */
+        display: none; /* Domyślnie ukryty */
+        flex-direction: column; /* Upewnij się, że jego zawartość jest w kolumnie */
+    }
+
+    /* Klasa do pokazywania chat-area-wrapper na mobile */
+    .chat-area-wrapper.active-on-mobile {
+        display: flex;
+    }
+
+    .logo-screen {
+        display: none !important; /* Całkowicie ukryj logoScreen na mobile */
+    }
+
     .chat-area {
-        display: none;
-        height: calc(100vh - (1.6rem + 2rem) - (50px + 1rem) - (1rem + 3rem));
-        border-top-right-radius: 0;
-        border-bottom-right-radius: 0;
+        height: 100%; /* Czat zajmuje całą dostępną wysokość */
+        display: flex; /* Zawsze flex, gdy jego wrapper jest aktywny */
+        flex-direction: column; /* Zawartość czatu w kolumnie */
     }
 
     .chat-header .back-button {
-        display: block;
-    }
-
-    .chat-header {
-        padding: 0.6rem 0.8rem;
-        gap: 0.6rem;
-    }
-
-    .chat-header-actions.right-aligned {
-        gap: 0.5rem;
-    }
-
-    .chat-header-actions button {
-        padding: 0.3rem;
+        display: block; /* Pokaż przycisk powrotu w nagłówku czatu na mobile */
     }
 
     /* UKRYJ PRAWY SIDEBAR CAŁKOWICIE NA MOBILE */
