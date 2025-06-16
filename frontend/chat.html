@@ -25,13 +25,20 @@
   </header>
 
   <div class="container">
-        <div class="sidebar-wrapper">
+    <div class="sidebar-wrapper">
       <div class="main-nav-icons">
         <button class="nav-icon active" data-tooltip="Rozmowy"><i class="fas fa-comments"></i></button>
         <button class="nav-icon" data-tooltip="Grupy"><i class="fas fa-users"></i></button>
         <button class="nav-icon" data-tooltip="Praca"><i class="fa fa-suitcase" aria-hidden="true"></i></button>
         <button class="nav-icon add-new-button" data-tooltip="Dodaj nowy kontakt/grupę"><i class="fas fa-plus"></i></button>
       </div>
+
+      <!-- NOWA SEKCJA DLA AKTYWNYCH UŻYTKOWNIKÓW NA MOBILE -->
+      <div class="online-users-mobile" id="onlineUsersMobile">
+        <!-- Aktywni użytkownicy będą dynamicznie dodawani tutaj przez JS -->
+        <!-- Będzie to pozioma lista avatarów, scrollowana poziomo -->
+      </div>
+      
       <div id="sidebar" class="conversations-list">
         <h2>Konwersacje</h2>
         <div class="search-bar">
@@ -44,7 +51,7 @@
       </div>
     </div>
 
-        <div class="chat-area-wrapper">
+    <div class="chat-area-wrapper">
       <section id="logoScreen" class="logo-screen">
         <h2>Witaj w Komunikatorze</h2>
         <p>Wybierz kontakt z listy po lewej, aby rozpocząć rozmowę.</p>

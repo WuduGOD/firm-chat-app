@@ -15,6 +15,8 @@ let sidebarWrapper; // Kontener dla main-nav-icons i sidebar
 let mainNavIcons;
 let navIcons;
 
+let onlineUsersMobile; // NOWA ZMIENNA: Kontener dla aktywnych użytkowników na mobile
+
 let sidebarEl; // ID: sidebar, Klasa: conversations-list
 let searchInput;
 let contactsListEl; // ID: contactsList
@@ -57,7 +59,7 @@ let reconnectAttempts = 0; // Licznik prób ponownego połączenia
 let typingTimeout; // Timeout dla wskaźnika pisania (dla obu wskaźników)
 let currentActiveConvoItem = null; // Aktualnie wybrany element konwersacji na liście
 
-// NOWA ZMIENNA: Mapa do przechowywania aktualnych statusów online (userID -> boolean)
+// Mapa do przechowywania aktualnych statusów online (userID -> boolean)
 let onlineUsers = new Map();
 
 
@@ -258,7 +260,7 @@ async function handleConversationClick(user, clickedConvoItemElement) {
     if (chatUserName && messageInput && sendButton && userStatusSpan) {
         chatUserName.textContent = currentChatUser.username;
         
-        // KLUCZOWA ZMIANA: Sprawdzamy aktualny status z mapy onlineUsers
+        // Sprawdzamy aktualny status z mapy onlineUsers
         // Jeśli użytkownik jest w mapie i jest online, to jest online. W przeciwnym razie offline.
         const isUserOnline = onlineUsers.get(String(user.id)) === true; 
         userStatusSpan.textContent = isUserOnline ? 'Online' : 'Offline';
@@ -383,7 +385,7 @@ function addMessageToChat(msg) {
 
         if (previewEl && timeEl) {
             const senderName = String(msg.username) === String(currentUser.id) ? "Ja" : (getUserLabelById(msg.username) || msg.username);
-            // KLUCZOWA ZMIANA: Bezpośrednia aktualizacja textContent na elemencie DOM
+            // Bezpośrednia aktualizacja textContent na elemencie DOM
             previewEl.textContent = `${senderName}: ${msg.text}`; // Użyj textContent, nie innerHTML dla bezpieczeństwa
 
             const lastMessageTime = new Date(msg.inserted_at);
@@ -453,7 +455,7 @@ function updateUserStatusIndicator(userId, isOnline) {
         console.log("[Status Update Debug] currentChatUser or userStatusSpan is null/undefined. Cannot update header.");
     }
 
-    // Update status in the active users list (right sidebar)
+    // Update status in the active users list (right sidebar - desktop)
     if (activeUsersListEl && noActiveUsersText) {
         const userListItem = activeUsersListEl.querySelector(`li[data-user-id="${userId}"]`);
 
@@ -461,38 +463,27 @@ function updateUserStatusIndicator(userId, isOnline) {
             // If user goes offline and is not the current user, remove from list
             if (userListItem) {
                 userListItem.remove();
-                console.log(`Removed offline user ${getUserLabelById(userId)} from active list.`);
+                console.log(`Removed offline user ${getUserLabelById(userId)} from desktop active list.`);
             }
             // Check if the list is empty after removal and show "no active users" message
             if (activeUsersListEl.children.length === 0) {
                 noActiveUsersText.style.display = 'block';
                 activeUsersListEl.style.display = 'none';
             }
-            return; // Exit after handling offline status
-        }
-
-        // Handle online status: update existing or add new
-        if (isOnline) {
-            // Do not add the current user to the active users list
-            if (String(userId) === String(currentUser.id)) {
-                console.log(`Filtering out current user ${userId} from active users list.`);
-                return;
-            }
-
+            // No return here, continue to update mobile list
+        } else if (isOnline && String(userId) !== String(currentUser.id)) {
             if (userListItem) {
-                // If user exists, update their status indicator
-                const statusIndicator = userListItem.querySelector('.status-dot'); // Użyj .status-dot
+                const statusIndicator = userListItem.querySelector('.status-dot');
                 if (statusIndicator) {
                     statusIndicator.classList.toggle('online', isOnline);
                     statusIndicator.classList.toggle('offline', !isOnline);
                 }
             } else {
-                 // If user is online and not already in the list, add them
                 const li = document.createElement('li');
-                li.classList.add('active-user-item'); // Dodaj klasę do LI, jeśli potrzebne do stylowania ogólnego
+                li.classList.add('active-user-item');
                 li.dataset.userId = userId;
 
-                const avatarSrc = `https://i.pravatar.cc/150?img=${userId.charCodeAt(0) % 70 + 1}`; // Temporary random avatar
+                const avatarSrc = `https://i.pravatar.cc/150?img=${userId.charCodeAt(0) % 70 + 1}`;
 
                 li.innerHTML = `
                     <img src="${avatarSrc}" alt="Avatar" class="avatar">
@@ -500,15 +491,58 @@ function updateUserStatusIndicator(userId, isOnline) {
                     <span class="status-dot online"></span>
                 `;
                 activeUsersListEl.appendChild(li);
+                console.log(`Added new online user to desktop active list: ${getUserLabelById(userId)}`);
             }
-            // If there are active users, ensure the list is visible and message is hidden
             noActiveUsersText.style.display = 'none';
             activeUsersListEl.style.display = 'block';
         }
     } else {
         console.error("activeUsersListEl or noActiveUsersText not found during status update.");
     }
+
+    // Update status in the mobile online users list
+    if (onlineUsersMobile) {
+        const mobileUserItem = onlineUsersMobile.querySelector(`div[data-user-id="${userId}"]`);
+
+        if (!isOnline && String(userId) !== String(currentUser.id)) {
+            if (mobileUserItem) {
+                mobileUserItem.remove();
+                console.log(`Removed offline user ${getUserLabelById(userId)} from mobile active list.`);
+            }
+        } else if (isOnline && String(userId) !== String(currentUser.id)) {
+            if (!mobileUserItem) {
+                const div = document.createElement('div');
+                div.classList.add('online-user-item-mobile');
+                div.dataset.userId = userId;
+
+                const avatarSrc = `https://i.pravatar.cc/150?img=${userId.charCodeAt(0) % 70 + 1}`;
+
+                div.innerHTML = `
+                    <img src="${avatarSrc}" alt="Avatar" class="avatar">
+                    <span class="username">${getUserLabelById(userId)}</span>
+                `;
+                
+                // Add click listener for mobile item
+                div.addEventListener('click', async () => {
+                    const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(userId));
+                    if (userProfile) {
+                        // Create a mock clicked convo item element as it's not from the contacts list
+                        const mockConvoItem = document.createElement('li');
+                        mockConvoItem.dataset.convoId = userId;
+                        mockConvoItem.dataset.email = userProfile.email;
+                        mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(userId));
+                        handleConversationClick(userProfile, mockConvoItem);
+                    }
+                });
+                onlineUsersMobile.appendChild(div);
+                console.log(`Added new online user to mobile active list: ${getUserLabelById(userId)}`);
+            }
+        }
+    } else {
+        console.error("onlineUsersMobile not found during status update.");
+    }
 }
+
 
 /**
  * Displays the typing indicator for a specific user.
@@ -559,7 +593,7 @@ function initWebSocket() {
         console.log('WebSocket connected');
         reconnectAttempts = 0; // Reset reconnect attempts
         if (currentUser) { // Only attempt to join if currentUser is defined
-            // KLUCZOWA ZMIANA: Zawsze dołączamy do "global" pokoju po otwarciu WS,
+            // Zawsze dołączamy do "global" pokoju po otwarciu WS,
             // aby otrzymywać ogólne statusy. Specyficzne pokoje będą dołączane w handleConversationClick.
             socket.send(JSON.stringify({
                 type: 'join',
@@ -640,10 +674,10 @@ function initWebSocket() {
  * Loads and displays the list of active users in the right sidebar.
  */
 async function loadActiveUsers() {
-    console.log("Loading active users for right sidebar...");
+    console.log("Loading active users for right sidebar and mobile...");
     // Sprawdź, czy elementy istnieją, zanim spróbujesz ich użyć
-    if (!activeUsersListEl || !noActiveUsersText) {
-        console.error("activeUsersListEl or noActiveUsersText not found, cannot load active users.");
+    if (!activeUsersListEl || !noActiveUsersText || !onlineUsersMobile) {
+        console.error("Critical active user list elements not found, cannot load active users.");
         return;
     }
 
@@ -657,33 +691,36 @@ async function loadActiveUsers() {
 }
 
 /**
- * Displays a list of active users in the right sidebar.
+ * Displays a list of active users in the right sidebar (desktop) and mobile online users section.
  * @param {Array<Object>} activeUsersData - An array of active user objects.
  */
 function displayActiveUsers(activeUsersData) {
-    if (!activeUsersListEl || !noActiveUsersText) return;
+    if (!activeUsersListEl || !noActiveUsersText || !onlineUsersMobile) return;
 
-    activeUsersListEl.innerHTML = ''; // Clear previous list items
-    onlineUsers.clear(); // KLUCZOWA ZMIANA: Czyścimy mapę przed uzupełnieniem z active_users
+    activeUsersListEl.innerHTML = ''; // Clear previous desktop list items
+    onlineUsersMobile.innerHTML = ''; // Clear previous mobile list items
+    onlineUsers.clear(); // Czyścimy mapę przed uzupełnieniem z active_users
 
     // Filter out the current user from the active users list
     const filteredUsers = activeUsersData.filter(user => String(user.id) !== String(currentUser.id));
 
     if (filteredUsers.length === 0) {
-        // No other active users: hide the list, show "no active users" message
+        // No other active users: hide desktop list, show "no active users" message
         activeUsersListEl.style.display = 'none';
         noActiveUsersText.style.display = 'block';
+        // Mobile list might still be displayed but empty, handled by CSS visibility.
     } else {
-        // Other active users exist: show the list, hide the message
+        // Other active users exist: show desktop list, hide the message
         activeUsersListEl.style.display = 'block';
         noActiveUsersText.style.display = 'none';
 
         filteredUsers.forEach(user => {
+            // Dodaj do listy na desktopie (prawy sidebar)
             const li = document.createElement('li');
-            li.classList.add('active-user-item'); // Dodaj klasę do LI, jeśli potrzebne do stylowania ogólnego
+            li.classList.add('active-user-item');
             li.dataset.userId = user.id;
 
-            const avatarSrc = `https://i.pravatar.cc/150?img=${user.id.charCodeAt(0) % 70 + 1}`; // Temporary random avatar
+            let avatarSrc = `https://i.pravatar.cc/150?img=${user.id.charCodeAt(0) % 70 + 1}`;
 
             li.innerHTML = `
                 <img src="${avatarSrc}" alt="Avatar" class="avatar">
@@ -691,7 +728,32 @@ function displayActiveUsers(activeUsersData) {
                 <span class="status-dot online"></span>
             `;
             activeUsersListEl.appendChild(li);
-            onlineUsers.set(String(user.id), true); // KLUCZOWA ZMIANA: Aktualizujemy mapę onlineUsers
+
+            // Dodaj do listy na mobile (górny poziomy pasek)
+            const divMobile = document.createElement('div');
+            divMobile.classList.add('online-user-item-mobile');
+            divMobile.dataset.userId = user.id;
+
+            divMobile.innerHTML = `
+                <img src="${avatarSrc}" alt="Avatar" class="avatar">
+                <span class="username">${getUserLabelById(user.id) || user.username}</span>
+            `;
+
+            // Dodaj listener kliknięcia dla elementów mobilnych
+            divMobile.addEventListener('click', async () => {
+                const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(user.id));
+                if (userProfile) {
+                    // Stwórz mockowy element clickedConvoItemElement
+                    const mockConvoItem = document.createElement('li');
+                    mockConvoItem.dataset.convoId = user.id;
+                    mockConvoItem.dataset.email = userProfile.email;
+                    mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(user.id));
+                    handleConversationClick(userProfile, mockConvoItem);
+                }
+            });
+            onlineUsersMobile.appendChild(divMobile);
+
+            onlineUsers.set(String(user.id), true); // Aktualizujemy mapę onlineUsers
         });
     }
     console.log("[Status Update Debug] onlineUsers map after displayActiveUsers:", onlineUsers);
@@ -770,7 +832,6 @@ function setupChatSettingsDropdown() {
                     }
 
                     console.log('New nickname set:', newNickname, 'for user:', currentUser.id);
-                    // Użyj alertu jako prostego powiadomienia, zgodnie z Twoim wcześniejszym kodem
                     // Zastąp alert modalem w prawdziwej aplikacji
                     alert(`Nickname '${newNickname}' has been set successfully.`);
                     await loadAllProfiles(); // Reload profiles to update cache
@@ -821,6 +882,8 @@ async function initializeApp() {
     mainNavIcons = document.querySelector('.main-nav-icons');
     navIcons = document.querySelectorAll('.nav-icon');
 
+    onlineUsersMobile = document.getElementById('onlineUsersMobile'); // NOWA REFERENCJA
+
     sidebarEl = document.getElementById('sidebar');
     // searchInput jest bezpośrednio w div.search-bar, nie ma ID, więc querySelector to wybiera.
     searchInput = sidebarEl.querySelector('.search-bar input[type="text"]');
@@ -851,7 +914,7 @@ async function initializeApp() {
     rightSidebarWrapper = document.querySelector('.right-sidebar-wrapper');
     rightSidebar = document.getElementById('rightSidebar');
     activeUsersListEl = document.getElementById('activeUsersList');
-    // KLUCZOWA ZMIANA: Wybieranie elementu po ID, nie po klasie, zgodnie z HTML
+    // Wybieranie elementu po ID, nie po klasie, zgodnie z HTML
     noActiveUsersText = document.getElementById('noActiveUsersText');
 
 
@@ -867,6 +930,7 @@ async function initializeApp() {
         sidebarWrapper: sidebarWrapper,
         mainNavIcons: mainNavIcons,
         navIconsLength: navIcons.length, // Sprawdzamy długość NodeList
+        onlineUsersMobile: onlineUsersMobile, // WAŻNE: sprawdź nowy element
         sidebarEl: sidebarEl,
         searchInput: searchInput,
         contactsListEl: contactsListEl,
@@ -910,8 +974,6 @@ async function initializeApp() {
 
     if (!allElementsFound) {
         console.error('Initialization failed due to missing UI elements. Please check your HTML selectors. Details:', missingElements);
-        // Możesz dodać alert dla użytkownika tutaj, ale w Canvas lepiej unikać alertów
-        // alert('Błąd inicjalizacji aplikacji: Brakujące elementy UI. Sprawdź konsolę.');
         return; // Zakończ inicjalizację, jeśli brakuje elementów
     } else {
         console.log('All critical UI elements found.');
@@ -1058,39 +1120,6 @@ async function initializeApp() {
     // Setup chat specific settings dropdown
     setupChatSettingsDropdown();
 
-    // TOOLTIP FUNCTIONALITY REMOVED: The CSS ::after pseudo-element already handles tooltips.
-    // The JavaScript implementation was redundant and causing the unwanted tooltip at the bottom.
-    // document.querySelectorAll('.main-nav-icons .nav-icon[data-tooltip]').forEach(element => {
-    //     let tooltipEl;
-
-    //     const showTooltip = (e) => {
-    //         const text = e.target.dataset.tooltip;
-    //         if (text) {
-    //             if (!tooltipEl) {
-    //                 tooltipEl = document.createElement('div');
-    //                 tooltipEl.classList.add('simple-tooltip');
-    //                 document.body.appendChild(tooltipEl);
-    //             }
-    //             tooltipEl.textContent = text;
-    //             tooltipEl.style.display = 'block';
-
-    //             const rect = e.target.getBoundingClientRect();
-    //             tooltipEl.style.left = `${rect.right + 10}px`;
-    //             tooltipEl.style.top = `${rect.top + (rect.height / 2) - (tooltipEl.offsetHeight / 2)}px`;
-    //         }
-    //     };
-
-    //     const hideTooltip = () => {
-    //         if (tooltipEl) {
-    //             tooltipEl.style.display = 'none';
-    //         }
-    //     };
-
-    //     element.addEventListener('mouseenter', showTooltip);
-    //     element.addEventListener('mouseleave', hideTooltip);
-    // });
-
-
     // Handle media query changes for responsive layout
     function handleMediaQueryChange(mq) {
         if (mq.matches) { // Mobile view (max-width: 768px)
@@ -1099,9 +1128,9 @@ async function initializeApp() {
             chatArea.classList.remove('active');
             logoScreen.classList.remove('hidden');
 
-            // Prawy sidebar zawsze ukryty na mobile
+            // Prawy sidebar zawsze ukryty na mobile (obsługiwane przez CSS: display: none !important)
             if (rightSidebarWrapper) {
-                rightSidebarWrapper.style.display = 'none'; // Możemy zostawić to w JS dla pewności, lub przenieść do CSS
+                // rightSidebarWrapper.style.display = 'none'; // Niepotrzebne, skoro jest w CSS
             }
             // Back button jest pokazywany dynamicznie w handleConversationClick, więc domyślnie ukryty
             if (backButton) {
