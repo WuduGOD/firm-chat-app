@@ -758,8 +758,8 @@ body {
     padding: 1.5rem;
     overflow-y: auto;
     background: var(--bg-color-chat-messages);
-    min-height: 0;
-    height: 0;
+    min-height: 0; /* Ważne dla flexboxa */
+    /* USUNIĘTO: height: 0; - Pozwalamy flex:1; na pełną kontrolę wysokości */
 }
 
 /* Stylowanie wiadomości w zależności od motywu */
