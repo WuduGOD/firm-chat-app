@@ -281,8 +281,9 @@ async function handleConversationClick(user, clickedConvoItemElement) {
         // Jeśli użytkownik jest w mapie i jest online, to jest online. W przeciwnym razie offline.
         const isUserOnline = onlineUsers.get(String(user.id)) === true; 
         userStatusSpan.textContent = isUserOnline ? 'Online' : 'Offline';
-        userStatusSpan.classList.toggle('online', isOnline);
-        userStatusSpan.classList.toggle('offline', !isOnline);
+        // POPRAWKA: Zmieniono 'isOnline' na 'isUserOnline'
+        userStatusSpan.classList.toggle('online', isUserOnline); 
+        userStatusSpan.classList.toggle('offline', !isUserOnline); 
         console.log(`Initial status for active chat user ${currentChatUser.username} (from onlineUsers map): ${isUserOnline ? 'Online' : 'Offline'}`);
 
         messageInput.disabled = false;
@@ -798,10 +799,10 @@ function displayActiveUsers(activeUsersData) {
             let avatarSrc = `https://i.pravatar.cc/150?img=${user.id.charCodeAt(0) % 70 + 1}`;
 
             li.innerHTML = `
-                <img src="${avatarSrc}" alt="Avatar" class="avatar">
-                <span class="username">${getUserLabelById(user.id) || user.username}</span>
-                <span class="status-dot online"></span>
-            `;
+                    <img src="${avatarSrc}" alt="Avatar" class="avatar">
+                    <span class="username">${getUserLabelById(user.id) || user.username}</span>
+                    <span class="status-dot online"></span>
+                `;
             activeUsersListEl.appendChild(li);
 
             // Dodaj do listy na mobile (górny poziomy pasek)
@@ -810,9 +811,9 @@ function displayActiveUsers(activeUsersData) {
             divMobile.dataset.userId = user.id;
 
             divMobile.innerHTML = `
-                <img src="${avatarSrc}" alt="Avatar" class="avatar">
-                <span class="username">${getUserLabelById(user.id) || user.username}</span>
-            `;
+                    <img src="${avatarSrc}" alt="Avatar" class="avatar">
+                    <span class="username">${getUserLabelById(user.id) || user.username}</span>
+                `;
             
             // Add click listener for mobile item
             divMobile.addEventListener('click', async () => {
@@ -820,9 +821,9 @@ function displayActiveUsers(activeUsersData) {
                 if (userProfile) {
                     // Stwórz mockowy element clickedConvoItemElement
                     const mockConvoItem = document.createElement('li');
-                    mockConvoItem.dataset.convoId = user.id;
+                    mockConvoItem.dataset.convoId = userId;
                     mockConvoItem.dataset.email = userProfile.email;
-                    mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(user.id));
+                    mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(userId));
                     handleConversationClick(userProfile, mockConvoItem);
                 }
             });
