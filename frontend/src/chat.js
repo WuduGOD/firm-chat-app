@@ -380,9 +380,17 @@ function setupSendMessage() {
 
     // Send message on button click
     sendButton.onclick = () => {
+        // --- NOWY LOG DEBUGOWANIA: Sprawdzamy, czy event listener działa ---
+        console.log("[DEBUG: SEND BUTTON] Send button clicked or Enter pressed.");
+        // --- KONIEC NOWEGO LOGU ---
+
         const text = messageInput.value.trim();
         if (!text || !currentChatUser || !socket || socket.readyState !== WebSocket.OPEN) {
             console.warn("Cannot send message: empty, no recipient, or WebSocket not open.");
+            
+            // Dodatkowe logi do zdiagnozowania warunku
+            console.log(`Debug conditions: text=${!!text}, currentChatUser=${!!currentChatUser}, socket=${!!socket}, socket.readyState=${socket ? socket.readyState : 'N/A'}`);
+
             return;
         }
         if (!currentRoom) {
@@ -828,9 +836,9 @@ function displayActiveUsers(activeUsersData) {
                 const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(user.id));
                 if (userProfile) {
                     const mockConvoItem = document.createElement('li');
-                    mockConvoItem.dataset.convoId = user.id; // Corrected: use user.id from the current loop
+                    mockConvoItem.dataset.convoId = user.id; 
                     mockConvoItem.dataset.email = userProfile.email;
-                    mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(user.id)); // Corrected: use user.id
+                    mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(user.id)); 
                     handleConversationClick(userProfile, mockConvoItem);
                 }
             });
