@@ -1318,7 +1318,7 @@ body.dark-mode .nav-icon::after {
         border-radius: 12px;
         box-shadow: var(--shadow-medium);
     }
-    .sidebar-wrapper, .chat-area-wrapper, .right-sidebar-wrapper {
+    .sidebar-wrapper, .chat-area, .right-sidebar-wrapper { /* Usunięto .chat-area-wrapper bo go nie ma */
         border-radius: 0 !important;
     }
     .main-nav-icons {
@@ -1333,42 +1333,81 @@ body.dark-mode .nav-icon::after {
     }
 
     .right-sidebar-wrapper {
-        min-width: 220px;
-        width: 25%;
-        max-width: 350px;
+        min-width: 180px; /* Dostosowano dla 1024px */
+        width: 20%; /* Dostosowano dla 1024px */
+        max-width: 300px;
         display: flex !important;
     }
 }
 
 @media (max-width: 768px) {
+    /* KLUCZOWE ZMIANY DLA MOBILE */
+    body {
+        overflow-y: auto; /* Pozwala na przewijanie na mobile, jeśli zawartość wykracza poza ekran */
+    }
+
     .main-header {
         padding: 0.8rem 1rem;
     }
     .app-title {
         font-size: 1.2rem;
     }
-    .user-menu button {
-        font-size: 1.1rem;
+    .user-menu { /* Zmieniono selektor */
+        display: none; /* Ukryj menu główne na mobile, będzie pokazywane przez JS */
+    }
+    .main-header .menu-button { /* Pokaż przycisk menu na mobile */
+        display: block;
     }
 
+    .dropdown-menu { /* Zmieniono selektor */
+        position: fixed; /* Zamiast absolute, żeby było zawsze widoczne */
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        width: 100vw !important; /* Pełna szerokość ekranu na mobile */
+        height: 100vh; /* Pełna wysokość ekranu na mobile */
+        max-width: none !important; /* Usunięto ograniczenie max-width */
+        border-radius: 0; /* Bez zaokrągleń */
+        padding-top: 5rem; /* Odstęp od góry, żeby nie zasłaniał przycisku */
+        z-index: 500; /* BARDZO wysoki z-index, aby było zawsze na wierzchu */
+        justify-content: flex-start;
+        align-items: center;
+        background: var(--bg-color-dropdown);
+    }
+    .dropdown-menu.hidden {
+        display: none;
+    }
+    .dropdown-menu #themeToggle,
+    .dropdown-menu #logoutButton {
+        font-size: 1.2rem;
+        padding: 1rem;
+        width: 80%; /* Szersze przyciski */
+    }
+
+
     .container {
-        flex-direction: column;
+        flex-direction: column; /* Układaj elementy pionowo na mobile */
         margin: 0;
         border-radius: 0;
         box-shadow: none;
         height: 100vh; /* Zapewnij pełną wysokość na mobile */
-        position: relative; /* Potrzebne, bo chat-area-wrapper będzie absolutny */
+        position: relative;
     }
 
     /* Sidebar Wrapper - widoczny domyślnie na mobile, zajmuje 100% szerokości i wysokości */
     .sidebar-wrapper {
         min-width: unset;
-        max-width: unset !important; /* <--- DODANO TĘ KLUCZOWĄ LINIĘ */
+        max-width: unset !important; /* Zapewnia pełną szerokość */
         width: 100%;
         flex-direction: column;
         height: 100%; /* Ważne: pełna wysokość kontenera, gdy sidebar jest aktywny */
         border-right: none;
         display: flex; /* Zapewnij, że jest to kontener flex */
+        position: absolute; /* Umożliwia nakładanie na inne elementy */
+        top: 0;
+        left: 0;
+        z-index: 200; /* Wyższy niż główny widok czatu, ale niższy niż menu główne */
     }
 
     /* Klasa do ukrywania sidebar-wrapper na mobile, gdy czat jest aktywny */
@@ -1389,51 +1428,12 @@ body.dark-mode .nav-icon::after {
         height: auto;
         flex-shrink: 0;
     }
-    .main-nav-icons .add-new-button {
+    .main-nav-icons .add-new-button { /* Ta klasa nie jest używana w HTML */
         margin-top: 0;
     }
 
-    /* Aktywni użytkownicy na mobile - widoczni, gdy sidebar-wrapper jest widoczny */
-    .online-users-mobile {
-        display: flex; /* Pokaż na mobile */
-        flex-direction: row;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        padding: 0.8rem 1rem;
-        border-bottom: 1px solid var(--border-color-light);
-        background: var(--bg-color-sidebar);
-        flex-shrink: 0;
-        gap: 0.8rem;
-        scroll-snap-type: x mandatory;
-    }
-
-    /* Style dla pojedynczego użytkownika w mobilnej liście online */
-    .online-users-mobile .online-user-item-mobile {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 0.3rem;
-        flex-shrink: 0;
-        min-width: 60px;
-        text-align: center;
-        cursor: pointer;
-    }
-    .online-users-mobile .online-user-item-mobile .avatar {
-        width: 50px;
-        height: 50px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 2px solid var(--color-online);
-        flex-shrink: 0;
-    }
-    .online-users-mobile .online-user-item-mobile .username {
-        font-size: 0.75rem;
-        color: var(--text-color-dark);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 100%;
-    }
+    /* Ukryj mobilną listę aktywnych użytkowników, bo nie jest w HTML */
+    /* Usunięto reguły dla .online-users-mobile */
 
     #sidebar {
         width: 100%;
@@ -1444,8 +1444,8 @@ body.dark-mode .nav-icon::after {
         min-height: 0;
     }
 
-    /* Chat Area Wrapper - ukryty domyślnie, staje się widoczny i pełnoekranowy po aktywacji czatu */
-    .chat-area-wrapper {
+    /* Chat Area Wrapper - KLUCZOWE: Dodano style dla chat-area-wrapper na mobile */
+    .chat-area-wrapper { /* Ten selektor istnieje w HTML jako kontener dla logoScreen i chatArea */
         flex-grow: 1;
         width: 100%; /* Rozciągnij na całą szerokość */
         height: 100%; /* Zajmij całą wysokość */
@@ -1462,8 +1462,9 @@ body.dark-mode .nav-icon::after {
         display: flex;
     }
 
+
     .logo-screen {
-        display: none !important; /* Całkowicie ukryj logoScreen na mobile */
+        display: none !important; /* Całkowicie ukryj logoScreen na mobile, bo czat będzie zawsze aktywny */
     }
 
     .chat-area {
@@ -1493,13 +1494,13 @@ body.dark-mode .nav-icon::after {
         padding: 0.6rem 1rem 0.6rem 2.5rem;
         font-size: 0.85rem;
     }
-    .contact {
+    .contacts-list .contact { /* Zmieniono selektor */
         padding: 0.6rem;
     }
-    .contact-name {
+    .contacts-list .contact .contact-name { /* Zmieniono selektor */
         font-size: 0.95rem;
     }
-    .last-message {
+    .contacts-list .contact .last-message { /* Zmieniono selektor */
         font-size: 0.8rem;
     }
     .chat-footer {
@@ -1514,22 +1515,20 @@ body.dark-mode .nav-icon::after {
         font-size: 0.9rem;
         margin: 0 5px;
     }
+
+    .chat-settings-dropdown {
+        width: auto !important; /* Dopasuj szerokość do zawartości */
+        max-width: min(400px, 90vw) !important; /* Ograniczenie szerokości na mobile */
+        top: 100%; /* Pokaż pod nagłówkiem */
+        right: 0;
+        left: auto; /* Domyślnie po prawej */
+        z-index: 220; /* Wyżej niż czat */
+    }
 }
 
 /* GLOBALNA REGUŁA: Ukryj na desktopie, domyślnie */
-.online-users-mobile {
-    display: none;
-}
-
-body.auth-body {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    background: var(--bg-color-light);
-    font-family: 'Segoe UI', sans-serif;
-    margin: 0;
-    box-sizing: border-box;
+.online-users-mobile { /* Ta klasa nie jest używana w HTML - usunięto globalne display: none */
+    display: none; /* Domyślne ukrycie dla wszystkich rozmiarów, jeśli nie ma jej w HTML */
 }
 
 /* Kontener główny formularza (Login/Rejestracja) */
