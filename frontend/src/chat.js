@@ -479,7 +479,7 @@ async function addMessageToChat(msg) {
         const senderName = senderId === String(currentUser.id) ? "Ja" : (getUserLabelById(senderId) || senderId);
         previewText = `${senderName}: ${msg.text}`; 
         const lastMessageTime = new Date(msg.inserted_at);
-        timeEl.textContent = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+        timeText = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
         console.log(`[addMessageToChat] Updated preview and time for room ${msg.room}. Preview: "${previewText}"`); 
         previewEl.textContent = previewText; 
     } else {
@@ -628,9 +628,9 @@ function updateUserStatusIndicator(userId, isOnline) {
                     if (userProfile) {
                         // Stwórz mockowy element clickedConvoItemElement
                         const mockConvoItem = document.createElement('li');
-                        mockConvoItem.dataset.convoId = user.id; 
+                        mockConvoItem.dataset.convoId = userProfile.id; // Corrected: use userProfile.id
                         mockConvoItem.dataset.email = userProfile.email;
-                        mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(user.id)); 
+                        mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(userProfile.id)); // Corrected: use userProfile.id
                         handleConversationClick(userProfile, mockConvoItem);
                     }
                 });
@@ -857,12 +857,12 @@ function displayActiveUsers(activeUsersData) {
                 `;
             
             divMobile.addEventListener('click', async () => {
-                const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(user.id));
+                const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(userId));
                 if (userProfile) {
                     const mockConvoItem = document.createElement('li');
-                    mockConvoItem.dataset.convoId = user.id; 
+                    mockConvoItem.dataset.convoId = userProfile.id; 
                     mockConvoItem.dataset.email = userProfile.email;
-                    mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(user.id)); 
+                    mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(userProfile.id)); 
                     handleConversationClick(userProfile, mockConvoItem);
                 }
             });
