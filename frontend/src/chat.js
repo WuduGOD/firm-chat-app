@@ -414,11 +414,11 @@ async function addMessageToChat(msg) { // Changed to async
     // If the conversation item is not found, it means it's a new conversation or the contacts list is outdated.
     // In this case, reload all contacts to ensure the new conversation appears and the list is sorted.
     if (!convoItemToUpdate) {
-        console.warn(`Conversation item for room ${msg.room} not found. Reloading contacts.`);
+        console.warn(`Conversation item for room ${msg.room} not found. This might be a new conversation. Reloading contacts.`);
         await loadContacts(); // Re-load all contacts, this will re-render and sort them
-        // After reloading, try to find the conversation item again
+        // After reloading, try to find the conversation item again. It should now exist.
         convoItemToUpdate = contactsListEl.querySelector(`.contact[data-room-id="${msg.room}"]`);
-        if (!convoItemToUpdate) {
+        if (!convoItemToUpdate) { // Double check in case of unexpected errors during loadContacts
             console.error(`Conversation item for room ${msg.room} still not found after reloading contacts. Cannot update UI.`);
             return; // Exit if still not found
         }
@@ -431,14 +431,15 @@ async function addMessageToChat(msg) { // Changed to async
     if (previewEl && timeEl) {
         const senderName = String(msg.username) === String(currentUser.id) ? "Ja" : (getUserLabelById(msg.username) || msg.username);
         previewEl.textContent = `${senderName}: ${msg.text}`;
-
         const lastMessageTime = new Date(msg.inserted_at);
         timeEl.textContent = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
     }
 
-    // Move the item to the top to reflect most recent activity
-    contactsListEl.prepend(convoItemToUpdate);
-    console.log(`Moved conversation for room ${msg.room} to top.`);
+    // Always move the item to the top to reflect most recent activity, unless it's already the first child
+    if (contactsListEl.firstChild !== convoItemToUpdate) {
+        contactsListEl.prepend(convoItemToUpdate);
+        console.log(`Moved conversation for room ${msg.room} to top.`);
+    }
 
     // Increment unread count ONLY if the message is for a DIFFERENT room AND it's not from the current user (sent by self)
     if (msg.room !== currentRoom && String(msg.username) !== String(currentUser.id)) {
@@ -453,27 +454,26 @@ async function addMessageToChat(msg) { // Changed to async
     }
 
     // Display message in the active chat only if it belongs to the current room
-    if (msg.room !== currentRoom) {
-        console.log("Message is not for the active room, not adding to chat view.");
-        return;
-    }
+    if (msg.room === currentRoom) { // Only display if it's the active chat
+        const div = document.createElement('div');
+        div.classList.add('message', String(msg.username) === String(currentUser.id) ? 'sent' : 'received');
 
-    const div = document.createElement('div');
-    // Ensure messages are correctly styled with .message class on div itself
-    div.classList.add('message', String(msg.username) === String(currentUser.id) ? 'sent' : 'received');
+        const timestamp = new Date(msg.inserted_at || Date.now());
+        const timeString = timestamp.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
 
-    const timestamp = new Date(msg.inserted_at || Date.now());
-    const timeString = timestamp.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
-
-    div.innerHTML = `
-        <p>${msg.text}</p>
-        <span class="timestamp">${timeString}</span>
-    `;
-    if (messageContainer) {
-        messageContainer.appendChild(div);
-        messageContainer.scrollTop = messageContainer.scrollHeight; // Scroll to bottom
+        div.innerHTML = `
+            <p>${msg.text}</p>
+            <span class="timestamp">${timeString}</span>
+        `;
+        if (messageContainer) {
+            messageContainer.appendChild(div);
+            messageContainer.scrollTop = messageContainer.scrollHeight; // Scroll to bottom
+            console.log(`Message displayed in active chat for room: ${msg.room}`);
+        } else {
+            console.error("messageContainer is null when trying to add message to active chat.");
+        }
     } else {
-        console.error("messageContainer is null when trying to add message.");
+        console.log("Message is not for the active room, not adding to chat view (but updated sidebar).");
     }
 }
 
