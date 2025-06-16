@@ -175,7 +175,7 @@ body {
     flex-direction: row; /* Domyślnie wierszowy układ na desktopie */
     min-width: 280px;
     flex: 0 0 25%;
-    max-width: 350px;
+    max-width: 350px; /* Domyślna max-width dla desktopu */
     background: var(--bg-color-sidebar-wrapper);
     border-right: 1px solid var(--border-color-light);
     flex-shrink: 0;
@@ -1363,6 +1363,7 @@ body.dark-mode .nav-icon::after {
     /* Sidebar Wrapper - widoczny domyślnie na mobile, zajmuje 100% szerokości i wysokości */
     .sidebar-wrapper {
         min-width: unset;
+        max-width: unset !important; /* <--- DODANO TĘ KLUCZOWĄ LINIĘ */
         width: 100%;
         flex-direction: column;
         height: 100%; /* Ważne: pełna wysokość kontenera, gdy sidebar jest aktywny */
