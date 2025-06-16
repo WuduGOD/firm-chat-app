@@ -304,7 +304,7 @@ body {
     color: var(--text-color-medium);
 }
 
-/* Kategorie sortowania kontaktów (na mobile zmieni się) */
+/* Kategorie sortowania kontaktów */
 .contact-categories {
     display: flex;
     flex-wrap: wrap;
@@ -988,7 +988,6 @@ body {
     border-top-right-radius: 0;
     border-bottom-right-radius: 0;
     flex-shrink: 0;
-    /* Domyślnie na desktopie jest flex, na mobile zostanie zmieniony na none */
 }
 
 .right-sidebar h4 {
@@ -1397,10 +1396,9 @@ body.dark-mode .nav-icon::after {
         gap: 0.8rem; /* Odstęp między avatarami */
         scroll-snap-type: x mandatory; /* Opcjonalnie: dla lepszego przewijania karuzeli */
     }
-    /* Ukryj na desktopie */
-    .online-users-mobile {
-        display: none;
-    }
+    /* Ukryj na desktopie (reguła jest domyślnie poza media query) */
+    /* .online-users-mobile { display: none; } - Ta reguła powinna być globalna i nadpisywana poniżej */
+
 
     /* Style dla pojedynczego użytkownika w mobilnej liście online */
     .online-users-mobile .online-user-item-mobile {
@@ -1501,6 +1499,11 @@ body.dark-mode .nav-icon::after {
         font-size: 0.9rem;
         margin: 0 5px;
     }
+}
+
+/* GLOBALNA REGUŁA: Ukryj na desktopie, domyślnie */
+.online-users-mobile {
+    display: none;
 }
 
 body.auth-body {
