@@ -43,6 +43,10 @@ console.log(`Serwer WebSocket uruchomiony na porcie ${process.env.WS_PORT || 808
 // Mapa do przechowywania aktywnych połączeń WebSocket wraz z ID użytkowników
 const clients = new Map(); // Map<WebSocket, { userId: string }>
 
+// Mapa do przechowywania pokojów czatu. Każdy pokój to Set aktywnych połączeń WebSocket.
+// Odzyskane z Twojej poprzedniej wersji.
+const rooms = new Map(); // Map<string (roomName), Set<WebSocket>>
+
 // Funkcja do generowania unikalnego ID pokoju dla czatów 1-na-1
 // Zapewnia, że room_id jest zawsze taki sam dla danej pary użytkowników, niezależnie od kolejności ID
 function generateRoomId(userId1, userId2) {
@@ -92,7 +96,7 @@ async function sendInitialOnlineUsers(ws) {
 wss.on('connection', async (ws) => {
     console.log('Serwer: Nowy klient podłączony.');
 
-    let currentClientData = null; // Będziemy przechowywać dane klienta tutaj
+    let currentClientData = null; // Będziemy przechowywać dane klienta tutaj, aby były dostępne w 'close'
 
     ws.on('message', async (message) => {
         const data = JSON.parse(message);
@@ -101,7 +105,7 @@ wss.on('connection', async (ws) => {
         if (type === 'userConnected') {
             const { userId } = data;
             if (userId) {
-                currentClientData = { userId: userId };
+                currentClientData = { userId: userId }; // Ustaw dane klienta po otrzymaniu userId
                 clients.set(ws, currentClientData);
                 console.log(`Serwer: Użytkownik ${userId} podłączony i zmapowany.`);
                 broadcastUserStatus(userId, true); // Rozgłoś, że użytkownik jest online
@@ -167,26 +171,57 @@ wss.on('connection', async (ws) => {
                 });
                 console.log(`Serwer: Status pisania od ${senderId} do ${recipientId}: ${type}.`);
             }
-        } else {
+        } else if (type === 'joinRoom') {
+            // Logika dołączania do pokoju (odzyskano z Twojej starej wersji)
+            const { roomId, userId } = data; // Zakładam, że `roomId` jest przekazywane
+            if (!rooms.has(roomId)) {
+                rooms.set(roomId, new Set());
+            }
+            rooms.get(roomId).add(ws);
+            console.log(`Serwer: Użytkownik ${userId} dołączył do pokoju ${roomId}.`);
+        } else if (type === 'leaveRoom') {
+            // Logika opuszczania pokoju (odzyskano z Twojej starej wersji)
+            const { roomId, userId } = data;
+            if (rooms.has(roomId)) {
+                rooms.get(roomId).delete(ws);
+                if (rooms.get(roomId).size === 0) {
+                    rooms.delete(roomId);
+                }
+            }
+            console.log(`Serwer: Użytkownik ${userId} opuścił pokój ${roomId}.`);
+        }
+        else {
             console.warn('Serwer: Otrzymano nieznany typ wiadomości:', type, data);
         }
     });
 
+    // Obsługa zamknięcia połączenia WebSocket
     ws.on('close', () => {
-        if (currentClientData && currentClientData.userId) {
-            console.log(`Serwer: Klient rozłączony: ${currentClientData.userId}`);
+        const disconnectedClientData = clients.get(ws); // Pobierz dane odłączonego klienta
+        if (disconnectedClientData && disconnectedClientData.userId) { // Upewnij się, że userId istnieje
+            console.log(`Serwer: Klient rozłączony: ${disconnectedClientData.userId}`);
 
-            // Usuń klienta z mapy
-            clients.delete(ws);
+            // Usuń klienta ze wszystkich pokojów, do których należał (odzyskano z Twojej starej wersji)
+            rooms.forEach((clientSet, roomName) => {
+                if (clientSet.has(ws)) {
+                    clientSet.delete(ws);
+                    if (clientSet.size === 0) {
+                        rooms.delete(roomName); // Usuń pokój, jeśli jest pusty
+                    }
+                    console.log(`Serwer: Usunięto ${disconnectedClientData.userId} z pokoju ${roomName}.`);
+                }
+            });
+            clients.delete(ws); // Usuń klienta z głównej mapy klientów
 
             // Rozgłoś status offline dla odłączonego użytkownika
-            broadcastUserStatus(currentClientData.userId, false);
+            broadcastUserStatus(disconnectedClientData.userId, false);
         } else {
-            console.log("Serwer: Nieznany klient rozłączony (brak userId lub danych przypisanych).");
+            console.log("Serwer: Nieznany klient rozłączony (brak userId lub danych).");
             clients.delete(ws); // Na wszelki wypadek usuń nawet bez userId
         }
     });
 
+    // Obsługa błędów połączenia WebSocket
     ws.on('error', (error) => {
         console.error('Serwer: Błąd WebSocket:', error);
         // Zamknij połączenie w przypadku błędu, aby wyzwolić zdarzenie 'close' i ponowne połączenie
