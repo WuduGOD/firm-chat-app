@@ -1,472 +1,888 @@
-// Importy zależności - dopasowane do ścieżek z Twojego działającego HTML
-// Zakładając, że wszystkie pliki JS są w /src/
-import { loadAllProfiles, getUserLabelById } from './profiles.js';
+// Importy zależności
+import { loadAllProfiles, getUserLabelById, getProfileById } from './profiles.js';
 import { supabase } from './supabaseClient.js';
 
-// Globalne zmienne UI i czatu - zadeklarowane na początku, aby były dostępne wszędzie
+// ==========================================================
+// Globalne zmienne UI i czatu
+// ==========================================================
 let mainHeader;
 let menuButton;
-let dropdownMenu; // ID: dropdownMenu, Klasa: dropdown
+let dropdownMenu;
 let themeToggle;
 let logoutButton;
 
 let container;
-let sidebarWrapper; // Kontener dla main-nav-icons i sidebar
+let sidebarWrapper;
 let mainNavIcons;
 let navIcons;
 
-let onlineUsersMobile; // NOWA ZMIENNA: Kontener dla aktywnych użytkowników na mobile
+let onlineUsersMobile; // Kontener dla aktywnych użytkowników na mobile
 
-let sidebarEl; // ID: sidebar, Klasa: conversations-list
-let searchInput;
-let contactsListEl; // ID: contactsList
+let sidebarEl; // <aside class="sidebar" id="sidebar">
+let searchInput; // <input id="sidebarSearchInput">
+let contactsListEl; // <ul class="conversations-list" id="contactsList">
 
-let chatAreaWrapper; // Kontener dla logo-screen i chat-area
-let logoScreen; // ID: logoScreen
-let chatArea; // ID: chatArea
+let chatAreaWrapper; // <div class="chat-area-wrapper">
+let logoScreen; // <div id="logoScreen">
+let chatArea; // <section class="chat-area" id="chatArea">
 
-let chatHeader; // Klasa: chat-header
-let backButton;
-let chatUserAvatar; // NOWA ZMIENNA: Avatar użytkownika czatu (był wcześniej w kodzie)
-let chatUserName; // ID: chatUserName
-let userStatusSpan; // ID: userStatus, Klasa: status
-let chatHeaderActions;
-let chatSettingsButton;
-let chatSettingsDropdown; // ID: chatSettingsDropdown, Klasa: dropdown chat-settings-dropdown
-let typingStatusHeader; // ID: typingStatus (status w nagłówku)
-let typingIndicatorMessages; // ID: typingIndicator (animowane kropki)
+let chatHeader; // <div class="chat-header">
+let backButton; // <button id="backButton">
+let chatUserAvatar; // <img id="chatUserAvatar"> lub <div class="user-avatar" id="chatUserAvatar">
+let chatUserName; // <span id="chatUserName">
+let userStatusSpan; // <span id="userStatus">
+let chatHeaderActions; // <div class="chat-header-actions">
+let chatSettingsButton; // <button id="chatSettingsButton">
+let chatSettingsDropdown; // <div id="chatSettingsDropdown">
+let typingStatusHeader; // <span id="typingStatus"> (w nagłówku)
+let typingIndicatorMessages; // <div id="typingIndicator"> (animowane kropki)
 
-let chatMessages; // Kontener na wiadomości w aktywnym czacie
-let messageInput;
-let sendButton;
-let emojiButton;
-let attachButton;
-let rightSidebarWrapper;
-let rightSidebar;
-let activeUsersList;
-let noActiveUsersText;
+let chatMessages; // <div class="chat-messages" id="chatMessages"> - kontener na wiadomości w aktywnym czacie
+let messageInput; // <input id="messageInput">
+let sendButton; // <button id="sendButton">
+let emojiButton; // <button class="emoji-button">
+let attachButton; // <button class="attach-button">
+
+let rightSidebarWrapper; // <aside class="right-sidebar-wrapper">
+let rightSidebar; // <div class="right-sidebar" id="rightSidebar">
+let activeUsersList; // <ul class="active-users-list" id="activeUsersList"> (prawy sidebar)
+let noActiveUsersText; // <div id="noActiveUsersText">
 
 let userId; // ID zalogowanego użytkownika
 let activeChatRecipientId = null; // ID użytkownika, z którym obecnie czatujemy (dla czatów 1-na-1)
 let activeChatRecipientName = ''; // Nazwa użytkownika, z którym obecnie czatujemy
 
 let socket; // Zmienna do przechowywania połączenia WebSocket
+let activeUsers = new Set(); // Przechowuje ID aktywnych użytkowników (Set dla szybkiego sprawdzania)
 
-// NOWA FUNKCJA: Do generowania unikalnego ID pokoju dla czatów 1-na-1
-// Zapewnia, że room_id jest zawsze taki sam dla danej pary użytkowników, niezależnie od kolejności ID
+// ==========================================================
+// Funkcje pomocnicze
+// ==========================================================
+
+/**
+ * Generuje unikalne ID pokoju dla czatów 1-na-1 na podstawie dwóch ID użytkowników.
+ * Zapewnia, że room_id jest zawsze taki sam dla danej pary użytkowników, niezależnie od kolejności ID.
+ * @param {string} userId1 Pierwsze ID użytkownika.
+ * @param {string} userId2 Drugie ID użytkownika.
+ * @returns {string} Unikalne ID pokoju.
+ */
 function generateRoomId(userId1, userId2) {
     const sortedIds = [userId1, userId2].sort();
     return `${sortedIds[0]}_${sortedIds[1]}`;
 }
 
-// Funkcja pomocnicza do pobierania elementów DOM
+/**
+ * Funkcja pomocnicza do pobierania elementów DOM.
+ * @param {string} idOrSelector ID elementu lub selektor CSS.
+ * @param {boolean} isQuerySelector Czy użyć document.querySelector (true) czy document.getElementById (false).
+ * @returns {HTMLElement|null} Znaleziony element DOM lub null.
+ */
 function getElement(idOrSelector, isQuerySelector = false) {
     const element = isQuerySelector ? document.querySelector(idOrSelector) : document.getElementById(idOrSelector);
     if (!element) {
-        console.warn(`Element with ${isQuerySelector ? 'selector' : 'ID'} "${idOrSelector}" not found.`);
+        console.warn(`[getElement] Element with ${isQuerySelector ? 'selector' : 'ID'} "${idOrSelector}" not found.`);
     }
     return element;
 }
 
+// ==========================================================
 // Inicjalizacja elementów DOM
+// ==========================================================
 function initializeDOMElements() {
-    mainHeader = getElement('.main-header', true); // Użycie selektora klasowego
+    mainHeader = getElement('.main-header', true);
     menuButton = getElement('menuButton');
     dropdownMenu = getElement('dropdownMenu');
     themeToggle = getElement('themeToggle');
     logoutButton = getElement('logoutButton');
 
-    container = getElement('.container', true); // Użycie selektora klasowego
-    sidebarWrapper = getElement('.sidebar-wrapper', true); // Użycie selektora klasowego
-    mainNavIcons = getElement('.main-nav-icons', true); // Użycie selektora klasowego
-    navIcons = document.querySelectorAll('.nav-icon');
+    container = getElement('.container', true);
+    sidebarWrapper = getElement('.sidebar-wrapper', true);
+    mainNavIcons = getElement('.main-nav-icons', true);
+    navIcons = document.querySelectorAll('.nav-icon'); // NodeList dla wszystkich ikon nawigacyjnych
 
-    // onlineUsersMobile: Zostawiamy pobieranie przez ID.
-    // Musisz DODAĆ TEN ELEMENT DO HTML, jeśli go tam nie ma, aby uniknąć błędu.
     onlineUsersMobile = getElement('onlineUsersMobile');
 
     sidebarEl = getElement('sidebar');
     searchInput = getElement('sidebarSearchInput');
-    contactsListEl = getElement('contactsList');
+    contactsListEl = getElement('contactsList'); // <ul class="conversations-list" id="contactsList">
 
-    chatAreaWrapper = getElement('.chat-area-wrapper', true); // Użycie selektora klasowego
+    chatAreaWrapper = getElement('.chat-area-wrapper', true);
     logoScreen = getElement('logoScreen');
     chatArea = getElement('chatArea');
 
-    chatHeader = getElement('.chat-header', true); // Użycie selektora klasowego
+    chatHeader = getElement('.chat-header', true);
     backButton = getElement('backButton');
-    chatUserAvatar = getElement('chatUserAvatar'); // Poprawne, jeśli masz ID "chatUserAvatar" w HTML
+    chatUserAvatar = getElement('chatUserAvatar');
     chatUserName = getElement('chatUserName');
     userStatusSpan = getElement('userStatus');
-    chatHeaderActions = getElement('.chat-header-actions', true); // Użycie selektora klasowego
+    chatHeaderActions = getElement('.chat-header-actions', true);
     chatSettingsButton = getElement('chatSettingsButton');
     chatSettingsDropdown = getElement('chatSettingsDropdown');
-    typingStatusHeader = getElement('typingStatus');
-    typingIndicatorMessages = getElement('typingIndicator');
+    typingStatusHeader = getElement('typingStatusHeader'); // Upewnij się, że masz takie ID w nagłówku
+    typingIndicatorMessages = getElement('typingIndicator'); // Animowane kropki na dole czatu
 
-    chatMessages = document.querySelector('.chat-messages'); // Użycie selektora klasowego
+    // Poprawka dla chatMessages - bezpośrednie użycie querySelector
+    chatMessages = document.querySelector('.chat-messages');
+
     messageInput = getElement('messageInput');
     sendButton = getElement('sendButton');
-    emojiButton = getElement('.emoji-button', true); // Użycie selektora klasowego
-    attachButton = getElement('.attach-button', true); // Użycie selektora klasowego
+    emojiButton = getElement('.emoji-button', true);
+    attachButton = getElement('.attach-button', true);
 
-    rightSidebarWrapper = getElement('.right-sidebar-wrapper', true); // Użycie selektora klasowego
+    rightSidebarWrapper = getElement('.right-sidebar-wrapper', true);
     rightSidebar = getElement('rightSidebar');
-    activeUsersList = getElement('activeUsersList');
+    activeUsersList = getElement('activeUsersList'); // Prawy pasek boczny z aktywnymi użytkownikami
     noActiveUsersText = getElement('noActiveUsersText');
 }
 
-/**
- * Dodaje wiadomość do obszaru czatu.
- * @param {string} messageContent Treść wiadomości.
- * @param {boolean} isOwnMessage Czy wiadomość została wysłana przez bieżącego użytkownika.
- * @param {string} timestamp Znacznik czasu wiadomości (ISO string).
- */
-function appendMessageToChat(messageContent, isOwnMessage, timestamp) {
-    const messageElement = document.createElement('div');
-    messageElement.classList.add('message');
-    if (isOwnMessage) {
-        messageElement.classList.add('own');
+// ==========================================================
+// Obsługa motywu (dzień/noc)
+// ==========================================================
+function applySavedTheme() {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+        document.body.classList.add(savedTheme);
+        if (themeToggle) {
+            themeToggle.querySelector('i').className = savedTheme === 'dark-theme' ? 'fas fa-sun' : 'fas fa-moon';
+            themeToggle.innerHTML = savedTheme === 'dark-theme' ? '<i class="fas fa-sun"></i> Tryb jasny' : '<i class="fas fa-moon"></i> Tryb ciemny';
+        }
     } else {
-        messageElement.classList.add('other');
+        document.body.classList.add('light-theme'); // Domyślny motyw
+        if (themeToggle) {
+            themeToggle.querySelector('i').className = 'fas fa-moon';
+            themeToggle.innerHTML = '<i class="fas fa-moon"></i> Tryb ciemny';
+        }
+    }
+}
+
+function toggleTheme() {
+    const currentTheme = document.body.classList.contains('dark-theme') ? 'dark-theme' : 'light-theme';
+    if (currentTheme === 'dark-theme') {
+        document.body.classList.remove('dark-theme');
+        document.body.classList.add('light-theme');
+        localStorage.setItem('theme', 'light-theme');
+        if (themeToggle) {
+            themeToggle.querySelector('i').className = 'fas fa-moon';
+            themeToggle.innerHTML = '<i class="fas fa-moon"></i> Tryb ciemny';
+        }
+    } else {
+        document.body.classList.remove('light-theme');
+        document.body.classList.add('dark-theme');
+        localStorage.setItem('theme', 'dark-theme');
+        if (themeToggle) {
+            themeToggle.querySelector('i').className = 'fas fa-sun';
+            themeToggle.innerHTML = '<i class="fas fa-sun"></i> Tryb jasny';
+        }
+    }
+}
+
+// ==========================================================
+// Obsługa menu rozwijanego
+// ==========================================================
+function toggleDropdownMenu() {
+    if (dropdownMenu) {
+        dropdownMenu.classList.toggle('hidden');
+        menuButton.setAttribute('aria-expanded', dropdownMenu.classList.contains('hidden') ? 'false' : 'true');
+    }
+}
+
+// Zamknij menu rozwijane, jeśli kliknięto poza nim
+document.addEventListener('click', (event) => {
+    if (dropdownMenu && !dropdownMenu.classList.contains('hidden')) {
+        if (!menuButton.contains(event.target) && !dropdownMenu.contains(event.target)) {
+            dropdownMenu.classList.add('hidden');
+            menuButton.setAttribute('aria-expanded', 'false');
+        }
+    }
+    // Zamknij również dropdown ustawień czatu
+    if (chatSettingsDropdown && !chatSettingsDropdown.classList.contains('hidden')) {
+        if (!chatSettingsButton.contains(event.target) && !chatSettingsDropdown.contains(event.target)) {
+            chatSettingsDropdown.classList.add('hidden');
+        }
+    }
+});
+
+
+// ==========================================================
+// Autoryzacja i wylogowanie
+// ==========================================================
+async function logoutUser() {
+    try {
+        const { error } = await supabase.auth.signOut();
+        if (error) throw error;
+        console.log('Wylogowano pomyślnie.');
+        window.location.href = '/'; // Przekieruj na stronę główną lub logowania
+    } catch (err) {
+        console.error('Błąd podczas wylogowania:', err.message);
+        alert('Wystąpił błąd podczas wylogowania: ' + err.message);
+    }
+}
+
+// ==========================================================
+// Obsługa WebSocket
+// ==========================================================
+function setupWebSocket() {
+    // WAŻNE: Upewnij się, że ten URL jest prawidłowym URL-em Twojego backendu na Render.com
+    // Zastąp 'firm-chat-app-backend.onrender.com' RZECZYWISTYM URL-em TWOJEGO SERWERA WEBSOCKET!
+    const wsUrl = 'wss://firm-chat-app-backend.onrender.com';
+
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        console.log('WebSocket jest już otwarty, nie tworzę nowego połączenia.');
+        return;
     }
 
-    const messageText = document.createElement('div');
-    messageText.classList.add('message-content');
-    messageText.textContent = messageContent;
+    console.log(`Próba połączenia z WebSocket: ${wsUrl}`);
+    socket = new WebSocket(wsUrl);
 
-    const messageTime = document.createElement('span');
-    messageTime.classList.add('message-time');
-    const date = new Date(timestamp);
-    messageTime.textContent = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    socket.onopen = () => {
+        console.log('Połączono z serwerem WebSocket.');
+        // Wyślij ID użytkownika do serwera po połączeniu
+        socket.send(JSON.stringify({ type: 'auth', userId: userId }));
+    };
 
-    messageElement.appendChild(messageText);
-    messageElement.appendChild(messageTime);
+    socket.onmessage = (message) => {
+        handleWebSocketMessage(message);
+    };
 
-    if (chatMessages) {
-        chatMessages.appendChild(messageElement);
-        chatMessages.scrollTop = chatMessages.scrollHeight; // Przewiń na dół
-    } else {
-        console.warn("Element 'chatMessages' nie znaleziony. Wiadomość nie została dodana do DOM.");
+    socket.onerror = (error) => {
+        console.error('Błąd WebSocket:', error);
+    };
+
+    socket.onclose = (event) => {
+        console.log(`Rozłączono z serwerem WebSocket. Kod: ${event.code} Powód: ${event.reason}`);
+        // Próba ponownego połączenia po krótkim opóźnieniu
+        if (event.code !== 1000) { // Kod 1000 oznacza normalne zamknięcie
+            console.log('Próba ponownego połączenia za 5 sekund...');
+            setTimeout(setupWebSocket, 5000);
+        }
+    };
+}
+
+/**
+ * Obsługuje wiadomości otrzymane przez WebSocket.
+ * @param {MessageEvent} message Zdarzenie wiadomości WebSocket.
+ */
+function handleWebSocketMessage(message) {
+    try {
+        const data = JSON.parse(message.data);
+
+        switch (data.type) {
+            case 'auth_success':
+                userId = data.userId;
+                console.log('Zalogowano jako użytkownik ID:', userId);
+                // Po udanym zalogowaniu, załaduj konwersacje
+                loadConversations();
+                break;
+            case 'user_list':
+                // Zaktualizuj globalną listę aktywnych użytkowników
+                activeUsers = new Set(data.users);
+                updateActiveUsersList(data.users);
+                // Po aktualizacji listy aktywnych użytkowników, odśwież status w konwersacjach
+                updateConversationStatuses();
+                break;
+            case 'user_status':
+                // Zaktualizuj globalną listę aktywnych użytkowników
+                if (data.status === 'online') {
+                    activeUsers.add(data.userId);
+                } else {
+                    activeUsers.delete(data.userId);
+                }
+                updateActiveUsersList(Array.from(activeUsers));
+                // Po aktualizacji statusu, odśwież status w konwersacjach
+                updateConversationStatuses();
+                break;
+            case 'chat_message':
+                // Obsłuż nową wiadomość czatu
+                if (activeChatRecipientId === data.senderId || activeChatRecipientId === data.receiverId) {
+                    // Wiadomość jest dla aktywnego czatu
+                    displayMessage(data.senderId, data.content, data.timestamp);
+                }
+                // Niezależnie od tego, czy czat jest aktywny, zaktualizuj konwersacje
+                loadConversations(); // Odśwież konwersacje po otrzymaniu nowej wiadomości
+                break;
+            case 'typing_status':
+                if (activeChatRecipientId === data.senderId) {
+                    if (data.isTyping) {
+                        displayTypingIndicator(data.senderId);
+                    } else {
+                        hideTypingIndicator(data.senderId);
+                    }
+                }
+                break;
+            case 'error':
+                console.error('[WebSocket Error]:', data.message);
+                break;
+            default:
+                console.warn('[WebSocket]: Nieznany typ wiadomości:', data.type, data);
+        }
+    } catch (e) {
+        console.error('[WebSocket] Błąd parsowania wiadomości WebSocket:', e, message.data);
     }
 }
 
 /**
- * Ładuje historię czatu dla danego odbiorcy (1-na-1 chat).
- * @param {string} recipientId ID użytkownika, z którym czatujemy.
+ * Wysyła wiadomość przez WebSocket.
+ * @param {Object} message Obiekt wiadomości do wysłania.
  */
-async function loadChatHistory(recipientId) {
-    if (!chatMessages) {
-        console.error("Element 'chatMessages' nie znaleziony. Nie można załadować historii czatu.");
+function sendMessageToWebSocket(message) {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify(message));
+    } else {
+        console.warn('Połączenie WebSocket nie jest otwarte. Nie można wysłać wiadomości.');
+        // Opcjonalnie: zaimplementuj logikę ponownego wysłania lub powiadom użytkownika
+    }
+}
+
+// ==========================================================
+// Obsługa list użytkowników i konwersacji
+// ==========================================================
+
+/**
+ * Filtruje listę kontaktów/konwersacji na podstawie wprowadzonego tekstu.
+ */
+function filterContacts() {
+    if (!searchInput || !contactsListEl) return;
+
+    const searchTerm = searchInput.value.toLowerCase();
+    const items = contactsListEl.querySelectorAll('li');
+
+    items.forEach(item => {
+        const name = item.querySelector('.conversation-name')?.textContent.toLowerCase() || '';
+        const lastMessage = item.querySelector('.last-message')?.textContent.toLowerCase() || '';
+
+        if (name.includes(searchTerm) || lastMessage.includes(searchTerm)) {
+            item.style.display = ''; // Pokaż element
+        } else {
+            item.style.display = 'none'; // Ukryj element
+        }
+    });
+}
+
+/**
+ * Ładuje i wyświetla konwersacje użytkownika.
+ */
+async function loadConversations() {
+    if (!userId || !contactsListEl) {
+        console.warn('[loadConversations] Nie można załadować konwersacji: userId lub contactsListEl nie jest dostępne.');
         return;
     }
-
-    chatMessages.innerHTML = ''; // Wyczyść poprzednie wiadomości
 
     try {
-        if (!userId) {
-            console.error('Błąd: userId nie jest zdefiniowane. Nie można załadować historii czatu.');
-            return;
-        }
-
-        // Zmieniono: Generuj room_id dla aktywnego czatu 1-na-1
-        const roomId = generateRoomId(userId, recipientId);
-
-        console.log(`Ładowanie historii dla pokoju: ${roomId}`);
-
-        const { data: messages, error } = await supabase
+        // Pobierz wiadomości, które dotyczą zalogowanego użytkownika (jako nadawca lub odbiorca)
+        const { data, error } = await supabase
             .from('messages')
-            .select('sender_id, content, created_at') // Zmieniono: wybieraj content i created_at
-            .eq('room_id', roomId) // Zmieniono: filtruj po room_id
-            .order('created_at', { ascending: true }); // Sortuj po created_at
+            .select('sender_id, receiver_id, content, created_at')
+            .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+            .order('created_at', { ascending: false }); // Sortuj od najnowszej
 
-        if (error) {
-            console.error('Błąd ładowania historii czatu:', error);
+        if (error) throw error;
+
+        const conversationsMap = new Map(); // Map: opponent_id -> { lastMessage, timestamp, opponent_id }
+
+        // Przetwarzanie wiadomości w celu znalezienia ostatniej wiadomości dla każdej konwersacji
+        for (const message of data) {
+            const opponentId = message.sender_id === userId ? message.receiver_id : message.sender_id;
+
+            // Jeśli to nowsza wiadomość dla tej konwersacji LUB to pierwsza wiadomość
+            // Upewniamy się, że opponentId nie jest null (na wypadek błędnych danych)
+            if (opponentId && (!conversationsMap.has(opponentId) || new Date(message.created_at) > new Date(conversationsMap.get(opponentId).timestamp))) {
+                conversationsMap.set(opponentId, {
+                    lastMessage: message.content,
+                    timestamp: message.created_at,
+                    opponentId: opponentId
+                });
+            }
+        }
+
+        // Konwertuj mapę na tablicę i posortuj od najnowszej wiadomości (najnowsza na górze)
+        const conversations = Array.from(conversationsMap.values()).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        // Wyczyść obecną listę konwersacji
+        contactsListEl.innerHTML = '';
+
+        if (conversations.length === 0) {
+            contactsListEl.innerHTML = '<li class="no-conversations-message">Brak rozpoczętych konwersacji.</li>';
             return;
         }
 
-        messages.forEach(msg => {
-            appendMessageToChat(msg.content, msg.sender_id === userId, msg.created_at); // Użyj msg.content
-        });
-        chatMessages.scrollTop = chatMessages.scrollHeight; // Przewiń na dół
-        console.log(`Załadowano historię czatu z ${messages.length} wiadomościami dla pokoju ${roomId}.`);
+        // Renderuj każdą konwersację
+        for (const convo of conversations) {
+            const userProfile = await getProfileById(convo.opponentId); // Pobierz profil użytkownika
+            if (userProfile) {
+                renderConversationItem(convo.opponentId, userProfile.username, convo.lastMessage, convo.timestamp);
+            }
+        }
+
     } catch (err) {
-        console.error('Wyjątek podczas ładowania historii czatu:', err);
+        console.error('[loadConversations] Błąd podczas ładowania konwersacji:', err.message);
     }
 }
 
 /**
- * Aktualizuje podgląd ostatniej wiadomości w liście konwersacji w sidebarze.
- * Tworzy nowy element konwersacji, jeśli nie istnieje.
- * @param {string} participantId ID uczestnika konwersacji (ID użytkownika, z którym konwersacja).
- * @param {string} lastMessage Treść ostatniej wiadomości.
- * @param {string} timestamp Znacznik czasu ostatniej wiadomości.
+ * Renderuje pojedynczy element listy konwersacji (pojedynczy kontakt/czat).
+ * @param {string} opponentId ID użytkownika po drugiej stronie konwersacji.
+ * @param {string} opponentName Nazwa użytkownika.
+ * @param {string} lastMessage Ostatnia wiadomość w konwersacji.
+ * @param {string} timestamp Czas ostatniej wiadomości.
  */
-async function updateConversationPreview(participantId, lastMessage, timestamp) {
-    let conversationItem = document.querySelector(`.conversation-item[data-user-id="${participantId}"]`);
+async function renderConversationItem(opponentId, opponentName, lastMessage, timestamp) {
+    if (!contactsListEl) return;
 
-    if (participantId === userId) {
-        // Nie aktualizuj podglądu konwersacji, jeśli to wiadomość wysłana do samego siebie (chyba że to test)
-        // W czatach 1-na-1 zawsze jest drugi uczestnik.
-        return;
-    }
+    const conversationItem = document.createElement('li');
+    conversationItem.className = 'conversation-item';
+    conversationItem.dataset.userId = opponentId; // Ustaw data-user-id dla łatwego dostępu
 
-    const userLabel = await getUserLabelById(participantId);
-    if (!userLabel) {
-        console.warn(`Nie znaleziono etykiety dla użytkownika ID: ${participantId} podczas aktualizacji podglądu konwersacji.`);
-        return;
-    }
+    const date = new Date(timestamp);
+    const timeString = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    const timeString = new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const isOnline = activeUsersList && activeUsersList.querySelector(`li[data-user-id="${participantId}"]`) ? true : false;
+    // Sprawdź, czy użytkownik jest online na podstawie globalnej listy aktywnych użytkowników (Set)
+    const isOnline = activeUsers.has(opponentId);
 
-    if (!conversationItem) {
-        // Jeśli element konwersacji nie istnieje, stwórz go
-        conversationItem = document.createElement('li');
-        conversationItem.classList.add('conversation-item');
-        conversationItem.dataset.userId = participantId;
-        conversationItem.innerHTML = `
-            <div class="user-avatar"></div>
-            <div class="conversation-info">
-                <span class="conversation-name">${userLabel}</span>
-                <span class="last-message">${lastMessage}</span>
-            </div>
-            <div class="conversation-meta">
-                <span class="last-message-time">${timeString}</span>
-                <span class="status ${isOnline ? 'online' : 'offline'}"></span>
-            </div>
-        `;
-        if (sidebarEl) {
-            sidebarEl.prepend(conversationItem); // Dodaj na początek listy
+    conversationItem.innerHTML = `
+        <div class="user-avatar"></div> <div class="conversation-info">
+            <span class="conversation-name">${opponentName}</span>
+            <span class="last-message">${lastMessage}</span>
+        </div>
+        <div class="conversation-meta">
+            <span class="last-message-time">${timeString}</span>
+            <span class="status ${isOnline ? 'online' : 'offline'}"></span>
+        </div>
+    `;
+    contactsListEl.appendChild(conversationItem);
+
+    // Dodaj nasłuchiwanie kliknięcia na element konwersacji
+    conversationItem.addEventListener('click', () => {
+        openChatWithUser(opponentId, opponentName);
+    });
+}
+
+/**
+ * Aktualizuje statusy online/offline w liście konwersacji (kuleczki obok nazw).
+ */
+function updateConversationStatuses() {
+    if (!contactsListEl) return;
+    const conversationItems = contactsListEl.querySelectorAll('.conversation-item');
+    conversationItems.forEach(item => {
+        const currentUserId = item.dataset.userId;
+        const statusSpan = item.querySelector('.status');
+        if (statusSpan && currentUserId) {
+            if (activeUsers.has(currentUserId)) {
+                statusSpan.classList.remove('offline');
+                statusSpan.classList.add('online');
+            } else {
+                statusSpan.classList.remove('online');
+                statusSpan.classList.add('offline');
+            }
         }
+    });
+}
+
+/**
+ * Aktualizuje listę aktywnych użytkowników w prawym sidebarze.
+ * @param {Array<string>} users Array ID aktywnych użytkowników.
+ */
+async function updateActiveUsersList(users) {
+    if (!activeUsersList) {
+        console.warn('[updateActiveUsersList] Element activeUsersList nie znaleziony.');
+        return;
+    }
+
+    activeUsersList.innerHTML = ''; // Wyczyść listę
+
+    if (users.length === 0) {
+        if (noActiveUsersText) noActiveUsersText.style.display = 'block';
+        return;
     } else {
-        const lastMessageEl = conversationItem.querySelector('.last-message');
-        const lastMessageTimeEl = conversationItem.querySelector('.last-message-time');
-        const statusEl = conversationItem.querySelector('.status');
+        if (noActiveUsersText) noActiveUsersText.style.display = 'none';
+    }
 
-        if (lastMessageEl) lastMessageEl.textContent = lastMessage;
-        if (lastMessageTimeEl) lastMessageTimeEl.textContent = timeString;
-        if (statusEl) { // Zaktualizuj status online/offline
-            statusEl.classList.toggle('online', isOnline);
-            statusEl.classList.toggle('offline', !isOnline);
+    // Pobierz profile dla wszystkich aktywnych użytkowników
+    const activeProfiles = [];
+    for (const id of users) {
+        // Nie wyświetlaj samego siebie na liście aktywnych użytkowników
+        if (id !== userId) {
+            const profile = await getProfileById(id);
+            if (profile) {
+                activeProfiles.push(profile);
+            }
         }
-        // Przenieś konwersację na górę listy, jeśli to nowa wiadomość
-        if (sidebarEl && conversationItem.parentNode === sidebarEl && sidebarEl.firstChild !== conversationItem) {
-            sidebarEl.prepend(conversationItem);
+    }
+
+    // Sortuj alfabetycznie
+    activeProfiles.sort((a, b) => a.username.localeCompare(b.username));
+
+    // Renderuj listę
+    for (const profile of activeProfiles) {
+        const listItem = document.createElement('li');
+        listItem.dataset.userId = profile.id; // Ustaw data-user-id
+
+        listItem.innerHTML = `
+            <div class="user-avatar"></div> <span>${profile.username}</span>
+            <span class="status online"></span>
+        `;
+        activeUsersList.appendChild(listItem);
+
+        // Dodaj event listener do otwierania czatu
+        listItem.addEventListener('click', () => {
+            openChatWithUser(profile.id, profile.username);
+        });
+    }
+
+    // Jeśli używasz onlineUsersMobile (dla widoku mobilnego), zaktualizuj go również
+    const onlineUsersMobileList = onlineUsersMobile ? onlineUsersMobile.querySelector('.active-users-list') : null;
+    if (onlineUsersMobileList) {
+        onlineUsersMobileList.innerHTML = ''; // Wyczyść listę mobilną
+        if (users.length === 0) {
+            const noActiveUsersMobileText = onlineUsersMobile.querySelector('.no-active-users-message');
+            if (noActiveUsersMobileText) noActiveUsersMobileText.style.display = 'block';
+        } else {
+            const noActiveUsersMobileText = onlineUsersMobile.querySelector('.no-active-users-message');
+            if (noActiveUsersMobileText) noActiveUsersMobileText.style.display = 'none';
+            for (const profile of activeProfiles) {
+                const listItem = document.createElement('li');
+                listItem.dataset.userId = profile.id;
+                listItem.innerHTML = `
+                    <div class="user-avatar"></div>
+                    <span>${profile.username}</span>
+                    <span class="status online"></span>
+                `;
+                onlineUsersMobileList.appendChild(listItem);
+                listItem.addEventListener('click', () => {
+                    openChatWithUser(profile.id, profile.username);
+                });
+            }
         }
     }
 }
 
+// ==========================================================
+// Obsługa obszaru czatu
+// ==========================================================
+
 /**
- * Obsługuje wyświetlanie obszaru czatu po kliknięciu na konwersację.
+ * Otwiera obszar czatu z wybranym użytkownikiem.
  * @param {string} recipientId ID użytkownika, z którym ma być otwarty czat.
- * @param {string} recipientName Nazwa użytkownika, z którym ma być otwarty czat.
- * @param {boolean} isOnline Czy użytkownik jest online.
+ * @param {string} recipientName Nazwa użytkownika.
  */
-async function displayChatArea(recipientId, recipientName, isOnline) {
+async function openChatWithUser(recipientId, recipientName) {
+    if (!chatAreaWrapper || !logoScreen || !chatArea || !messageInput || !sendButton || !chatUserName || !chatMessages || !chatUserAvatar || !userStatusSpan) {
+        console.warn('[openChatWithUser] Brak wymaganych elementów DOM.');
+        return;
+    }
+
+    // Ustaw aktywnego odbiorcę
     activeChatRecipientId = recipientId;
     activeChatRecipientName = recipientName;
 
-    if (logoScreen) logoScreen.classList.add('hidden');
-    if (chatArea) chatArea.classList.add('active');
-
-    if (chatUserName) chatUserName.textContent = recipientName;
-    if (userStatusSpan) {
-        userStatusSpan.textContent = isOnline ? 'Online' : 'Offline';
-        userStatusSpan.className = isOnline ? 'status online' : 'status offline';
+    // Aktualizuj nagłówek czatu
+    chatUserName.textContent = recipientName;
+    // Tutaj możesz zaktualizować avatar chatUserAvatar.src
+    // np. if (profile.avatar_url) chatUserAvatar.src = profile.avatar_url;
+    // Aktualizuj status online/offline
+    if (activeUsers.has(recipientId)) {
+        userStatusSpan.textContent = 'online';
+        userStatusSpan.classList.remove('offline');
+        userStatusSpan.classList.add('online');
+    } else {
+        userStatusSpan.textContent = 'offline';
+        userStatusSpan.classList.remove('online');
+        userStatusSpan.classList.add('offline');
     }
-    if (messageInput) {
-        messageInput.disabled = false;
-        messageInput.focus();
-    }
-    if (sendButton) sendButton.disabled = false;
-    if (emojiButton) emojiButton.disabled = false;
-    if (attachButton) attachButton.disabled = false;
 
-    // Ładuj historię czatu dla nowego odbiorcy
-    await loadChatHistory(recipientId);
+    // Pokaż obszar czatu, ukryj ekran logo
+    logoScreen.classList.add('hidden');
+    chatArea.classList.add('active'); // Upewnij się, że chatArea jest widoczne
 
-    // Obsługa dla widoku mobilnego
-    if (window.matchMedia('(max-width: 768px)').matches) {
+    // Upewnij się, że pole wprowadzania wiadomości i przycisk wysyłania są aktywne
+    messageInput.disabled = false;
+    sendButton.disabled = false;
+    messageInput.focus();
+
+    // Wyczyść stare wiadomości
+    chatMessages.innerHTML = '';
+
+    // Wczytaj historię wiadomości
+    await loadChatHistory(userId, recipientId);
+
+    // Dołącz do pokoju WebSocket dla tej konwersacji
+    const roomId = generateRoomId(userId, recipientId);
+    sendMessageToWebSocket({ type: 'join_room', roomId: roomId });
+
+    // Przewiń na dół do najnowszych wiadomości
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    // Dla widoku mobilnego: ukryj sidebar i pokaż obszar czatu
+    const mq = window.matchMedia('(max-width: 768px)');
+    if (mq.matches) {
         if (sidebarWrapper) sidebarWrapper.classList.add('hidden-on-mobile');
         if (chatAreaWrapper) chatAreaWrapper.classList.add('active-on-mobile');
         if (backButton) backButton.style.display = 'block';
-        if (rightSidebarWrapper) rightSidebarWrapper.style.display = 'none';
-        if (onlineUsersMobile) onlineUsersMobile.classList.add('hidden'); // Ukryj mobilną listę aktywnych użytkowników, gdy czat jest otwarty
-    }
-    console.log(`Aktywny czat z użytkownikiem: ${recipientName} (ID: ${recipientId})`);
-}
-
-// Obsługa kliknięć na konwersacje w lewym sidebarze
-function setupConversationClickHandlers() {
-    if (sidebarEl) { // SidebarEl to kontener dla conversation-item
-        sidebarEl.addEventListener('click', async (event) => {
-            const conversationItem = event.target.closest('.conversation-item');
-            if (conversationItem) {
-                const recipientId = conversationItem.dataset.userId;
-                const recipientName = conversationItem.querySelector('.conversation-name').textContent;
-                // Sprawdź status online na podstawie klasy statusu w elemencie
-                const isOnline = conversationItem.querySelector('.status').classList.contains('online');
-                await displayChatArea(recipientId, recipientName, isOnline);
-            }
-        });
     }
 }
 
-// Funkcja wysyłania wiadomości
-function sendMessage() {
-    const messageContent = messageInput.value.trim();
-    if (messageContent && activeChatRecipientId) {
-        // Zmieniono: Generuj room_id dla tej konwersacji 1-na-1
-        const roomId = generateRoomId(userId, activeChatRecipientId);
-
-        const message = {
-            type: 'chatMessage', // Zmieniono: typ wiadomości na 'chatMessage'
-            senderId: userId,
-            recipientId: activeChatRecipientId, // Nadal potrzebne serwerowi do rozgłaszania
-            content: messageContent, // Zmieniono: nazwa pola na 'content'
-            timestamp: new Date().toISOString()
-        };
-        if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify(message));
-            messageInput.value = '';
-            // Natychmiast dodaj wysłaną wiadomość do widoku czatu
-            appendMessageToChat(messageContent, true, message.timestamp);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-            // Aktualizuj podgląd konwersacji w sidebarze
-            updateConversationPreview(activeChatRecipientId, messageContent, message.timestamp);
-            // Wyślij status "nie pisze" po wysłaniu wiadomości
-            sendTypingStatus(false);
-        } else {
-            console.error('Błąd: Połączenie WebSocket nie jest otwarte.');
-            alert('Nie można wysłać wiadomości: Brak połączenia z serwerem czatu.');
-        }
+/**
+ * Ukrywa obszar czatu i pokazuje ekran logo.
+ * Głównie używane na urządzeniach mobilnych przyciskiem "Wstecz".
+ */
+function hideChatArea() {
+    if (!chatAreaWrapper || !logoScreen || !chatArea || !sidebarWrapper || !backButton) {
+        console.warn('[hideChatArea] Brak wymaganych elementów DOM.');
+        return;
     }
-}
 
-// Funkcja do wysyłania statusu pisania
-let typingTimeout = null;
-function sendTypingStatus(isTyping) {
+    // Opuść pokój WebSocket dla poprzedniej konwersacji
     if (activeChatRecipientId) {
-        const statusMessage = {
-            type: isTyping ? 'typing' : 'notTyping',
-            senderId: userId,
-            recipientId: activeChatRecipientId
-        };
-        if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify(statusMessage));
-        }
+        const roomId = generateRoomId(userId, activeChatRecipientId);
+        sendMessageToWebSocket({ type: 'leave_room', roomId: roomId });
     }
-}
 
-// Obsługa inputu wiadomości dla statusu pisania
-function setupMessageInputHandler() {
-    if (messageInput) {
-        messageInput.addEventListener('input', () => {
-            if (typingTimeout) {
-                clearTimeout(typingTimeout);
-            } else {
-                sendTypingStatus(true); // Wyślij 'typing' tylko raz, gdy zacznie pisać
-            }
-            typingTimeout = setTimeout(() => {
-                sendTypingStatus(false); // Wyślij 'notTyping' po pauzie
-                typingTimeout = null;
-            }, 1000); // 1 sekunda pauzy po ostatnim naciśnięciu klawisza
-        });
-    }
-}
+    // Resetuj aktywnego odbiorcę
+    activeChatRecipientId = null;
+    activeChatRecipientName = '';
 
-// Obsługa kliknięcia przycisku Wyślij
-function setupSendButtonHandler() {
-    if (sendButton) {
-        sendButton.addEventListener('click', sendMessage);
-    }
-    if (messageInput) {
-        messageInput.addEventListener('keypress', (event) => {
-            if (event.key === 'Enter') {
-                event.preventDefault(); // Zapobiegaj nowej linii w input
-                sendMessage();
-            }
-        });
-    }
-}
+    // Ukryj obszar czatu, pokaż ekran logo
+    chatArea.classList.remove('active');
+    logoScreen.classList.remove('hidden');
 
-// Funkcja obsługująca przełączanie motywu
-function toggleTheme() {
-    document.body.classList.toggle('dark-theme');
-    const isDark = document.body.classList.contains('dark-theme');
-    localStorage.setItem('theme', isDark ? 'dark' : 'light');
-    // Zaktualizuj ikonę przycisku
-    if (themeToggle) {
-        themeToggle.querySelector('i').className = isDark ? 'fas fa-sun' : 'fas fa-moon';
-        themeToggle.querySelector('i').nextSibling.nodeValue = isDark ? ' Tryb jasny' : ' Tryb ciemny';
-    }
-}
+    // Resetuj pole wprowadzania wiadomości i przycisk wysyłania
+    if (messageInput) messageInput.disabled = true;
+    if (sendButton) sendButton.disabled = true;
 
-// Ustawia motyw na podstawie preferencji użytkownika (localStorage)
-function applySavedTheme() {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-        document.body.classList.add('dark-theme');
-        if (themeToggle) {
-            themeToggle.querySelector('i').className = 'fas fa-sun';
-            themeToggle.querySelector('i').nextSibling.nodeValue = ' Tryb jasny';
-        }
-    } else {
-        // Domyślnie użyj jasnego motywu
-        document.body.classList.remove('dark-theme');
-        if (themeToggle) {
-            themeToggle.querySelector('i').className = 'fas fa-moon';
-            themeToggle.querySelector('i').nextSibling.nodeValue = ' Tryb ciemny';
-        }
-    }
-}
-
-// Funkcja wylogowania
-async function handleLogout() {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-        console.error('Błąd wylogowania:', error.message);
-        alert('Wystąpił błąd podczas wylogowania. Spróbuj ponownie.');
-    } else {
-        console.log('Użytkownik wylogowany.');
-        window.location.href = 'index.html'; // Przekieruj do strony logowania
-    }
-}
-
-// Funkcja obsługująca zmiany rozmiaru ekranu (media queries)
-function handleMediaQueryChange(mq) {
+    // Dla widoku mobilnego: pokaż sidebar i ukryj obszar czatu
+    const mq = window.matchMedia('(max-width: 768px)');
     if (mq.matches) {
-        // Tryb mobilny (szerokość <= 768px)
-        console.log("Media Query: Tryb mobilny aktywowany.");
-        if (chatAreaWrapper) chatAreaWrapper.classList.remove('active-on-mobile');
         if (sidebarWrapper) sidebarWrapper.classList.remove('hidden-on-mobile');
-        if (backButton) backButton.style.display = 'none'; // Ukryj przycisk wstecz na liście konwersacji
-        if (rightSidebarWrapper) rightSidebarWrapper.style.display = 'none'; // Ukryj prawy sidebar na mobile
+        if (chatAreaWrapper) chatAreaWrapper.classList.remove('active-on-mobile');
+        if (backButton) backButton.style.display = 'none';
+    }
+    // Wyczyść ewentualne wskaźniki pisania
+    hideTypingIndicator(null); // Ukryj wszystkie wskaźniki
+}
 
-        // Jeśli jest otwarty czat, pokaż chatArea, ukryj sidebar
-        if (activeChatRecipientId) {
-            if (sidebarWrapper) sidebarWrapper.classList.add('hidden-on-mobile');
-            if (chatAreaWrapper) chatAreaWrapper.classList.add('active-on-mobile');
-            if (backButton) backButton.style.display = 'block'; // Pokaż przycisk wstecz w czacie
-            if (rightSidebarWrapper) rightSidebarWrapper.style.display = 'none';
-            if (onlineUsersMobile) onlineUsersMobile.classList.add('hidden'); // Ukryj mobilną listę aktywnych użytkowników
-        } else {
-            // Jeśli nie ma aktywnego czatu, pokaż sidebar, ukryj chatArea
-            if (sidebarWrapper) sidebarWrapper.classList.remove('hidden-on-mobile');
-            if (chatAreaWrapper) chatAreaWrapper.classList.remove('active-on-mobile');
-            if (chatArea) chatArea.classList.remove('active');
-            if (logoScreen) logoScreen.classList.remove('hidden'); // Pokaż ekran logo
-            if (backButton) backButton.style.display = 'none';
-            if (onlineUsersMobile) onlineUsersMobile.classList.remove('hidden'); // Pokaż mobilną listę aktywnych użytkowników
+/**
+ * Ładuje i wyświetla historię wiadomości dla danej konwersacji.
+ * @param {string} currentUserId ID zalogowanego użytkownika.
+ * @param {string} recipientId ID drugiego użytkownika w konwersacji.
+ */
+async function loadChatHistory(currentUserId, recipientId) {
+    if (!chatMessages) {
+        console.warn('[loadChatHistory] Element chatMessages nie znaleziony.');
+        return;
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from('messages')
+            .select('*')
+            .or(`(sender_id.eq.${currentUserId},receiver_id.eq.${recipientId}),(sender_id.eq.${recipientId},receiver_id.eq.${currentUserId})`)
+            .order('created_at', { ascending: true }); // Sortuj od najstarszej
+
+        if (error) throw error;
+
+        chatMessages.innerHTML = ''; // Wyczyść poprzednie wiadomości
+
+        for (const msg of data) {
+            const senderName = await getUserLabelById(msg.sender_id);
+            displayMessage(msg.sender_id, msg.content, msg.created_at, senderName);
         }
+        chatMessages.scrollTop = chatMessages.scrollHeight; // Przewiń na dół
+    } catch (err) {
+        console.error('Błąd podczas ładowania historii czatu:', err.message);
+    }
+}
 
+/**
+ * Wysyła wiadomość do aktywnego czatu.
+ */
+async function handleSendMessage() {
+    if (!messageInput || !chatMessages || !userId || !activeChatRecipientId) {
+        console.warn('[handleSendMessage] Brak wymaganych elementów lub danych (messageInput, chatMessages, userId, activeChatRecipientId).');
+        return;
+    }
+
+    const content = messageInput.value.trim();
+    if (content === '') return;
+
+    try {
+        // Wysyłamy wiadomość do serwera WebSocket
+        // Serwer powinien zapisać ją w bazie danych i rozgłosić do wszystkich w pokoju
+        const messagePayload = {
+            type: 'chat_message',
+            senderId: userId,
+            receiverId: activeChatRecipientId,
+            content: content
+        };
+        sendMessageToWebSocket(messagePayload);
+
+        messageInput.value = ''; // Wyczyść pole wprowadzania
+        // Ukryj wskaźnik pisania, ponieważ użytkownik przestał pisać (wysłał wiadomość)
+        handleTypingStatus(false);
+
+        // Opcjonalnie: możesz dodać wiadomość do DOM od razu, zanim przyjdzie z serwera,
+        // ale może to prowadzić do duplikacji lub niezgodności, jeśli serwer odrzuci wiadomość.
+        // Lepiej poczekać na wiadomość zwrotną z serwera.
+
+    } catch (err) {
+        console.error('Błąd podczas wysyłania wiadomości:', err.message);
+    }
+}
+
+/**
+ * Wyświetla pojedynczą wiadomość w obszarze czatu.
+ * @param {string} senderId ID nadawcy wiadomości.
+ * @param {string} content Treść wiadomości.
+ * @param {string} timestamp Czas wysłania wiadomości.
+ * @param {string} [senderName] Opcjonalna nazwa nadawcy. Jeśli nie podana, zostanie pobrana.
+ */
+async function displayMessage(senderId, content, timestamp, senderName = null) {
+    if (!chatMessages) return;
+
+    // Jeśli nazwa nadawcy nie została podana, pobierz ją
+    if (senderName === null) {
+        senderName = await getUserLabelById(senderId);
+    }
+
+    const messageDiv = document.createElement('div');
+    messageDiv.classList.add('message');
+    // Dodaj klasę 'sent' lub 'received' w zależności od nadawcy
+    if (senderId === userId) {
+        messageDiv.classList.add('sent');
     } else {
-        // Tryb desktopowy (szerokość > 768px)
-        console.log("Media Query: Tryb desktopowy aktywowany. Dostosowywanie początkowej widoczności.");
+        messageDiv.classList.add('received');
+    }
+
+    const time = new Date(timestamp);
+    const timeString = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    messageDiv.innerHTML = `
+        <div class="message-bubble">
+            <span class="message-sender">${senderName}</span>
+            <p>${content}</p>
+            <span class="message-time">${timeString}</span>
+        </div>
+    `;
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight; // Przewiń na dół
+}
+
+// ==========================================================
+// Obsługa wskaźnika pisania
+// ==========================================================
+let typingTimeout; // Zmienna do przechowywania timeoutu dla statusu pisania
+let isTyping = false; // Czy użytkownik aktualnie pisze
+
+/**
+ * Obsługuje status pisania użytkownika. Wysyła status do serwera.
+ * @param {Event|boolean} eventOrValue Zdarzenie input lub boolean, jeśli ręcznie ustawiamy status.
+ */
+function handleTypingStatus(eventOrValue) {
+    if (!userId || !activeChatRecipientId) return;
+
+    const currentTypingStatus = (typeof eventOrValue === 'boolean') ? eventOrValue : (messageInput.value.length > 0);
+
+    if (currentTypingStatus !== isTyping) {
+        isTyping = currentTypingStatus;
+        sendMessageToWebSocket({
+            type: 'typing_status',
+            senderId: userId,
+            receiverId: activeChatRecipientId,
+            isTyping: isTyping
+        });
+    }
+
+    // Zresetuj timeout, aby wysłać "nie pisze" po ustaniu aktywności
+    clearTimeout(typingTimeout);
+    if (isTyping) {
+        typingTimeout = setTimeout(() => {
+            isTyping = false; // Resetuj status pisania po ustaniu aktywności
+            sendMessageToWebSocket({
+                type: 'typing_status',
+                senderId: userId,
+                receiverId: activeChatRecipientId,
+                isTyping: false
+            });
+        }, 1500); // 1.5 sekundy bez pisania uznane za koniec pisania
+    }
+}
+
+/**
+ * Wyświetla wskaźnik pisania (animowane kropki) lub status pisania w nagłówku.
+ * @param {string} senderId ID użytkownika, który pisze.
+ */
+async function displayTypingIndicator(senderId) {
+    if (!typingStatusHeader && !typingIndicatorMessages) return;
+
+    const senderName = await getUserLabelById(senderId);
+
+    // Wskaźnik pisania w nagłówku (jeśli istnieje)
+    if (typingStatusHeader && activeChatRecipientId === senderId) {
+        typingStatusHeader.textContent = `${senderName} pisze...`;
+        typingStatusHeader.style.display = 'block'; // Pokaż, jeśli był ukryty
+    }
+
+    // Animowane kropki na dole czatu (jeśli istnieją)
+    if (typingIndicatorMessages && activeChatRecipientId === senderId) {
+        typingIndicatorMessages.classList.remove('hidden');
+    }
+}
+
+/**
+ * Ukrywa wskaźnik pisania.
+ * @param {string|null} senderId ID użytkownika, którego wskaźnik ukryć, lub null, aby ukryć wszystkie.
+ */
+function hideTypingIndicator(senderId) {
+    if (typingStatusHeader && (senderId === null || activeChatRecipientId === senderId)) {
+        typingStatusHeader.textContent = '';
+        typingStatusHeader.style.display = 'none'; // Ukryj
+    }
+    if (typingIndicatorMessages && (senderId === null || activeChatRecipientId === senderId)) {
+        typingIndicatorMessages.classList.add('hidden');
+    }
+}
+
+// ==========================================================
+// Obsługa Media Queries (RWD)
+// ==========================================================
+/**
+ * Obsługuje zmiany w media queries (zmiany rozmiaru ekranu).
+ * Dostosowuje widoczność elementów na podstawie trybu mobilnego/desktopowego.
+ * @param {MediaQueryList} mq Obiekt MediaQueryList.
+ */
+function handleMediaQueryChange(mq) {
+    console.log(`[handleMediaQueryChange] Media Query: ${mq.matches ? 'Tryb mobilny' : 'Tryb desktopowy'} aktywowany. Dostosowywanie widoczności.`);
+
+    if (mq.matches) { // Tryb mobilny (max-width: 768px)
+        // Na mobile, początkowo pokaż sidebar, ukryj obszar czatu.
+        if (sidebarWrapper) {
+            sidebarWrapper.classList.remove('hidden-on-mobile');
+            sidebarWrapper.style.display = 'flex'; // Zapewnij widoczność sidebara
+        }
+        if (chatAreaWrapper) {
+            chatAreaWrapper.classList.add('active-on-mobile'); // Dodaj klasę, aby pokazać obszar czatu na mobile
+            chatAreaWrapper.style.display = 'none'; // Ukryj obszar czatu domyślnie
+        }
+        if (logoScreen) {
+            logoScreen.classList.remove('hidden'); // Pokaż ekran logo, gdy czat jest ukryty
+        }
+        if (chatArea) {
+            chatArea.classList.remove('active'); // Obszar czatu ukryty
+        }
+        if (rightSidebarWrapper) {
+            rightSidebarWrapper.style.display = 'none'; // Ukryj prawy sidebar na mobile
+        }
+        if (backButton) {
+            backButton.style.display = 'block'; // Pokaż przycisk wstecz na mobile
+        }
+        // W mobile, jeśli otwarty jest czat, przycisk Wstecz i tak go ukryje.
+        // Jeśli jest aktywowana sekcja "Użytkownicy" na mobile, to sidebar jest ukryty, a onlineUsersMobile widoczne.
+        // Obsługa w głównym listenerze dla navIcons.
+        if (sidebarEl) sidebarEl.style.display = 'block'; // Domyślnie pokaż listę konwersacji
+
+    } else { // Tryb desktopowy (powyżej 768px)
         // Na desktopie, pokaż sidebar, ekran logo początkowo, obszar czatu ukryty.
         if (sidebarWrapper) {
             sidebarWrapper.classList.remove('hidden-on-mobile'); // Upewnij się, że jest widoczny
+            sidebarWrapper.style.display = 'flex';
         }
         if (chatAreaWrapper) {
             chatAreaWrapper.classList.remove('active-on-mobile'); // Usuń klasę mobilną
@@ -484,308 +900,112 @@ function handleMediaQueryChange(mq) {
         if (backButton) {
             backButton.style.display = 'none'; // Przycisk wstecz niepotrzebny na desktopie
         }
-        if (onlineUsersMobile) onlineUsersMobile.classList.add('hidden'); // Ukryj mobilną listę aktywnych użytkowników na desktopie
+        if (onlineUsersMobile) onlineUsersMobile.style.display = 'none'; // Ukryj mobilną listę aktywnych
+        if (sidebarEl) sidebarEl.style.display = 'block'; // Zawsze pokaż główny sidebar
     }
 }
 
-/**
- * Ładuje ostatnie wiadomości dla każdej konwersacji użytkownika i tworzy listę konwersacji.
- */
-async function loadConversations() {
-    if (!userId) {
-        console.error('Błąd: userId nie jest zdefiniowane. Nie można załadować konwersacji.');
-        return;
-    }
-
-    if (!sidebarEl) {
-        console.error('Element sidebarEl nie znaleziony.');
-        return;
-    }
-    sidebarEl.innerHTML = ''; // Wyczyść listę przed załadowaniem
-
-    try {
-        // Zmieniono: Pobierz wszystkie unikalne room_id, w których uczestniczył użytkownik
-        // Filtrowanie po room_id.ilike.%_${userId} jest kluczowe dla znalezienia wszystkich czatów 1-na-1
-        // gdzie użytkownik jest drugim ID w room_id.
-        const { data: roomsData, error: roomsError } = await supabase
-            .from('messages')
-            .select('room_id, created_at') // Wybieramy room_id i created_at dla sortowania
-            .or(`sender_id.eq.${userId},room_id.ilike.%_${userId}`) // Filtruj po sender_id lub jeśli userId jest w room_id
-            .order('created_at', { ascending: false });
-
-        if (roomsError) {
-            console.error('Błąd ładowania room_id:', roomsError);
-            return;
-        }
-
-        const uniqueRoomIds = [...new Set(roomsData.map(row => row.room_id))];
-        const conversations = [];
-
-        for (const roomId of uniqueRoomIds) {
-            // Pobierz ostatnią wiadomość dla każdego room_id
-            const { data: latestMessageData, error: latestMessageError } = await supabase
-                .from('messages')
-                .select('sender_id, content, created_at') // Zmieniono: wybieramy content
-                .eq('room_id', roomId)
-                .order('created_at', { ascending: false })
-                .limit(1);
-
-            if (latestMessageError) {
-                console.error(`Błąd ładowania ostatniej wiadomości dla pokoju ${roomId}:`, latestMessageError);
-                continue;
-            }
-
-            if (latestMessageData && latestMessageData.length > 0) {
-                const latestMsg = latestMessageData[0];
-
-                // Wyodrębnij ID drugiego uczestnika z room_id
-                const participants = roomId.split('_');
-                const otherParticipantId = participants.find(id => id !== userId);
-
-                if (otherParticipantId) {
-                    conversations.push({
-                        userId: otherParticipantId,
-                        lastMessage: latestMsg.content, // Użyj content jako ostatnią wiadomość
-                        timestamp: latestMsg.created_at,
-                        roomId: roomId
-                    });
-                }
-            }
-        }
-
-        // Posortuj konwersacje od najnowszej
-        conversations.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-        // Wyświetl konwersacje
-        for (const convo of conversations) {
-            const conversationItem = document.createElement('li');
-            conversationItem.classList.add('conversation-item');
-            conversationItem.dataset.userId = convo.userId; // Użyj ID drugiego uczestnika jako data-user-id
-
-            const userLabel = await getUserLabelById(convo.userId); // Pobierz etykietę dla drugiego uczestnika
-            if (!userLabel) {
-                console.warn(`Nie znaleziono etykiety dla użytkownika ID: ${convo.userId} podczas ładowania konwersacji.`);
-                continue;
-            }
-
-            const date = new Date(convo.timestamp);
-            const timeString = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-            // Sprawdź, czy użytkownik jest online na podstawie listy aktywnych użytkowników
-            const isOnline = activeUsersList && activeUsersList.querySelector(`li[data-user-id="${convo.userId}"]`) ? true : false;
-
-            conversationItem.innerHTML = `
-                <div class="user-avatar"></div>
-                <div class="conversation-info">
-                    <span class="conversation-name">${userLabel}</span>
-                    <span class="last-message">${convo.lastMessage}</span>
-                </div>
-                <div class="conversation-meta">
-                    <span class="last-message-time">${timeString}</span>
-                    <span class="status ${isOnline ? 'online' : 'offline'}"></span>
-                </div>
-            `;
-            sidebarEl.appendChild(conversationItem);
-        }
-    } catch (err) {
-        console.error('Błąd podczas ładowania konwersacji:', err);
-    }
-}
-
-// Funkcja inicjalizująca aplikację
+// ==========================================================
+// Główna inicjalizacja aplikacji
+// ==========================================================
 async function initializeApp() {
-    initializeDOMElements(); // Inicjalizacja wszystkich zmiennych DOM
+    console.log("[initializeApp] Rozpoczęcie inicjalizacji aplikacji Komunikator.");
 
-    // Sprawdź stan autentykacji Supabase
+    initializeDOMElements(); // Inicjalizacja wszystkich elementów DOM
+    applySavedTheme(); // Zastosuj zapisany motyw
+
+    // Upewnij się, że userId jest dostępne przed nawiązaniem połączenia WebSocket
     const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+        userId = user.id;
+        console.log(`[initializeApp] Zalogowany użytkownik ID: ${userId}`);
 
-    if (!user) {
-        console.log('Użytkownik nie zalogowany. Przekierowanie do index.html');
-        window.location.href = 'index.html'; // Przekieruj, jeśli użytkownik nie jest zalogowany
-        return;
+        // Wczytaj wszystkie profile od razu, buforując je
+        await loadAllProfiles();
+
+        // Po udanym pobraniu userId, nawiąż połączenie WebSocket
+        setupWebSocket();
+
+        // Załaduj konwersacje po starcie i uwierzytelnieniu
+        // Zauważ, że loadConversations() jest też wywoływane po 'auth_success' z WebSocket,
+        // ale to początkowe wywołanie jest ważne, jeśli połączenie WebSocket zostanie nawiązane później.
+        // loadConversations(); // Zostawiłem to do wywołania po auth_success w handleWebSocketMessage
+
+        // Wczytaj listę aktywnych użytkowników do prawego sidebara
+        // (Będzie aktualizowana przez WebSocket, ale możemy zrobić początkowe zapytanie jeśli to potrzebne)
+        // Jeśli server.js wysyła 'user_list' po połączeniu, to ta linia może być zbędna
+        // updateActiveUsersList(Array.from(activeUsers));
+
+    } else {
+        console.warn('[initializeApp] Użytkownik niezalogowany. Przekierowanie do strony logowania.');
+        window.location.href = '/login.html'; // Przekieruj do strony logowania, jeśli nie ma użytkownika
+        return; // Zakończ inicjalizację, jeśli użytkownik nie jest zalogowany
     }
 
-    userId = user.id; // Ustaw ID zalogowanego użytkownika
-    console.log(`Zalogowano jako użytkownik ID: ${userId}`);
-
-    // Połącz się z serwerem WebSocket
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    // WAŻNE: Jeśli backend jest na osobnym adresie (np. Render.com), odkomentuj i użyj tego adresu:
-    const wsUrl = 'wss://firm-chat-app-backend.onrender.com'; // Przykładowy adres Render.com
-
-    socket = new WebSocket(wsUrl);
-
-    socket.onopen = () => {
-        console.log('Połączono z serwerem WebSocket.');
-        // Wyślij wiadomość o podłączeniu użytkownika
-        socket.send(JSON.stringify({ type: 'userConnected', userId: userId }));
-    };
-
-    socket.onmessage = async (event) => {
-        const data = JSON.parse(event.data);
-        const { type } = data;
-
-        if (type === 'message') {
-            const { senderId, content, timestamp, roomId } = data; // Zmieniono: destrukturyzacja content, roomId
-            console.log(`Odebrano wiadomość z pokoju ${roomId}: od ${senderId}, treść: ${content}`);
-            // Dodaj wiadomość do aktywnego czatu, jeśli pasuje do currentRecipient
-            const participants = roomId.split('_');
-            const otherParticipantId = participants.find(id => id !== userId); // Znajdź drugiego uczestnika czatu
-
-            if (activeChatRecipientId && otherParticipantId === activeChatRecipientId) {
-                // Jeśli wiadomość jest przeznaczona dla aktywnego czatu
-                appendMessageToChat(content, senderId === userId, timestamp); // Użyj content
-            } else if (senderId === userId && otherParticipantId !== activeChatRecipientId) {
-                // Jeśli to wiadomość wysłana przez samego siebie, ale do innego aktywnego odbiorcy
-                // Opcjonalnie: nie rób nic lub odśwież podgląd
+    // Dodaj wszystkie event listenery
+    if (menuButton) menuButton.addEventListener('click', toggleDropdownMenu);
+    if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
+    if (logoutButton) logoutButton.addEventListener('click', logoutUser);
+    if (searchInput) searchInput.addEventListener('input', filterContacts);
+    if (backButton) backButton.addEventListener('click', hideChatArea);
+    if (sendButton) sendButton.addEventListener('click', handleSendMessage);
+    if (messageInput) {
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) { // Wyślij wiadomość po enterze, chyba że Shift+Enter (nowa linia)
+                e.preventDefault(); // Zapobiegnij domyślnej akcji (np. dodaniu nowej linii)
+                handleSendMessage();
             }
+        });
+        messageInput.addEventListener('input', handleTypingStatus);
+    }
+    if (chatSettingsButton) chatSettingsButton.addEventListener('click', () => {
+        if (chatSettingsDropdown) chatSettingsDropdown.classList.toggle('hidden');
+    });
 
-            // Zawsze aktualizuj podgląd konwersacji w sidebarze dla odpowiedniego użytkownika
-            if (otherParticipantId) {
-                await updateConversationPreview(otherParticipantId, content, timestamp); // Użyj content
-            }
-        } else if (type === 'userStatusUpdate') {
-            const { userId: updatedUserId, isOnline } = data;
-            console.log(`Status użytkownika ${updatedUserId} zaktualizowany na: ${isOnline ? 'online' : 'offline'}`);
-            // Zaktualizuj status w liście konwersacji
-            const conversationItem = document.querySelector(`.conversation-item[data-user-id="${updatedUserId}"]`);
-            if (conversationItem) {
-                const statusEl = conversationItem.querySelector('.status');
-                if (statusEl) {
-                    statusEl.classList.toggle('online', isOnline);
-                    statusEl.classList.toggle('offline', !isOnline);
-                }
-            }
+    // Event listener dla przycisków nawigacyjnych (Rozmowy, Użytkownicy, Ustawienia)
+    if (mainNavIcons) {
+        mainNavIcons.querySelectorAll('.nav-icon').forEach(icon => {
+            icon.addEventListener('click', (e) => {
+                const tooltip = icon.dataset.tooltip;
+                // Usuń klasę 'active' ze wszystkich ikon
+                navIcons.forEach(navIcon => navIcon.classList.remove('active'));
+                // Dodaj klasę 'active' do klikniętej ikony
+                icon.classList.add('active');
 
-            // Zaktualizuj status w nagłówku aktywnego czatu
-            if (activeChatRecipientId === updatedUserId && userStatusSpan) {
-                userStatusSpan.textContent = isOnline ? 'Online' : 'Offline';
-                userStatusSpan.className = isOnline ? 'status online' : 'status offline';
-            }
-
-            // Zaktualizuj listę aktywnych użytkowników (prawy sidebar)
-            const activeUserListItem = activeUsersList && activeUsersList.querySelector(`li[data-user-id="${updatedUserId}"]`);
-            const userLabel = await getUserLabelById(updatedUserId);
-            if (isOnline) {
-                if (!activeUserListItem && userLabel) {
-                    const li = document.createElement('li');
-                    li.dataset.userId = updatedUserId;
-                    li.innerHTML = `<span>${userLabel}</span> <span class="status online"></span>`;
-                    li.addEventListener('click', () => displayChatArea(updatedUserId, userLabel, true)); // Możliwość otwarcia czatu
-                    if (activeUsersList) activeUsersList.appendChild(li);
-                }
-            } else {
-                if (activeUserListItem) {
-                    activeUserListItem.remove();
-                }
-            }
-            // Pokaż/ukryj "Brak aktywnych użytkowników"
-            if (noActiveUsersText) {
-                noActiveUsersText.style.display = activeUsersList && activeUsersList.children.length > 0 ? 'none' : 'block';
-            }
-
-        } else if (type === 'initialOnlineUsers') {
-            const { users } = data;
-            console.log('Otrzymano początkową listę aktywnych użytkowników:', users);
-            if (activeUsersList) activeUsersList.innerHTML = ''; // Wyczyść obecną listę
-            if (noActiveUsersText) noActiveUsersText.style.display = 'block';
-
-            for (const onlineUserId of users) {
-                if (onlineUserId === userId) continue; // Nie dodawaj samego siebie do listy online
-                const userLabel = await getUserLabelById(onlineUserId);
-                if (userLabel) {
-                    const li = document.createElement('li');
-                    li.dataset.userId = onlineUserId;
-                    li.innerHTML = `<span>${userLabel}</span> <span class="status online"></span>`;
-                    li.addEventListener('click', () => displayChatArea(onlineUserId, userLabel, true));
-                    if (activeUsersList) activeUsersList.appendChild(li);
-                }
-            }
-            if (noActiveUsersText) {
-                noActiveUsersText.style.display = activeUsersList && activeUsersList.children.length > 0 ? 'none' : 'block';
-            }
-
-            // Zaktualizuj statusy online/offline w liście konwersacji
-            document.querySelectorAll('.conversation-item').forEach(item => {
-                const conversationUserId = item.dataset.userId;
-                const statusEl = item.querySelector('.status');
-                if (statusEl) {
-                    const isOnline = users.includes(conversationUserId);
-                    statusEl.classList.toggle('online', isOnline);
-                    statusEl.classList.toggle('offline', !isOnline);
+                // Logika przełączania widoków
+                if (tooltip === 'Rozmowy') {
+                    if (sidebarEl) sidebarEl.style.display = 'block';
+                    if (onlineUsersMobile) onlineUsersMobile.style.display = 'none'; // Ukryj na mobile
+                    loadConversations(); // Odśwież konwersacje po przełączeniu
+                    if (rightSidebarWrapper && !window.matchMedia('(max-width: 768px)').matches) {
+                        rightSidebarWrapper.style.display = 'flex'; // Upewnij się, że prawy sidebar jest widoczny na desktopie
+                    }
+                } else if (tooltip === 'Użytkownicy') {
+                    if (sidebarEl) sidebarEl.style.display = 'none';
+                    if (onlineUsersMobile) {
+                        onlineUsersMobile.style.display = 'block'; // Pokaż mobilną listę aktywnych użytkowników
+                        // Zaktualizuj listę aktywnych użytkowników (dla mobile)
+                        updateActiveUsersList(Array.from(activeUsers));
+                    }
+                    if (rightSidebarWrapper) rightSidebarWrapper.style.display = 'none'; // Ukryj prawy sidebar
+                } else if (tooltip === 'Ustawienia') {
+                    // Tutaj logika dla Ustawień
+                    if (sidebarEl) sidebarEl.style.display = 'none';
+                    if (onlineUsersMobile) onlineUsersMobile.style.display = 'none';
+                    if (rightSidebarWrapper) rightSidebarWrapper.style.display = 'none';
+                    // Możesz tu wyświetlić np. jakiś inny div z ustawieniami, ukrywając resztę
                 }
             });
-
-        } else if (type === 'typing') {
-            const { senderId } = data;
-            if (senderId === activeChatRecipientId && typingStatusHeader) {
-                typingStatusHeader.textContent = `${activeChatRecipientName} pisze...`;
-                if (typingIndicatorMessages) typingIndicatorMessages.classList.remove('hidden');
-            }
-        } else if (type === 'notTyping') {
-            const { senderId } = data;
-            if (senderId === activeChatRecipientId && typingStatusHeader) {
-                typingStatusHeader.textContent = ''; // Usuń status pisania
-                if (typingIndicatorMessages) typingIndicatorMessages.classList.add('hidden');
-            }
-        }
-    };
-
-    socket.onclose = (event) => {
-        console.log('Rozłączono z serwerem WebSocket. Kod:', event.code, 'Powód:', event.reason);
-        // Połączenie utracone - możesz tutaj dodać logikę ponownego łączenia
-        if (messageInput) messageInput.disabled = true;
-        if (sendButton) sendButton.disabled = true;
-        alert('Utracono połączenie z serwerem czatu. Spróbuj odświeżyć stronę.');
-    };
-
-    socket.onerror = (error) => {
-        console.error('Błąd WebSocket:', error);
-        if (messageInput) messageInput.disabled = true;
-        if (sendButton) sendButton.disabled = true;
-        alert('Wystąpił błąd połączenia z serwerem czatu.');
-    };
-
-    // Obsługa zdarzeń UI
-    if (menuButton) menuButton.addEventListener('click', () => dropdownMenu.classList.toggle('hidden'));
-    if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
-    if (logoutButton) logoutButton.addEventListener('click', handleLogout);
-    if (backButton) {
-        backButton.addEventListener('click', () => {
-            activeChatRecipientId = null; // Resetuj aktywnego odbiorcę
-            if (sidebarWrapper) sidebarWrapper.classList.remove('hidden-on-mobile');
-            if (chatAreaWrapper) chatAreaWrapper.classList.remove('active-on-mobile');
-            if (chatArea) chatArea.classList.remove('active');
-            if (logoScreen) logoScreen.classList.remove('hidden');
-            if (backButton) backButton.style.display = 'none'; // Ukryj przycisk wstecz
-
-            // Upewnij się, że prawy sidebar jest widoczny na desktopie po powrocie
-            if (window.matchMedia('(min-width: 769px)').matches && rightSidebarWrapper) {
-                rightSidebarWrapper.style.display = 'flex';
-            }
-            if (onlineUsersMobile) onlineUsersMobile.classList.remove('hidden'); // Pokaż mobilną listę aktywnych użytkowników
         });
     }
 
-    setupConversationClickHandlers();
-    setupSendButtonHandler();
-    setupMessageInputHandler(); // Konfiguracja dla wskaźnika pisania
-
-    // Dołącz nasłuchiwanie zapytania mediów i wywołaj obsługę początkowo
+    // Obsługa zmiany rozmiaru okna (media query)
     const mq = window.matchMedia('(max-width: 768px)');
     mq.addListener(handleMediaQueryChange);
     handleMediaQueryChange(mq); // Początkowe wywołanie w celu ustawienia poprawnego układu
 
-    // Wczytaj początkowe konwersacje po załadowaniu użytkownika
-    await loadConversations();
-    // Załaduj wszystkie profile użytkowników raz, aby móc szybko pobierać etykiety
-    await loadAllProfiles();
-
-    console.log("Komunikator application initialized successfully.");
+    console.log("[initializeApp] Aplikacja Komunikator zainicjalizowana pomyślnie.");
 }
 
 // Uruchomienie aplikacji po załadowaniu DOM
-document.addEventListener('DOMContentLoaded', () => {
-    applySavedTheme(); // Zastosuj zapisany motyw przed inicjalizacją app
-    initializeApp();
-});
+document.addEventListener('DOMContentLoaded', initializeApp);
