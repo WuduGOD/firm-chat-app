@@ -274,6 +274,13 @@ async function handleConversationClick(user, clickedConvoItemElement) {
         userStatusSpan.textContent = isUserOnline ? 'Online' : 'Offline';
         userStatusSpan.classList.toggle('online', isUserOnline); 
         userStatusSpan.classList.toggle('offline', !isUserOnline); 
+        console.log(`[handleConversationClick] Ustawiam status dla ${currentChatUser.username}: ${isUserOnline ? 'Online' : 'Offline'}`);
+
+        // WAŻNE: Upewnij się, że input i przycisk są włączone
+        messageInput.disabled = false;
+        sendButton.disabled = false;
+        messageInput.focus();
+        console.log("[handleConversationClick] Pole wiadomości i przycisk WYŚLIJ włączone.");
     }
 
     // Logika przełączania widoku mobilnego/desktopowego
@@ -338,7 +345,7 @@ async function handleConversationClick(user, clickedConvoItemElement) {
  */
 function setupSendMessage() {
     if (!messageInput || !sendButton || !messageContainer) {
-        console.error("[setupSendMessage] Elementy do wysyłania wiadomości nie znalezione.");
+        console.error("[setupSendMessage] Elementy do wysyłania wiadomości nie znalezione. Sprawdź selektory DOM.");
         return;
     }
 
@@ -355,14 +362,19 @@ function setupSendMessage() {
 
     // Wyślij wiadomość po kliknięciu przycisku
     sendButton.onclick = () => {
-        console.log("[setupSendMessage] Kliknięto przycisk Wyślij lub naciśnięto Enter.");
+        console.log("[setupSendMessage] *** Próba wysłania wiadomości ***");
         const text = messageInput.value.trim();
-        if (!text || !currentChatUser || !socket || socket.readyState !== WebSocket.OPEN) {
-            console.warn("[setupSendMessage] Nie można wysłać wiadomości: pusta, brak odbiorcy lub WebSocket nie jest otwarty.");
-            return;
-        }
-        if (!currentRoom) {
-            console.error("[setupSendMessage] Nie można wysłać wiadomości: currentRoom nie jest ustawiony.");
+
+        console.log(`[setupSendMessage] Stan przed wysłaniem:
+            Tekst wiadomości: "${text}" (pusty? ${!text})
+            currentChatUser: ${currentChatUser ? currentChatUser.username : 'BRAK'} (null? ${!currentChatUser})
+            socket: ${socket ? 'Obiekt' : 'BRAK'} (null? ${!socket})
+            socket.readyState: ${socket ? socket.readyState : 'N/A'} (OPEN? ${socket && socket.readyState === WebSocket.OPEN})
+            currentRoom: "${currentRoom}" (null? ${!currentRoom})
+        `);
+
+        if (!text || !currentChatUser || !socket || socket.readyState !== WebSocket.OPEN || !currentRoom) {
+            console.warn("[setupSendMessage] Wysyłka zablokowana: Brak tekstu, odbiorcy, otwartego połączenia WS lub pokoju.");
             return;
         }
 
@@ -377,8 +389,16 @@ function setupSendMessage() {
         console.log("[setupSendMessage] Wysyłanie wiadomości przez WS:", msgData);
         socket.send(JSON.stringify(msgData));
         
+        // Przenieś konwersację na górę dla wysłanych wiadomości
+        const convoItemToMove = contactsListEl.querySelector(`.contact[data-room-id="${currentRoom}"]`);
+        if (convoItemToMove && contactsListEl.firstChild !== convoItemToMove) {
+            contactsListEl.prepend(convoItemToMove);
+            console.log(`[setupSendMessage][Reorder] Przeniesiono konwersację dla pokoju ${currentRoom} na początek z powodu wysłanej wiadomości.`);
+        }
+
         messageInput.value = ''; // Wyczyść pole
         messageInput.focus(); // Zachowaj fokus
+        console.log("[setupSendMessage] Wiadomość wysłana, pole wyczyszczone.");
     };
 
     // Wyślij wiadomość po naciśnięciu Enter
@@ -658,7 +678,7 @@ function initWebSocket() {
 
     socket.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        console.log('[WS MESSAGE] Odebrano dane WS:', data); // Zostaw ten log dla wglądu
+        console.log('[WS MESSAGE] Odebrano dane WS:', data);
 
         switch (data.type) {
             case 'message':
@@ -766,12 +786,12 @@ function displayActiveUsers(activeUsersData) {
             `;
             
             divMobile.addEventListener('click', async () => {
-                const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(user.id));
+                const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(userId));
                 if (userProfile) {
                     const mockConvoItem = document.createElement('li');
-                    mockConvoItem.dataset.convoId = user.id;
+                    mockConvoItem.dataset.convoId = userId;
                     mockConvoItem.dataset.email = userProfile.email;
-                    mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(user.id));
+                    mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(userId));
                     handleConversationClick(userProfile, mockConvoItem);
                 }
             });
