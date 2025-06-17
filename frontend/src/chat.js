@@ -142,13 +142,6 @@ function connectWebSocket() {
     socket.onopen = () => {
         console.log('[WebSocket] Połączono z serwerem WebSocket.');
         reconnectAttempts = 0; // Resetuj licznik prób ponownego połączenia po udanym połączeniu
-        // Wyślij ID użytkownika zaraz po połączeniu
-        if (userId) {
-            socket.send(JSON.stringify({ type: 'authenticate', userId: userId }));
-        } else {
-            console.error('Brak ID użytkownika do uwierzytelnienia na WebSocket!');
-            // Możesz przekierować użytkownika na stronę logowania lub pokazać błąd
-        }
     };
 
     socket.onmessage = async (event) => {
