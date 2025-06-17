@@ -1,197 +1,238 @@
 // server.js
+// Importy niezbędnych modułów:
+// WebSocketServer i WebSocket z biblioteki 'ws' do obsługi połączeń WebSocket.
+// 'pg' do interakcji z bazą danych PostgreSQL.
+// 'dotenv' do ładowania zmiennych środowiskowych z pliku .env.
 import { WebSocketServer, WebSocket } from 'ws';
 import pkg from 'pg';
 import dotenv from 'dotenv';
 
+// Konfiguracja dotenv do ładowania zmiennych środowiskowych
 dotenv.config();
 
+// Destrukturyzacja modułu 'pg' do uzyskania klasy Pool
 const { Pool } = pkg;
 
+// Konfiguracja połączenia z bazą danych PostgreSQL
+// Dane do połączenia są pobierane ze zmiennych środowiskowych
 const pool = new Pool({
     user: process.env.DB_USER,
     host: process.env.DB_HOST,
     database: process.env.DB_NAME,
     password: process.env.DB_PASS,
-    port: parseInt(process.env.DB_PORT || '5432'),
+    port: parseInt(process.env.DB_PORT || '5432'), // Domyślny port 5432, jeśli nie ustawiono
     ssl: { rejectUnauthorized: false }, // Ustawienie SSL, może być wymagane dla niektórych hostingów (np. Render.com)
-    connectionTimeoutMillis: 5000,
-    keepAlive: true
+    connectionTimeoutMillis: 5000, // Limit czasu na nawiązanie połączenia
+    keepAlive: true // Utrzymuj połączenie aktywne
 });
 
-pool.on('error', (err) => {
-    console.error('Serwer: Nieoczekiwany błąd w puli połączeń z bazą danych:', err);
-    process.exit(-1);
-});
-
-async function testDbConnection() {
-    try {
-        const client = await pool.connect();
+// Testowanie połączenia z bazą danych na starcie serwera
+pool.connect()
+    .then(client => {
         console.log('Serwer: Połączono z bazą danych PostgreSQL!');
-        client.release();
-    } catch (err) {
+        client.release(); // Zwolnij klienta z powrotem do puli
+    })
+    .catch(err => {
         console.error('Serwer: Błąd połączenia z bazą danych:', err.message);
-        process.exit(1); // Zakończ proces, jeśli nie można połączyć się z bazą danych
-    }
-}
+        process.exit(1); // Zakończ proces serwera, jeśli nie można połączyć się z bazą danych
+    });
 
-testDbConnection();
+// Mapowanie klientów WebSocket na ich userId
+// { WebSocket: { userId: 'uuid', lastSeen: Date } }
+const clients = new Map();
 
-// POPRAWKA: Dodano 'export' przed 'const wss'
-export const wss = new WebSocketServer({ port: process.env.WS_PORT || 8080 });
-console.log(`Serwer WebSocket uruchomiony na porcie ${process.env.WS_PORT || 8080}`);
+// Mapowanie pokojów czatu na zestawy aktywnych połączeń WebSocket w tym pokoju
+// { 'room_id': Set<WebSocket> }
+const rooms = new Map();
 
-// Mapa do przechowywania aktywnych połączeń WebSocket wraz z ID użytkowników
-const clients = new Map(); // Map<WebSocket, { userId: string }>
+// Inicjalizacja serwera WebSocket na porcie 8080 (lub innym z ENV)
+const PORT = process.env.PORT || 8080;
+const wss = new WebSocketServer({ port: PORT });
 
-// Mapa do przechowywania pokojów czatu. Każdy pokój to Set aktywnych połączeń WebSocket.
-// Odzyskane z Twojej poprzedniej wersji.
-const rooms = new Map(); // Map<string (roomName), Set<WebSocket>>
+wss.on('listening', () => {
+    console.log(`Serwer WebSocket nasłuchuje na porcie ${PORT}`);
+});
 
-// Funkcja do generowania unikalnego ID pokoju dla czatów 1-na-1
-// Zapewnia, że room_id jest zawsze taki sam dla danej pary użytkowników, niezależnie od kolejności ID
+// Funkcja pomocnicza do generowania room_id
 function generateRoomId(userId1, userId2) {
     const sortedIds = [userId1, userId2].sort();
     return `${sortedIds[0]}_${sortedIds[1]}`;
 }
 
-// Funkcja rozsyłająca status użytkownika
-async function broadcastUserStatus(userId, isOnline) {
-    try {
-        // Zaktualizuj status is_online w bazie danych
-        await pool.query(
-            'UPDATE profiles SET is_online = $1, last_seen_at = $2 WHERE id = $3',
-            [isOnline, new Date().toISOString(), userId]
-        );
-        console.log(`Serwer: Zaktualizowano status w DB dla użytkownika ${userId}: ${isOnline ? 'online' : 'offline'}`);
-    } catch (err) {
-        console.error('Serwer: Błąd aktualizacji statusu użytkownika w DB:', err);
-    }
+/**
+ * Rozgłasza aktualną listę aktywnych użytkowników do wszystkich podłączonych klientów.
+ * Używane przy zmianie statusu (online/offline) lub do początkowego wysłania listy.
+ */
+function broadcastActiveUsersList() {
+    const activeUserIds = Array.from(clients.values())
+                               .map(clientData => clientData.userId)
+                               .filter(id => id !== undefined); // Filtruj undefined
 
-    const statusUpdate = {
-        type: 'userStatusUpdate',
-        userId: userId,
-        isOnline: isOnline
-    };
-    clients.forEach((clientWs) => {
-        if (clientWs.readyState === WebSocket.OPEN) {
-            clientWs.send(JSON.stringify(statusUpdate));
+    console.log('Serwer: Rozgłaszanie listy aktywnych użytkowników:', activeUserIds);
+    wss.clients.forEach(wsClient => {
+        if (wsClient.readyState === WebSocket.OPEN && clients.has(wsClient)) {
+            wsClient.send(JSON.stringify({ type: 'user_list', users: activeUserIds }));
         }
     });
-    console.log(`Serwer: Rozesłano status ${isOnline ? 'online' : 'offline'} dla użytkownika ${userId} do wszystkich klientów.`);
 }
 
-// Funkcja do wysyłania początkowej listy aktywnych użytkowników do nowo połączonego klienta
-async function sendInitialOnlineUsers(ws) {
-    const onlineUserIds = Array.from(clients.values()).map(data => data.userId);
-    const initialOnlineUsersMsg = {
-        type: 'initialOnlineUsers',
-        users: onlineUserIds
-    };
-    if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify(initialOnlineUsersMsg));
-        console.log(`Serwer: Wysłano początkową listę ${onlineUserIds.length} aktywnych użytkowników do nowego klienta.`);
-    }
-}
-
-wss.on('connection', async (ws) => {
-    console.log('Serwer: Nowy klient podłączony.');
-
-    let currentClientData = null; // Będziemy przechowywać dane klienta tutaj, aby były dostępne w 'close'
-
-    ws.on('message', async (message) => {
-        const data = JSON.parse(message);
-        const { type } = data;
-
-        if (type === 'userConnected') {
-            const { userId } = data;
-            if (userId) {
-                currentClientData = { userId: userId }; // Ustaw dane klienta po otrzymaniu userId
-                clients.set(ws, currentClientData);
-                console.log(`Serwer: Użytkownik ${userId} podłączony i zmapowany.`);
-                broadcastUserStatus(userId, true); // Rozgłoś, że użytkownik jest online
-                await sendInitialOnlineUsers(ws); // Wyślij listę online do nowego klienta
-            } else {
-                console.warn('Serwer: Otrzymano userConnected bez userId.');
-            }
-        } else if (type === 'chatMessage') {
-            const { senderId, recipientId, content, timestamp } = data; // content zamiast message
-            if (!senderId || !recipientId || !content || !timestamp) {
-                console.error('Serwer: Niekompletne dane wiadomości (wymagane: senderId, recipientId, content, timestamp):', data);
-                return;
-            }
-
-            // Generuj room_id dla czatu 1-na-1
-            const roomId = generateRoomId(senderId, recipientId);
-
-            console.log(`Serwer: Otrzymano wiadomość: od ${senderId} do ${recipientId} w pokoju ${roomId}: ${content}`);
-
-            try {
-                // Zapisz wiadomość do bazy danych
-                const { rows, error } = await pool.query(
-                    'INSERT INTO messages (room_id, sender_id, content, created_at) VALUES ($1, $2, $3, $4) RETURNING *',
-                    [roomId, senderId, content, timestamp]
-                );
-
-                if (error) {
-                    console.error('Serwer: Błąd zapisu wiadomości do bazy danych:', error);
-                    return;
-                }
-                const newMessage = rows[0]; // Pobrana nowa wiadomość z bazy danych
-
-                // Rozgłoś wiadomość do nadawcy i odbiorcy
-                const messageToClients = {
-                    type: 'message',
-                    roomId: roomId, // Dodaj room_id do wiadomości
-                    senderId: newMessage.sender_id, // Użyj danych z bazy
-                    content: newMessage.content,    // Użyj danych z bazy
-                    timestamp: newMessage.created_at // Użyj danych z bazy (created_at)
-                };
-
-                // Iteruj po wszystkich połączonych klientach
-                clients.forEach((clientWs, clientData) => {
-                    // Wyślij wiadomość tylko do nadawcy i do odbiorcy (w kontekście czatu 1-na-1)
-                    if ((clientData.userId === senderId || clientData.userId === recipientId) &&
-                        clientWs.readyState === WebSocket.OPEN) {
-                        clientWs.send(JSON.stringify(messageToClients));
-                    }
-                });
-                console.log(`Serwer: Wiadomość z pokoju ${roomId} rozesłana do uczestników.`);
-
-            } catch (dbError) {
-                console.error('Serwer: Błąd bazy danych podczas przetwarzania wiadomości:', dbError);
-            }
-        } else if (type === 'typing' || type === 'notTyping') {
-            const { senderId, recipientId } = data;
-            if (senderId && recipientId) {
-                // Przekaż status pisania tylko do odbiorcy
-                clients.forEach((clientWs, clientData) => {
-                    if (clientData.userId === recipientId && clientWs.readyState === WebSocket.OPEN) {
-                        clientWs.send(JSON.stringify({ type: data.type, senderId: senderId }));
-                    }
-                });
-                console.log(`Serwer: Status pisania od ${senderId} do ${recipientId}: ${type}.`);
-            }
-        } else if (type === 'joinRoom') {
-            // Logika dołączania do pokoju (odzyskano z Twojej starej wersji)
-            const { roomId, userId } = data; // Zakładam, że `roomId` jest przekazywane
-            if (!rooms.has(roomId)) {
-                rooms.set(roomId, new Set());
-            }
-            rooms.get(roomId).add(ws);
-            console.log(`Serwer: Użytkownik ${userId} dołączył do pokoju ${roomId}.`);
-        } else if (type === 'leaveRoom') {
-            // Logika opuszczania pokoju (odzyskano z Twojej starej wersji)
-            const { roomId, userId } = data;
-            if (rooms.has(roomId)) {
-                rooms.get(roomId).delete(ws);
-                if (rooms.get(roomId).size === 0) {
-                    rooms.delete(roomId);
-                }
-            }
-            console.log(`Serwer: Użytkownik ${userId} opuścił pokój ${roomId}.`);
+/**
+ * Rozgłasza zmianę statusu pojedynczego użytkownika (online/offline) do wszystkich klientów.
+ * @param {string} userId ID użytkownika, którego status się zmienił.
+ * @param {boolean} isOnline True, jeśli użytkownik jest online, false jeśli offline.
+ */
+function broadcastUserStatus(userId, isOnline) {
+    console.log(`Serwer: Rozgłaszanie statusu użytkownika ${userId}: ${isOnline ? 'online' : 'offline'}`);
+    wss.clients.forEach(wsClient => {
+        if (wsClient.readyState === WebSocket.OPEN && clients.has(wsClient)) {
+            wsClient.send(JSON.stringify({ type: 'user_status', userId: userId, status: isOnline ? 'online' : 'offline' }));
         }
-        else {
-            console.warn('Serwer: Otrzymano nieznany typ wiadomości:', type, data);
+    });
+    // Po zmianie statusu, zawsze rozgłaszamy też pełną listę, aby upewnić się, że wszyscy mają aktualną.
+    broadcastActiveUsersList();
+}
+
+
+// Obsługa nowych połączeń WebSocket
+wss.on('connection', (ws) => {
+    console.log('Serwer: Nowe połączenie WebSocket.');
+
+    // Kiedy otrzymamy wiadomość od klienta
+    ws.on('message', async (message) => {
+        try {
+            const data = JSON.parse(message.toString());
+            console.log('Serwer: Otrzymano wiadomość od klienta:', data); // Loguj każdą odebraną wiadomość
+
+            switch (data.type) {
+                case 'auth':
+                    const userId = data.userId;
+                    if (userId) {
+                        clients.set(ws, { userId: userId, lastSeen: new Date() }); // Zapisz userId i czas
+                        console.log(`Serwer: Klient ${userId} uwierzytelniony.`);
+                        // Wyślij potwierdzenie autoryzacji do klienta, który się właśnie połączył
+                        ws.send(JSON.stringify({ type: 'auth_success', userId: userId }));
+                        console.log(`Serwer: Wysłano 'auth_success' do ${userId}`);
+
+                        // Rozgłoś status online do wszystkich pozostałych klientów
+                        broadcastUserStatus(userId, true);
+                    } else {
+                        ws.send(JSON.stringify({ type: 'error', message: 'Brak userId w wiadomości autoryzacyjnej.' }));
+                        console.warn('Serwer: Otrzymano wiadomość auth bez userId.');
+                    }
+                    break;
+
+                case 'chat_message':
+                    const { senderId, receiverId, content } = data;
+                    console.log(`Serwer: Otrzymano wiadomość czatu: od ${senderId} do ${receiverId}, Treść: "${content}"`);
+
+                    try {
+                        // Zapisz wiadomość w bazie danych
+                        const { data: dbData, error } = await pool.query(
+                            'INSERT INTO messages (sender_id, receiver_id, content) VALUES ($1, $2, $3) RETURNING *',
+                            [senderId, receiverId, content]
+                        );
+
+                        if (error) throw error;
+
+                        const savedMessage = dbData.rows[0];
+                        console.log('Serwer: Wiadomość zapisana w DB:', savedMessage);
+
+                        // Rozgłoś wiadomość do odpowiednich klientów
+                        const roomId = generateRoomId(senderId, receiverId);
+                        const clientsInRoom = rooms.get(roomId);
+
+                        if (clientsInRoom) {
+                            console(`Serwer: Rozgłaszanie wiadomości w pokoju ${roomId} do ${clientsInRoom.size} klientów.`);
+                            clientsInRoom.forEach(clientWs => {
+                                if (clientWs.readyState === WebSocket.OPEN) {
+                                    clientWs.send(JSON.stringify({
+                                        type: 'chat_message',
+                                        senderId: savedMessage.sender_id,
+                                        receiverId: savedMessage.receiver_id,
+                                        content: savedMessage.content,
+                                        created_at: savedMessage.created_at // Użyj timestamp z bazy danych
+                                    }));
+                                }
+                            });
+                        } else {
+                            console.warn(`Serwer: Pokój ${roomId} nie istnieje lub jest pusty. Wiadomość nie została rozgłoszona. To może się zdarzyć, jeśli użytkownicy nie dołączyli do pokoju.`);
+                            // Jeśli pokój nie istnieje, nadal wyślij wiadomość bezpośrednio do nadawcy i odbiorcy, jeśli są online
+                            // To jest fallback, główna logika powinna polegać na dołączaniu do pokoju
+                            wss.clients.forEach(clientWs => {
+                                const clientInfo = clients.get(clientWs);
+                                if (clientInfo && (clientInfo.userId === senderId || clientInfo.userId === receiverId)) {
+                                    if (clientWs.readyState === WebSocket.OPEN) {
+                                        clientWs.send(JSON.stringify({
+                                            type: 'chat_message',
+                                            senderId: savedMessage.sender_id,
+                                            receiverId: savedMessage.receiver_id,
+                                            content: savedMessage.content,
+                                            created_at: savedMessage.created_at
+                                        }));
+                                    }
+                                }
+                            });
+                        }
+
+                    } catch (dbError) {
+                        console.error('Serwer: Błąd podczas zapisywania wiadomości w bazie danych:', dbError.message);
+                        ws.send(JSON.stringify({ type: 'error', message: 'Błąd serwera podczas zapisywania wiadomości.' }));
+                    }
+                    break;
+
+                case 'typing_status':
+                    const { senderId: typingSenderId, receiverId: typingReceiverId, isTyping } = data;
+                    console.log(`Serwer: Status pisania od ${typingSenderId} do ${typingReceiverId}: ${isTyping}`);
+                    const typingRoomId = generateRoomId(typingSenderId, typingReceiverId);
+                    const typingClientsInRoom = rooms.get(typingRoomId);
+
+                    if (typingClientsInRoom) {
+                        typingClientsInRoom.forEach(clientWs => {
+                            const clientInfo = clients.get(clientWs);
+                            // Wysyłamy status pisania tylko do odbiorcy (nie do samego nadawcy)
+                            if (clientWs.readyState === WebSocket.OPEN && clientInfo && clientInfo.userId === typingReceiverId) {
+                                clientWs.send(JSON.stringify({
+                                    type: 'typing_status',
+                                    senderId: typingSenderId,
+                                    receiverId: typingReceiverId,
+                                    isTyping: isTyping
+                                }));
+                            }
+                        });
+                    }
+                    break;
+
+                case 'join_room':
+                    const { roomId: joinRoomId } = data;
+                    if (!rooms.has(joinRoomId)) {
+                        rooms.set(joinRoomId, new Set());
+                        console.log(`Serwer: Utworzono nowy pokój: ${joinRoomId}`);
+                    }
+                    rooms.get(joinRoomId).add(ws);
+                    console.log(`Serwer: Klient dołączył do pokoju: ${joinRoomId}. Aktywni w pokoju: ${rooms.get(joinRoomId).size}`);
+                    break;
+
+                case 'leave_room':
+                    const { roomId: leaveRoomId } = data;
+                    if (rooms.has(leaveRoomId)) {
+                        rooms.get(leaveRoomId).delete(ws);
+                        if (rooms.get(leaveRoomId).size === 0) {
+                            rooms.delete(leaveRoomId);
+                            console.log(`Serwer: Pokój ${leaveRoomId} jest pusty i został usunięty.`);
+                        }
+                        console.log(`Serwer: Klient opuścił pokój: ${leaveRoomId}. Aktywni w pokoju: ${rooms.has(leaveRoomId) ? rooms.get(leaveRoomId).size : 0}`);
+                    }
+                    break;
+
+                default:
+                    console.warn('Serwer: Nieznany typ wiadomości:', data.type);
+                    break;
+            }
+        } catch (error) {
+            console.error('Serwer: Błąd parsowania wiadomości lub przetwarzania:', error);
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'error', message: 'Błąd serwera podczas przetwarzania wiadomości.' }));
+            }
         }
     });
 
@@ -201,7 +242,7 @@ wss.on('connection', async (ws) => {
         if (disconnectedClientData && disconnectedClientData.userId) { // Upewnij się, że userId istnieje
             console.log(`Serwer: Klient rozłączony: ${disconnectedClientData.userId}`);
 
-            // Usuń klienta ze wszystkich pokojów, do których należał (odzyskano z Twojej starej wersji)
+            // Usuń klienta ze wszystkich pokojów, do których należał
             rooms.forEach((clientSet, roomName) => {
                 if (clientSet.has(ws)) {
                     clientSet.delete(ws);
