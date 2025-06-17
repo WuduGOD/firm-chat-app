@@ -15,14 +15,13 @@ let logoutButton;
 let container;
 let sidebarWrapper;
 let mainNavIcons;
-let navIcons; // Przycisk do przełączania rozmów, użytkowników, ustawień
+let navIcons;
 
 let onlineUsersMobile; // Kontener dla aktywnych użytkowników na mobile
 
 let sidebarEl; // <aside class="sidebar" id="sidebar">
 let searchInput; // <input id="sidebarSearchInput">
-let contactsListEl; // <ul class="conversations-list" id="contactsList"> - Lista konwersacji/kontaktów
-let searchBarEl; // Zmienna dla paska wyszukiwania (jeśli jest)
+let contactsListEl; // <ul class="conversations-list" id="contactsList">
 
 let chatAreaWrapper; // <div class="chat-area-wrapper">
 let logoScreen; // <div id="logoScreen">
@@ -33,31 +32,28 @@ let backButton; // <button id="backButton">
 let chatUserAvatar; // <div class="user-avatar" id="chatUserAvatar">
 let chatUserName; // <span id="chatUserName">
 let userStatusSpan; // <span id="userStatus">
+let typingStatusHeader; // Nowa zmienna dla nagłówka statusu pisania
 let chatHeaderActions; // <div class="chat-header-actions">
 let chatSettingsButton; // <button id="chatSettingsButton">
-let chatSettingsDropdown; // <div id="chatSettingsDropdown" class="dropdown chat-settings-dropdown">
-let typingStatusHeader; // <span id="typingStatus">
+let chatSettingsDropdown; // <div class="chat-settings-dropdown">
 
-let chatMessages; // <div class="chat-messages" id="chatMessages"> - Kontener na wiadomości w aktywnym czacie
+let messagesContainer; // <div class="messages-container" id="messagesContainer">
+let typingIndicator; // <div class="typing-indicator" id="typingIndicator">
+
 let messageInput; // <input id="messageInput">
 let sendButton; // <button id="sendButton">
-let emojiButton; // <button class="emoji-button">
-let attachButton; // <button class="attach-button">
 
-let rightSidebarWrapper; // <aside class="right-sidebar-wrapper">
-let rightSidebar; // <div class="right-sidebar" id="rightSidebar">
-let activeUsersList; // <ul class="active-users-list" id="activeUsersList">
+let activeUsersListEl; // <ul class="active-users-list" id="activeUsersList">
 let noActiveUsersText; // <div id="noActiveUsersText">
+let rightSidebarWrapper; // <aside class="right-sidebar-wrapper">
 
-let typingIndicator; // <div class="typing-indicator-messages" id="typingIndicatorMessages">
-
-let userId; // ID zalogowanego użytkownika (aktualnie zalogowany)
-let activeChatRecipientId = null; // ID użytkownika, z którym obecnie czatujemy (dla czatów 1-na-1)
-let activeChatRecipientName = ''; // Nazwa użytkownika, z którym obecnie czatujemy
+let userId; // ID zalogowanego użytkownika
+let activeChatRecipientId = null;
+let activeChatRecipientName = '';
 
 // WebSocket
 let socket;
-let activeUsers = new Set(); // Przechowuje ID użytkowników online
+let activeUsers = new Set();
 let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 5;
 const RECONNECT_INTERVAL_MS = 3000;
@@ -67,24 +63,23 @@ const RECONNECT_INTERVAL_MS = 3000;
 // ==========================================================
 
 /**
- * Prosta funkcja pomocnicza do pobierania elementów DOM po ID.
+ * Bezpiecznie pobiera element DOM po ID.
  * @param {string} id ID elementu.
- * @returns {HTMLElement|null} Element DOM lub null.
+ * @returns {HTMLElement|null} Element DOM lub null, jeśli nie znaleziono.
  */
 function getElement(id) {
-    const el = document.getElementById(id);
-    if (!el) {
+    const element = document.getElementById(id);
+    if (!element) {
         console.warn(`Element z ID '${id}' nie znaleziony.`);
     }
-    return el;
+    return element;
 }
 
 /**
- * Inicjalizuje wszystkie globalne elementy DOM.
+ * Inicjalizuje zmienne DOM, przypisując elementy do globalnych zmiennych.
  */
 function initializeDOMElements() {
     console.log("[initializeDOMElements] Rozpoczynanie inicjalizacji elementów DOM.");
-
     mainHeader = getElement('mainHeader');
     menuButton = getElement('menuButton');
     dropdownMenu = getElement('dropdownMenu');
@@ -92,45 +87,74 @@ function initializeDOMElements() {
     logoutButton = getElement('logoutButton');
 
     container = getElement('container');
-    sidebarWrapper = document.querySelector('.sidebar-wrapper'); // Jest klasa, a nie ID
-    mainNavIcons = document.querySelector('.main-nav-icons');
-    navIcons = document.querySelectorAll('.main-nav-icons .nav-icon'); // NodeList
+    sidebarWrapper = getElement('sidebarWrapper');
+    mainNavIcons = getElement('mainNavIcons');
+    navIcons = document.querySelectorAll('.nav-icon');
 
-    onlineUsersMobile = getElement('onlineUsersMobile'); // Sprawdź czy to ID istnieje w HTML
+    onlineUsersMobile = getElement('onlineUsersMobile');
 
     sidebarEl = getElement('sidebar');
-    searchInput = getElement('sidebarSearchInput');
-    contactsListEl = getElement('contactsList'); // Powinno być ul z listą konwersacji/kontaktów
+    searchInput = getElement('sidebarSearchInput'); // Poprawiono ID
+    contactsListEl = getElement('contactsList');
 
-    chatAreaWrapper = document.querySelector('.chat-area-wrapper');
+    chatAreaWrapper = getElement('chatAreaWrapper');
     logoScreen = getElement('logoScreen');
     chatArea = getElement('chatArea');
 
-    chatHeader = document.querySelector('.chat-header');
+    chatHeader = getElement('chatHeader');
     backButton = getElement('backButton');
     chatUserAvatar = getElement('chatUserAvatar');
     chatUserName = getElement('chatUserName');
     userStatusSpan = getElement('userStatus');
-    chatHeaderActions = document.querySelector('.chat-header-actions');
+    typingStatusHeader = getElement('typingStatusHeader'); // Nowy element
+    chatHeaderActions = getElement('chatHeaderActions');
     chatSettingsButton = getElement('chatSettingsButton');
     chatSettingsDropdown = getElement('chatSettingsDropdown');
-    typingStatusHeader = getElement('typingStatus');
 
-    chatMessages = getElement('chatMessages');
+    messagesContainer = getElement('messagesContainer');
+    typingIndicator = getElement('typingIndicator'); // Poprawiono ID
+
     messageInput = getElement('messageInput');
     sendButton = getElement('sendButton');
-    emojiButton = document.querySelector('.emoji-button');
-    attachButton = document.querySelector('.attach-button');
 
-    rightSidebarWrapper = document.querySelector('.right-sidebar-wrapper');
-    rightSidebar = getElement('rightSidebar');
-    activeUsersList = getElement('activeUsersList');
+    activeUsersListEl = getElement('activeUsersList');
     noActiveUsersText = getElement('noActiveUsersText');
-
-    typingIndicator = getElement('typingIndicator');
+    rightSidebarWrapper = getElement('rightSidebar'); // Poprawiono, by pasowało do ID HTML
 
     console.log("[initializeDOMElements] Zakończono inicjalizację elementów DOM.");
 }
+
+/**
+ * Przełącza widoczność paska bocznego w zależności od stanu (otwarty/zamknięty).
+ * @param {boolean} open True, aby otworzyć; false, aby zamknąć.
+ */
+function toggleSidebar(open) {
+    if (sidebarEl) {
+        sidebarEl.classList.toggle('open', open);
+    }
+}
+
+/**
+ * Obsługuje zmiany w media query (tryb mobilny/desktopowy).
+ * @param {MediaQueryListEvent} mq Media Query List Event.
+ */
+function handleMediaQueryChange(mq) {
+    console.log("Media Query: Tryb desktopowy aktywowany. Dostosowywanie początkowej widoczności dla desktopu.");
+    if (mq.matches) { // Tryb mobilny (max-width: 768px)
+        if (sidebarEl) sidebarEl.style.display = 'block'; // Pokaż sidebar by default
+        if (onlineUsersMobile) onlineUsersMobile.style.display = 'none'; // Ukryj mobilną listę online users
+        if (chatAreaWrapper) chatAreaWrapper.style.display = 'none'; // Ukryj obszar czatu na start mobile
+        if (rightSidebarWrapper) rightSidebarWrapper.style.display = 'none'; // Ukryj prawy sidebar
+        if (backButton) backButton.classList.add('mobile-only'); // Pokaż przycisk Wróć na mobile
+    } else { // Tryb desktopowy
+        if (sidebarEl) sidebarEl.style.display = 'block'; // Pokaż sidebar
+        if (chatAreaWrapper) chatAreaWrapper.style.display = 'flex'; // Pokaż obszar czatu
+        if (rightSidebarWrapper) rightSidebarWrapper.style.display = 'block'; // Pokaż prawy sidebar
+        if (onlineUsersMobile) onlineUsersMobile.style.display = 'none'; // Upewnij się, że mobilna lista jest ukryta
+        if (backButton) backButton.classList.remove('mobile-only'); // Ukryj przycisk Wróć na desktop
+    }
+}
+
 
 /**
  * Uruchamia połączenie WebSocket.
@@ -141,7 +165,10 @@ function connectWebSocket() {
 
     socket.onopen = () => {
         console.log('[WebSocket] Połączono z serwerem WebSocket.');
-        reconnectAttempts = 0; // Resetuj licznik prób ponownego połączenia po udanym połączeniu
+        reconnectAttempts = 0;
+        // W tym modelu (autoryzacja przez ciasteczka), frontend NIE WYSYŁA wiadomości 'authenticate'
+        // Serwer powinien sam uwierzytelnić połączenie na podstawie ciasteczek
+        // i odesłać wiadomość 'auth_success'.
     };
 
     socket.onmessage = async (event) => {
@@ -151,37 +178,34 @@ function connectWebSocket() {
         switch (message.type) {
             case 'auth_success':
                 console.log(`[WebSocket] Zalogowano jako użytkownik ID: ${message.userId}`);
-                // Po udanym zalogowaniu, załaduj listę konwersacji
-                userId = message.userId;
-				localStorage.setItem('userId', message.userId);
-                await loadConversations();
+                userId = message.userId; // Ustaw globalną zmienną userId
+                localStorage.setItem('userId', message.userId); // Zapisz w localStorage dla przyszłych sesji
+                await loadConversations(); // Załaduj konwersacje po udanym zalogowaniu
                 break;
             case 'user_status':
-                // Aktualizuj status online/offline użytkownika
                 if (message.status === 'online') {
                     activeUsers.add(message.userId);
-                    console.log(`[WebSocket] Użytkownik ${message.userId} jest teraz online.`);
                 } else {
                     activeUsers.delete(message.userId);
-                    console.log(`[WebSocket] Użytkownik ${message.userId} jest teraz offline.`);
                 }
                 updateActiveUsersListUI(Array.from(activeUsers));
-                // Zaktualizuj UI, np. listę kontaktów
                 updateConversationStatus(message.userId, message.status === 'online');
                 break;
             case 'user_list':
-                // Początkowa lista aktywnych użytkowników
                 activeUsers = new Set(message.users);
                 console.log('[WebSocket] Aktywni użytkownicy (ID):', Array.from(activeUsers));
                 updateActiveUsersListUI(Array.from(activeUsers));
-                // Po załadowaniu listy, upewnij się, że stany konwersacji są zaktualizowane
-                // loadConversations() już to zrobi, jeśli wywoła się po tym.
-                // Możesz też dodać logikę do odświeżania statusów bez przeładowywania całej listy
                 break;
             case 'chat_message':
-                // Obsługa nowej wiadomości czatu
                 console.log('Otrzymano wiadomość czatu:', message);
-                displayMessage(message);
+                // Wyświetl wiadomość tylko jeśli dotyczy aktywnej rozmowy lub jest powiadomieniem
+                if (message.senderId === activeChatRecipientId || message.receiverId === userId) {
+                    displayMessage(message);
+                }
+                // Oznacz konwersację jako nieprzeczytaną, jeśli wiadomość nie jest z aktywnego czatu
+                if (message.senderId !== activeChatRecipientId) {
+                    markConversationAsUnread(message.senderId);
+                }
                 break;
             case 'typing_status':
                 handleTypingStatus(message.senderId, message.isTyping);
@@ -193,256 +217,424 @@ function connectWebSocket() {
 
     socket.onclose = (event) => {
         console.warn(`[WebSocket] Połączenie zamknięte. Kod: ${event.code}, Powód: ${event.reason}`);
-        // Spróbuj ponownie połączyć, jeśli połączenie zostało nieoczekiwanie zamknięte
         if (event.code !== 1000 && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) { // 1000 to normalne zamknięcie
             reconnectAttempts++;
             console.log(`[WebSocket] Próba ponownego połączenia (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
             setTimeout(connectWebSocket, RECONNECT_INTERVAL_MS);
         } else if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
             console.error('[WebSocket] Osiągnięto maksymalną liczbę prób ponownego połączenia. Nie można połączyć z serwerem.');
-            // Tutaj możesz wyświetlić komunikat dla użytkownika
+            // Tutaj możesz wyświetlić komunikat o błędzie dla użytkownika
         }
     };
 
     socket.onerror = (error) => {
         console.error('[WebSocket] Błąd połączenia WebSocket:', error);
-        socket.close(); // Zamknij, aby wywołać onclose i logiczne ponowne połączenie
+        // socket.close() może być automatycznie wywołane przez przeglądarkę po błędzie,
+        // ale jawne zamknięcie może pomóc w bardziej kontrolowanym ponownym połączeniu.
+        // Jednak w tym przypadku, 'onclose' i tak obsłuży ponowne połączenie.
     };
 }
 
-/**
- * Aktualizuje listę aktywnych użytkowników w UI.
- * @param {Array<string>} userIds Array ID użytkowników, którzy są online.
- */
-function updateActiveUsersListUI(userIds) {
-    if (!activeUsersList) {
-        console.warn("Element activeUsersList nie znaleziony.");
-        return;
-    }
-    activeUsersList.innerHTML = ''; // Wyczyść listę
-
-    if (userIds.length === 0) {
-        if (noActiveUsersText) noActiveUsersText.style.display = 'block';
-        return;
-    } else {
-        if (noActiveUsersText) noActiveUsersText.style.display = 'none';
-    }
-
-    // Filtruj siebie z listy aktywnych użytkowników
-    const onlineUsersToDisplay = userIds.filter(id => id !== userId);
-
-    onlineUsersToDisplay.forEach(async (onlineUserId) => {
-        const userProfile = await getProfileById(onlineUserId); // Pobierz pełny profil
-        if (userProfile) {
-            const listItem = document.createElement('li');
-            listItem.classList.add('active-user-item');
-            listItem.dataset.userId = onlineUserId;
-            listItem.innerHTML = `
-                <div class="user-avatar"></div>
-                <span>${userProfile.username || userProfile.full_name || `Użytkownik (${onlineUserId.substring(0, 4)}...)`}</span>
-                <span class="status online"></span>
-            `;
-            activeUsersList.appendChild(listItem);
-        }
-    });
-
-    console.log(`[updateActiveUsersListUI] Zaktualizowano listę aktywnych użytkowników. Online: ${onlineUsersToDisplay.length}`);
-}
 
 /**
- * Aktualizuje status online/offline dla konkretnej konwersacji na liście.
- * @param {string} targetUserId ID użytkownika, którego status zmieniamy.
- * @param {boolean} isOnline Czy użytkownik jest online.
+ * Wysyła wiadomość czatu przez WebSocket.
  */
-function updateConversationStatus(targetUserId, isOnline) {
-    if (!sidebarEl) {
-        console.warn("Element sidebarEl nie znaleziony. Nie można zaktualizować statusu konwersacji.");
+async function sendMessage() {
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+        console.error('Błąd: Połączenie WebSocket nie jest otwarte.');
+        alert('Błąd połączenia z serwerem czatu. Spróbuj odświeżyć stronę.');
+        return;
+    }
+    if (!activeChatRecipientId) {
+        console.warn('Nie wybrano odbiorcy wiadomości.');
         return;
     }
 
-    const conversationItem = sidebarEl.querySelector(`li[data-user-id="${targetUserId}"]`);
-    if (conversationItem) {
-        const statusSpan = conversationItem.querySelector('.status');
-        if (statusSpan) {
-            if (isOnline) {
-                statusSpan.classList.remove('offline');
-                statusSpan.classList.add('online');
-            } else {
-                statusSpan.classList.remove('online');
-                statusSpan.classList.add('offline');
-            }
-        }
+    const messageContent = messageInput.value.trim();
+    if (messageContent === '') {
+        return;
     }
 
-    // Aktualizuj również status w nagłówku czatu, jeśli to aktywna konwersacja
-    if (activeChatRecipientId === targetUserId && chatUserName) {
-        if (isOnline) {
-            userStatusSpan.textContent = 'online';
-            userStatusSpan.classList.remove('offline');
-            userStatusSpan.classList.add('online');
-        } else {
-            userStatusSpan.textContent = 'offline';
-            userStatusSpan.classList.remove('online');
-            userStatusSpan.classList.add('offline');
-        }
+    const chatMessage = {
+        type: 'chat_message',
+        senderId: userId,
+        receiverId: activeChatRecipientId,
+        content: messageContent,
+        timestamp: new Date().toISOString()
+    };
+
+    socket.send(JSON.stringify(chatMessage));
+    console.log('Wysłano wiadomość:', chatMessage);
+    displayMessage(chatMessage); // Wyświetl własną wiadomość od razu
+    messageInput.value = ''; // Wyczyść pole wprowadzania
+    // Wyślij status "nie pisze" po wysłaniu wiadomości, jeśli jest aktywny typingTimeout
+    if (typingTimeout) {
+        clearTimeout(typingTimeout);
+        socket.send(JSON.stringify({ type: 'typing_status', senderId: userId, receiverId: activeChatRecipientId, isTyping: false }));
     }
 }
 
 /**
- * Ładuje i wyświetla wszystkie zarejestrowane konwersacje (profile użytkowników).
- */
-export async function loadConversations() {
-    console.log(`[loadConversations] Rozpoczynanie ładowania wszystkich zarejestrowanych użytkowników dla userId: ${userId}`);
-    if (!sidebarEl) {
-        console.warn("Element sidebarEl nie znaleziony. Nie można załadować konwersacji.");
-        return;
-    }
-    sidebarEl.innerHTML = ''; // Wyczyść listę konwersacji przed załadowaniem
-    console.log("[loadConversations] Wyczyścino listę konwersacji.");
-
-    try {
-        const allRegisteredProfiles = await loadAllProfiles();
-        console.log("[loadConversations] Pobrane wszystkie zarejestrowane profile:", allRegisteredProfiles);
-
-        // Filtruj, aby nie wyświetlać aktualnie zalogowanego użytkownika
-        const conversationsToDisplay = allRegisteredProfiles.filter(profile => profile.id !== userId);
-        console.log("[loadConversations] Profile do wyświetlenia (po odfiltrowaniu siebie):", conversationsToDisplay);
-
-        if (conversationsToDisplay.length === 0) {
-            sidebarEl.innerHTML = '<li class="no-conversations-message">Brak zarejestrowanych użytkowników do wyświetlenia.</li>';
-            console.log("[loadConversations] Brak zarejestrowanych użytkowników do wyświetlenia.");
-            return;
-        }
-
-        for (const convo of conversationsToDisplay) {
-            // Utwórz nowy element listy dla każdej konwersacji
-            const conversationItem = document.createElement('li');
-            conversationItem.classList.add('conversation-item');
-            conversationItem.dataset.userId = convo.id; // Ustaw data-user-id na ID użytkownika
-            
-            // Pobierz etykietę użytkownika (username lub full_name)
-            const userLabel = await getUserLabelById(convo.id); // TUTAJ BYŁ BRAK
-
-            conversationItem.dataset.username = userLabel; // Zapisz nazwę użytkownika (teraz poprawnie pobrana)
-
-            // Sprawdź, czy użytkownik jest online na podstawie listy aktywnych użytkowników
-            const isOnline = activeUsers.has(convo.id);
-            
-            console.log(`[loadConversations] Próba renderowania profilu jako konwersacji: ${userLabel}, ID: ${convo.id}, Online: ${isOnline}`);
-            console.log(`[renderConversationItem] Rozpoczynanie renderowania elementu dla ${userLabel}. Online: ${isOnline}`);
-
-
-            // Renderuj element konwersacji
-            conversationItem.innerHTML = `
-                <div class="user-avatar"></div>
-                <div class="conversation-info">
-                    <span class="conversation-name">${userLabel}</span>
-                    <span class="last-message">${convo.lastMessage || ''}</span>
-                </div>
-                <div class="conversation-meta">
-                    <span class="last-message-time">${convo.lastMessageTime || ''}</span>
-                    <span class="status ${isOnline ? 'online' : 'offline'}"></span>
-                </div>
-            `;
-            sidebarEl.appendChild(conversationItem);
-
-            // Dodaj obsługę kliknięcia elementu konwersacji
-            conversationItem.addEventListener('click', async () => {
-                // Implementacja otwierania czatu
-                console.log(`Wybrano konwersację z użytkownikiem ID: ${convo.id}, Nazwa: ${userLabel}`);
-                activeChatRecipientId = convo.id;
-                activeChatRecipientName = userLabel; // Użyj poprawnej etykiety
-
-                // Aktualizuj nagłówek czatu
-                if (chatUserName) chatUserName.textContent = activeChatRecipientName;
-                if (userStatusSpan) {
-                    // Sprawdź aktualny status online
-                    if (activeUsers.has(activeChatRecipientId)) {
-                        userStatusSpan.textContent = 'online';
-                        userStatusSpan.classList.remove('offline');
-                        userStatusSpan.classList.add('online');
-                    } else {
-                        userStatusSpan.textContent = 'offline';
-                        userStatusSpan.classList.remove('online');
-                        userStatusSpan.classList.add('offline');
-                    }
-                }
-
-                // Pokaż obszar czatu, ukryj logoScreen
-                if (logoScreen) logoScreen.classList.add('hidden');
-                if (chatArea) chatArea.classList.add('active');
-                if (backButton) backButton.style.display = 'block'; // Pokaż przycisk Wstecz na mobile
-
-                // Wyczyść stare wiadomości i załaduj nowe dla tej konwersacji
-                if (chatMessages) chatMessages.innerHTML = '';
-                // Tutaj będziesz ładować wiadomości z bazy danych dla tej konwersacji
-                // loadMessages(userId, activeChatRecipientId); // TODO: implementuj loadMessages
-                
-                // Uaktywnij pole wiadomości i przycisk wyślij
-                if (messageInput) messageInput.disabled = false;
-                if (sendButton) sendButton.disabled = false;
-                
-                // Schowaj pasek boczny na mobile po wybraniu konwersacji
-                if (window.matchMedia('(max-width: 768px)').matches) {
-                    if (sidebarWrapper) sidebarWrapper.classList.add('hidden-on-mobile');
-                    if (chatAreaWrapper) chatAreaWrapper.classList.add('active-on-mobile');
-                }
-            });
-        }
-    } catch (err) {
-        console.error('Błąd podczas ładowania konwersacji:', err);
-    }
-}
-
-/**
- * Wyświetla pojedynczą wiadomość w obszarze czatu.
+ * Wyświetla wiadomość w kontenerze wiadomości.
  * @param {Object} message Wiadomość do wyświetlenia.
  */
 function displayMessage(message) {
-    if (!chatMessages) {
-        console.warn("Element chatMessages nie znaleziony. Nie można wyświetlić wiadomości.");
-        return;
-    }
+    if (!messagesContainer) return;
 
     const messageEl = document.createElement('div');
     messageEl.classList.add('message');
-    // Sprawdź, czy wiadomość została wysłana przez aktualnego użytkownika
-    if (message.senderId === userId) {
-        messageEl.classList.add('outgoing');
+    messageEl.classList.add(message.senderId === userId ? 'outgoing' : 'incoming');
+
+    const senderNameEl = document.createElement('div');
+    senderNameEl.classList.add('sender-name');
+    if (message.senderId !== userId) {
+        // Dla wiadomości przychodzących wyświetl nazwę nadawcy
+        getUserLabelById(message.senderId).then(name => {
+            senderNameEl.textContent = name;
+        });
     } else {
-        messageEl.classList.add('incoming');
+        senderNameEl.textContent = "Ty"; // Dla wiadomości wychodzących
     }
+    messageEl.appendChild(senderNameEl);
 
-    // Formatowanie daty i czasu
+    const messageContentEl = document.createElement('div');
+    messageContentEl.classList.add('message-content');
+    messageContentEl.textContent = message.content;
+    messageEl.appendChild(messageContentEl);
+
+    const timestampEl = document.createElement('div');
+    timestampEl.classList.add('timestamp');
     const date = new Date(message.timestamp);
-    const timeString = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    timestampEl.textContent = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    messageEl.appendChild(timestampEl);
 
-    messageEl.innerHTML = `
-        <div class="message-bubble">${message.content}</div>
-        <div class="message-time">${timeString}</div>
-    `;
-    chatMessages.appendChild(messageEl);
-
-    // Przewiń do najnowszej wiadomości
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    messagesContainer.appendChild(messageEl);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight; // Przewiń na dół
 }
 
 /**
- * Obsługuje status pisania wiadomości.
+ * Ładuje konwersacje z bazy danych i wyświetla je.
+ */
+async function loadConversations() {
+    if (!userId) {
+        console.warn("[loadConversations] Brak ID użytkownika. Nie można załadować konwersacji.");
+        return;
+    }
+    console.log(`[loadConversations] Rozpoczynanie ładowania konwersacji dla userId: ${userId}`);
+
+    try {
+        const { data: messages, error: messagesError } = await supabase
+            .from('messages')
+            .select('*')
+            .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+            .order('timestamp', { ascending: true });
+
+        if (messagesError) {
+            console.error('Błąd ładowania wiadomości:', messagesError);
+            return;
+        }
+
+        const allProfiles = await loadAllProfiles();
+        const profilesMap = new Map(allProfiles.map(p => [p.id, p]));
+
+        const conversationsMap = new Map(); // Mapa przechowująca ostatnią wiadomość dla każdej konwersacji
+        const unreadCounts = new Map(); // Mapa przechowująca liczbę nieprzeczytanych wiadomości
+
+        messages.forEach(msg => {
+            let participantId;
+            if (msg.sender_id === userId) {
+                participantId = msg.receiver_id;
+            } else {
+                participantId = msg.sender_id;
+            }
+
+            // Zapisz ostatnią wiadomość
+            if (!conversationsMap.has(participantId) || new Date(msg.timestamp) > new Date(conversationsMap.get(participantId).timestamp)) {
+                conversationsMap.set(participantId, msg);
+            }
+
+            // Zlicz nieprzeczytane wiadomości
+            if (msg.receiver_id === userId && !msg.read) {
+                unreadCounts.set(participantId, (unreadCounts.get(participantId) || 0) + 1);
+            }
+        });
+
+        contactsListEl.innerHTML = ''; // Wyczyść listę przed ponownym renderowaniem
+
+        // Przejdź przez wszystkie profile i stwórz listę konwersacji
+        for (const profile of allProfiles) {
+            if (profile.id === userId) continue; // Pomiń samego siebie
+
+            const convoId = profile.id;
+            const convoLabel = profile.username || profile.full_name || `Użytkownik (${convoId.substring(0, 4)}...)`;
+            const lastMessage = conversationsMap.get(convoId);
+            const isOnline = activeUsers.has(convoId);
+            const unreadCount = unreadCounts.get(convoId) || 0;
+
+            const li = document.createElement('li');
+            li.dataset.userId = convoId;
+            li.classList.add('conversation-item');
+            if (isOnline) {
+                li.classList.add('online');
+            }
+
+            let lastMessagePreview = 'Brak wiadomości';
+            if (lastMessage) {
+                const senderPrefix = lastMessage.sender_id === userId ? 'Ty: ' : '';
+                lastMessagePreview = `${senderPrefix}${lastMessage.content.substring(0, 30)}${lastMessage.content.length > 30 ? '...' : ''}`;
+            }
+
+            li.innerHTML = `
+                <div class="user-avatar"></div>
+                <div class="conversation-info">
+                    <span class="user-name">${convoLabel}</span>
+                    <span class="last-message-preview">${lastMessagePreview}</span>
+                </div>
+                ${unreadCount > 0 ? `<span class="unread-count">${unreadCount}</span>` : ''}
+                <span class="status-indicator ${isOnline ? 'online' : 'offline'}"></span>
+            `;
+
+            li.addEventListener('click', () => openChat(convoId, convoLabel));
+            contactsListEl.appendChild(li);
+        }
+        updateActiveUsersListUI(Array.from(activeUsers)); // Aktualizuj listę aktywnych po załadowaniu konwersacji
+    } catch (error) {
+        console.error('Wyjątek podczas ładowania konwersacji:', error);
+    }
+}
+
+/**
+ * Otwiera okno czatu dla wybranego odbiorcy.
+ * @param {string} recipientId ID odbiorcy.
+ * @param {string} recipientName Nazwa odbiorcy.
+ */
+async function openChat(recipientId, recipientName) {
+    if (!messagesContainer || !chatArea || !logoScreen || !chatUserAvatar || !chatUserName || !userStatusSpan || !messageInput || !sendButton) return;
+
+    activeChatRecipientId = recipientId;
+    activeChatRecipientName = recipientName;
+
+    // Aktualizacja nagłówka czatu
+    chatUserName.textContent = recipientName;
+    const isOnline = activeUsers.has(recipientId);
+    userStatusSpan.textContent = isOnline ? 'Online' : 'Offline';
+    userStatusSpan.classList.toggle('online', isOnline);
+    userStatusSpan.classList.toggle('offline', !isOnline);
+
+    // Zmiana awatara
+    const recipientProfile = await getProfileById(recipientId);
+    if (recipientProfile && recipientProfile.avatar_url) {
+        chatUserAvatar.style.backgroundImage = `url(${recipientProfile.avatar_url})`;
+    } else {
+        chatUserAvatar.style.backgroundImage = `none`; // Domyślny awatar
+    }
+
+    // Pokaż obszar czatu i ukryj ekran powitalny
+    logoScreen.style.display = 'none';
+    chatArea.style.display = 'flex'; // Zmienione na flex dla poprawnego układu wewnętrznego
+
+    // Wyczyść stare wiadomości i załaduj nowe
+    messagesContainer.innerHTML = '';
+    await loadMessagesForChat(recipientId);
+
+    // Aktywuj pole wprowadzania wiadomości i przycisk wysyłania
+    messageInput.disabled = false;
+    sendButton.disabled = false;
+    messageInput.focus();
+
+    // Na mobile, ukryj sidebar i pokaż obszar czatu
+    if (window.matchMedia('(max-width: 768px)').matches) {
+        if (sidebarEl) sidebarEl.style.display = 'none';
+        if (onlineUsersMobile) onlineUsersMobile.style.display = 'none';
+        if (chatAreaWrapper) chatAreaWrapper.style.display = 'flex';
+        // Przycisk wstecz jest teraz zawsze widoczny na mobile dzięki handleMediaQueryChange
+    }
+
+    // Oznacz wszystkie wiadomości z tej konwersacji jako przeczytane
+    await markMessagesAsRead(recipientId);
+    // Usuń licznik nieprzeczytanych z UI
+    const convoItem = contactsListEl.querySelector(`[data-user-id="${recipientId}"]`);
+    if (convoItem) {
+        const unreadCountSpan = convoItem.querySelector('.unread-count');
+        if (unreadCountSpan) unreadCountSpan.remove();
+    }
+}
+
+/**
+ * Ładuje wiadomości dla aktywnej konwersacji.
+ * @param {string} targetUserId ID użytkownika, z którym prowadzona jest rozmowa.
+ */
+async function loadMessagesForChat(targetUserId) {
+    if (!userId || !targetUserId) {
+        console.warn("Brak ID użytkownika lub ID odbiorcy do załadowania wiadomości czatu.");
+        return;
+    }
+
+    try {
+        const { data: chatMessages, error } = await supabase
+            .from('messages')
+            .select('*')
+            .or(`and(sender_id.eq.${userId},receiver_id.eq.${targetUserId}),and(sender_id.eq.${targetUserId},receiver_id.eq.${userId})`)
+            .order('timestamp', { ascending: true });
+
+        if (error) {
+            console.error('Błąd ładowania wiadomości czatu:', error);
+            return;
+        }
+
+        messagesContainer.innerHTML = ''; // Wyczyść przed dodaniem nowych
+        chatMessages.forEach(msg => displayMessage(msg));
+        messagesContainer.scrollTop = messagesContainer.scrollHeight; // Przewiń na dół
+    } catch (err) {
+        console.error('Wyjątek podczas ładowania wiadomości czatu:', err);
+    }
+}
+
+/**
+ * Aktualizuje status online/offline na liście konwersacji.
+ * @param {string} targetUserId ID użytkownika.
+ * @param {boolean} isOnline Czy użytkownik jest online.
+ */
+function updateConversationStatus(targetUserId, isOnline) {
+    const convoItem = contactsListEl.querySelector(`[data-user-id="${targetUserId}"]`);
+    if (convoItem) {
+        convoItem.classList.toggle('online', isOnline);
+        convoItem.classList.toggle('offline', !isOnline);
+        const statusIndicator = convoItem.querySelector('.status-indicator');
+        if (statusIndicator) {
+            statusIndicator.classList.toggle('online', isOnline);
+            statusIndicator.classList.toggle('offline', !isOnline);
+        }
+    }
+    // Aktualizuj status w nagłówku aktywnego czatu
+    if (activeChatRecipientId === targetUserId && userStatusSpan) {
+        userStatusSpan.textContent = isOnline ? 'Online' : 'Offline';
+        userStatusSpan.classList.toggle('online', isOnline);
+        userStatusSpan.classList.toggle('offline', !isOnline);
+    }
+}
+
+/**
+ * Aktualizuje listę aktywnych użytkowników w prawym pasku bocznym (i na mobile).
+ * @param {string[]} activeUserIds Tablica ID aktywnych użytkowników.
+ */
+async function updateActiveUsersListUI(activeUserIds) {
+    if (!activeUsersListEl && !onlineUsersMobile) return;
+
+    const allProfiles = await loadAllProfiles();
+    const profilesMap = new Map(allProfiles.map(p => [p.id, p]));
+
+    const renderList = (element, isMobile = false) => {
+        element.innerHTML = '';
+        if (activeUserIds.length === 0) {
+            const noUsersEl = document.createElement('li');
+            noUsersEl.textContent = 'Brak aktywnych użytkowników.';
+            noUsersEl.style.cssText = 'text-align: center; color: var(--text-color-medium); font-size: 0.9em; margin-top: 10px; list-style: none;';
+            element.appendChild(noUsersEl);
+            return;
+        }
+
+        activeUserIds.forEach(id => {
+            if (id === userId) return; // Pomiń siebie
+
+            const profile = profilesMap.get(id);
+            if (!profile) return;
+
+            const li = document.createElement('li');
+            li.dataset.userId = id;
+            li.classList.add('active-user-item');
+
+            const convoLabel = profile.username || profile.full_name || `Użytkownik (${id.substring(0, 4)}...)`;
+
+            li.innerHTML = `
+                <div class="user-avatar"></div>
+                <div class="user-info">
+                    <span class="user-name">${convoLabel}</span>
+                    <span class="status-indicator online"></span>
+                </div>
+            `;
+            li.addEventListener('click', () => openChat(id, convoLabel));
+            element.appendChild(li);
+        });
+    };
+
+    // Renderuj dla desktopowego paska bocznego
+    if (activeUsersListEl) {
+        renderList(activeUsersListEl);
+    }
+
+    // Renderuj dla mobilnego widoku aktywnych użytkowników
+    if (onlineUsersMobile) {
+        // Tworzymy tymczasową listę dla mobile, jeśli onlineUsersMobile nie ma bezpośrednio ul
+        let mobileUl = onlineUsersMobile.querySelector('ul.active-users-list');
+        if (!mobileUl) {
+            mobileUl = document.createElement('ul');
+            mobileUl.classList.add('active-users-list');
+            onlineUsersMobile.appendChild(mobileUl);
+        }
+        renderList(mobileUl, true);
+    }
+}
+
+
+/**
+ * Obsługuje status pisania użytkownika.
  * @param {string} senderId ID użytkownika, który pisze.
- * @param {boolean} isTyping Czy użytkownik pisze.
+ * @param {boolean} isTyping True, jeśli pisze; false, jeśli przestał.
  */
 function handleTypingStatus(senderId, isTyping) {
-    if (activeChatRecipientId === senderId && typingStatusHeader) {
-        if (isTyping) {
-            typingStatusHeader.textContent = 'pisze...';
-            // Jeśli masz animację, aktywuj ją
-            if (typingIndicator) typingIndicator.classList.remove('hidden');
+    if (!typingStatusHeader || !typingIndicator || activeChatRecipientId !== senderId) {
+        return;
+    }
+
+    if (isTyping) {
+        typingStatusHeader.textContent = `${activeChatRecipientName} pisze...`;
+        typingIndicator.classList.remove('hidden');
+    } else {
+        typingStatusHeader.textContent = '';
+        typingIndicator.classList.add('hidden');
+    }
+}
+
+/**
+ * Oznacza wiadomości w danej konwersacji jako przeczytane w bazie danych.
+ * @param {string} participantId ID drugiego uczestnika konwersacji.
+ */
+async function markMessagesAsRead(participantId) {
+    if (!userId || !participantId) return;
+
+    try {
+        const { data, error } = await supabase
+            .from('messages')
+            .update({ read: true })
+            .eq('receiver_id', userId) // Wiadomości odebrane przez obecnego użytkownika
+            .eq('sender_id', participantId) // I wysłane przez wybranego uczestnika
+            .eq('read', false); // Tylko te, które jeszcze nie są przeczytane
+
+        if (error) {
+            console.error('Błąd oznaczania wiadomości jako przeczytane:', error);
         } else {
-            typingStatusHeader.textContent = '';
-            // Jeśli masz animację, dezaktywuj ją
-            if (typingIndicator) typingIndicator.classList.add('hidden');
+            console.log(`Oznaczono wiadomości od ${participantId} jako przeczytane.`);
         }
+    } catch (err) {
+        console.error('Wyjątek podczas oznaczania wiadomości jako przeczytane:', err);
+    }
+}
+
+/**
+ * Oznacza konwersację jako nieprzeczytaną w UI.
+ * @param {string} senderId ID nadawcy nowej wiadomości.
+ */
+function markConversationAsUnread(senderId) {
+    const convoItem = contactsListEl.querySelector(`[data-user-id="${senderId}"]`);
+    if (convoItem) {
+        let unreadCountSpan = convoItem.querySelector('.unread-count');
+        if (!unreadCountSpan) {
+            unreadCountSpan = document.createElement('span');
+            unreadCountSpan.classList.add('unread-count');
+            convoItem.appendChild(unreadCountSpan);
+        }
+        unreadCountSpan.textContent = parseInt(unreadCountSpan.textContent || '0') + 1;
     }
 }
 
@@ -458,180 +650,174 @@ async function initializeApp() {
     console.log("[initializeApp] Rozpoczęcie inicjalizacji aplikacji Komunikator.");
     initializeDOMElements(); // Inicjalizacja zmiennych DOM
 
-    // Sprawdź, czy użytkownik jest już zalogowany w lokalnym magazynie
-    userId = localStorage.getItem('userId');
-	connectWebSocket();
+    // --- KLUCZOWA LOGIKA AUTORYZACJI PRZEZ SUPABASE I PRZEKIEROWANIE ---
+    try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+        if (sessionError) {
+            console.error("Błąd podczas pobierania sesji Supabase:", sessionError);
+            // Nadal próbuj z localStorage jako backup przed przekierowaniem
+            userId = localStorage.getItem('userId');
+            if (!userId) {
+                console.warn("[initializeApp] Brak ID użytkownika po błędzie Supabase. Przekierowanie na stronę logowania.");
+                window.location.href = '/login.html';
+                return;
+            }
+        } else if (session) {
+            userId = session.user.id;
+            localStorage.setItem('userId', userId); // Upewnij się, że localStorage jest aktualne
+            console.log(`[initializeApp] Znaleziono ID użytkownika z Supabase Session: ${userId}`);
+        } else {
+            // Brak sesji i brak w localStorage - użytkownik nie jest zalogowany
+            userId = localStorage.getItem('userId'); // Ostatnia szansa na userId z localStorage
+            if (userId) {
+                 console.log(`[initializeApp] Znaleziono ID użytkownika w localStorage (brak aktywnej sesji Supabase, ale ID było wcześniej): ${userId}`);
+            } else {
+                console.warn("[initializeApp] Brak ID użytkownika w localStorage i aktywnej sesji Supabase. Przekierowanie na stronę logowania.");
+                window.location.href = '/login.html';
+                return;
+            }
+        }
+    } catch (error) {
+        console.error("Ogólny błąd w initializeApp podczas pobierania sesji Supabase:", error);
+        userId = localStorage.getItem('userId');
+        if (!userId) { // Jeśli nawet po błędzie nie ma userId, przekieruj
+             console.warn("[initializeApp] Brak ID użytkownika po ogólnym błędzie. Przekierowanie na stronę logowania.");
+             window.location.href = '/login.html';
+             return;
+        }
+    }
+    // --- KONIEC KLUCZOWEJ LOGIKI AUTORYZACJI ---
+
+    // Połączenie z WebSocketem powinno nastąpić TYLKO jeśli userId jest dostępne.
+    // W obecnej logice userId powinno być już ustawione, albo nastąpi przekierowanie.
     if (userId) {
-        console.log(`[initializeApp] Znaleziono ID użytkownika w localStorage: ${userId}`);
-        connectWebSocket(); // Połącz z WebSocket, jeśli użytkownik jest zalogowany
+        connectWebSocket();
     } else {
-        // Jeśli brak userId, to użytkownik nie jest zalogowany
-        // Przekieruj na stronę logowania lub pokaż ekran logowania
-        console.warn("[initializeApp] Brak ID użytkownika w localStorage. Należy się zalogować.");
-        // Tutaj możesz dodać przekierowanie: window.location.href = '/login.html';
+        // Ten blok powinien być osiągnięty tylko jeśli wcześniej nastąpiło przekierowanie.
+        // Jeśli jednak userId jest null tutaj, to jest to błąd logiczny.
+        console.error("Błąd: userId jest null po logicznej ścieżce initializeApp. Nie można połączyć z WebSocket.");
+        alert("Błąd inicjalizacji użytkownika. Odśwież stronę lub zaloguj się ponownie.");
+        window.location.href = '/login.html'; // Upewnij się, że użytkownik jest przekierowany
+        return;
     }
 
-    // Globalne listenery
-    if (menuButton) {
-        menuButton.addEventListener('click', () => {
-            if (dropdownMenu) dropdownMenu.classList.toggle('hidden');
+    // --- Listenery zdarzeń ---
+
+    // Obsługa wylogowania
+    if (logoutButton) {
+        logoutButton.addEventListener('click', async () => {
+            const { error } = await supabase.auth.signOut();
+            if (error) {
+                console.error('Błąd wylogowania:', error.message);
+                alert('Wystąpił błąd podczas wylogowania.');
+            } else {
+                localStorage.removeItem('userId'); // Usuń ID użytkownika z localStorage
+                // Zamknij połączenie WebSocket przed przekierowaniem
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.close(1000, 'User logged out'); // Kod 1000 to normalne zamknięcie
+                }
+                window.location.href = '/login.html'; // Przekieruj na stronę logowania
+            }
         });
     }
 
-    // Przełączanie motywu
+    // Obsługa przełącznika motywu
     if (themeToggle) {
         themeToggle.addEventListener('click', () => {
             document.body.classList.toggle('dark-mode');
             const isDarkMode = document.body.classList.contains('dark-mode');
-            themeToggle.innerHTML = isDarkMode ? '<i class="fas fa-sun"></i> Tryb jasny' : '<i class="fas fa-moon"></i> Tryb ciemny';
-            localStorage.setItem('darkMode', isDarkMode);
+            localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+            themeToggle.querySelector('i').className = isDarkMode ? 'fas fa-sun' : 'fas fa-moon';
+            themeToggle.lastChild.nodeValue = isDarkMode ? ' Tryb jasny' : ' Tryb ciemny';
         });
-        // Ustaw początkowy motyw na podstawie localStorage
-        const savedDarkMode = localStorage.getItem('darkMode');
-        if (savedDarkMode === 'true') {
+        // Ustawienie motywu na podstawie localStorage przy starcie
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
             document.body.classList.add('dark-mode');
-            themeToggle.innerHTML = '<i class="fas fa-sun"></i> Tryb jasny';
+            themeToggle.querySelector('i').className = 'fas fa-sun';
+            themeToggle.lastChild.nodeValue = ' Tryb jasny';
         } else {
-            themeToggle.innerHTML = '<i class="fas fa-moon"></i> Tryb ciemny';
+            document.body.classList.remove('dark-mode');
+            themeToggle.querySelector('i').className = 'fas fa-moon';
+            themeToggle.lastChild.nodeValue = ' Tryb ciemny';
         }
     }
 
-    // Wylogowywanie
-    if (logoutButton) {
-        logoutButton.addEventListener('click', async () => {
-            try {
-                await supabase.auth.signOut();
-                localStorage.removeItem('userId'); // Usuń ID użytkownika z localStorage
-                // Zamknij połączenie WebSocket
-                if (socket && socket.readyState === WebSocket.OPEN) {
-                    socket.close(1000, 'User logged out'); // Kod 1000 to normalne zamknięcie
-                }
-                window.location.href = '/'; // Przekieruj na stronę główną/logowania
-            } catch (error) {
-                console.error("Błąd podczas wylogowywania:", error);
+    // Obsługa menu głównego
+    if (menuButton && dropdownMenu) {
+        menuButton.addEventListener('click', () => {
+            dropdownMenu.classList.toggle('hidden');
+            menuButton.setAttribute('aria-expanded', !dropdownMenu.classList.contains('hidden'));
+        });
+        // Zamknij menu po kliknięciu poza nim
+        document.addEventListener('click', (event) => {
+            if (!menuButton.contains(event.target) && !dropdownMenu.contains(event.target)) {
+                dropdownMenu.classList.add('hidden');
+                menuButton.setAttribute('aria-expanded', 'false');
             }
         });
     }
 
-    // Obsługa kliknięcia przycisku "Wstecz" (dla mobilnych)
+    // Obsługa nawigacji ikon
+    if (mainNavIcons) {
+        mainNavIcons.addEventListener('click', async (event) => {
+            const clickedButton = event.target.closest('.nav-icon');
+            if (!clickedButton) return;
+
+            navIcons.forEach(icon => icon.classList.remove('active'));
+            clickedButton.classList.add('active');
+
+            const tooltip = clickedButton.dataset.tooltip;
+            if (tooltip === 'Rozmowy') {
+                if (sidebarEl) sidebarEl.style.display = 'block';
+                if (onlineUsersMobile) onlineUsersMobile.style.display = 'none';
+                if (chatAreaWrapper && activeChatRecipientId) { // Jeśli jest aktywna rozmowa, pokaż czat
+                    chatAreaWrapper.style.display = 'flex';
+                } else if (chatAreaWrapper && window.matchMedia('(max-width: 768px)').matches) {
+                    chatAreaWrapper.style.display = 'none'; // Ukryj czat na mobile, jeśli nie ma rozmowy
+                }
+                loadConversations(); // Odśwież/załadowanie konwersacji (wszystkich użytkowników)
+            } else if (tooltip === 'Użytkownicy') {
+                if (sidebarEl) sidebarEl.style.display = 'none';
+                if (onlineUsersMobile) {
+                    onlineUsersMobile.style.display = 'block';
+                    updateActiveUsersListUI(Array.from(activeUsers)); // Zapewnij aktualną listę aktywnych
+                }
+                if (chatAreaWrapper) chatAreaWrapper.style.display = 'none'; // Ukryj główny obszar czatu na mobile
+                if (rightSidebarWrapper) rightSidebarWrapper.style.display = 'none'; // Upewnij się, że prawy sidebar jest ukryty
+            } else if (tooltip === 'Ustawienia') {
+                if (sidebarEl) sidebarEl.style.display = 'none';
+                if (onlineUsersMobile) onlineUsersMobile.style.display = 'none';
+                if (chatAreaWrapper) chatAreaWrapper.style.display = 'none'; // Ukryj główny obszar czatu na mobile
+                if (rightSidebarWrapper) rightSidebarWrapper.style.display = 'none';
+                // Tutaj możesz wyświetlić inny widok ustawień
+            }
+        });
+    }
+
+    // Obsługa przycisku "Wróć" na mobile
     if (backButton) {
         backButton.addEventListener('click', () => {
-            if (window.matchMedia('(max-width: 768px)').matches) {
-                if (sidebarWrapper) sidebarWrapper.classList.remove('hidden-on-mobile');
-                if (chatAreaWrapper) chatAreaWrapper.classList.remove('active-on-mobile');
-                // Ukryj przycisk Wstecz
-                if (backButton) backButton.style.display = 'none';
-            }
-        });
-    }
-
-    // Obsługa przycisków nawigacyjnych (Rozmowy, Użytkownicy, Ustawienia)
-    if (navIcons && navIcons.length > 0) {
-        navIcons.forEach(icon => {
-            icon.addEventListener('click', () => {
-                navIcons.forEach(i => i.classList.remove('active'));
-                icon.classList.add('active');
-                const tooltip = icon.dataset.tooltip; // Pobierz tooltip, np. "Rozmowy", "Użytkownicy"
-
-                if (tooltip === 'Rozmowy') {
-                    if (sidebarEl) sidebarEl.style.display = 'block';
-                    if (onlineUsersMobile) onlineUsersMobile.style.display = 'none';
-                    if (rightSidebarWrapper) rightSidebarWrapper.style.display = 'flex'; // Z powrotem na desktopie
-                    // Ukryj obszar czatu na mobile, jeśli nie ma rozmowy
-                } else if (tooltip === 'Użytkownicy') {
-                    if (sidebarEl) sidebarEl.style.display = 'none';
-                    if (onlineUsersMobile) {
-                        onlineUsersMobile.style.display = 'block';
-                        updateActiveUsersListUI(Array.from(activeUsers)); // Zapewnij aktualną listę aktywnych
-                    }
-                    if (rightSidebarWrapper) rightSidebarWrapper.style.display = 'none';
-                } else if (tooltip === 'Ustawienia') {
-                    if (sidebarEl) sidebarEl.style.display = 'none';
-                    if (onlineUsersMobile) onlineUsersMobile.style.display = 'none';
-                    if (rightSidebarWrapper) rightSidebarWrapper.style.display = 'none';
-                    // Tutaj możesz wyświetlić inny widok ustawień
-                }
-            });
-        });
-    }
-
-    // Obsługa media query (dostosowanie UI do rozmiaru ekranu)
-    function handleMediaQueryChange(mq) {
-        if (mq.matches) { // Tryb mobilny (ekran < 768px)
-            console.log("Media Query: Tryb mobilny aktywowany. Ukrywanie zbędnych elementów.");
-            if (sidebarWrapper) {
-                sidebarWrapper.classList.add('hidden-on-mobile'); // Domyślnie ukryj lewy sidebar
-            }
-            if (chatAreaWrapper) {
-                chatAreaWrapper.classList.remove('active-on-mobile'); // Domyślnie nieaktywny
-                chatAreaWrapper.style.display = 'none'; // Ukryj, dopóki nie zostanie wybrana rozmowa
-            }
-            if (logoScreen) {
-                logoScreen.classList.remove('hidden'); // Pokaż logo screen
-            }
-            if (chatArea) {
-                chatArea.classList.remove('active'); // Ukryj czat
-            }
-            if (rightSidebarWrapper) {
-                rightSidebarWrapper.style.display = 'none'; // Ukryj prawy sidebar na mobile
-            }
-            if (backButton) {
-                backButton.style.display = 'none'; // Domyślnie ukryj przycisk Wstecz
-            }
-
-            // Domyślnie pokaż listę rozmów, a nie aktywnych użytkowników na mobile
+            if (chatAreaWrapper) chatAreaWrapper.style.display = 'none';
             if (sidebarEl) sidebarEl.style.display = 'block';
-            if (onlineUsersMobile) onlineUsersMobile.style.display = 'none';
-        } else { // Tryb desktopowy (ekran >= 768px)
-            console.log("Media Query: Tryb desktopowy aktywowany. Dostosowywanie początkowej widoczności dla desktopu.");
-            // Na desktopie, pokaż sidebar, logo screen początkowo, obszar czatu ukryty.
-            if (sidebarWrapper) {
-                sidebarWrapper.classList.remove('hidden-on-mobile'); // Upewnij się, że jest widoczny
-            }
-            if (chatAreaWrapper) {
-                chatAreaWrapper.classList.remove('active-on-mobile'); // Usuń klasę mobilną
-                chatAreaWrapper.style.display = 'flex'; // Upewnij się, że jest widoczny, aby zawierał logo screen
-            }
-            if (logoScreen) {
-                logoScreen.classList.remove('hidden'); // Pokaż logo screen
-            }
-            if (chatArea) {
-                chatArea.classList.remove('active'); // Obszar czatu ukryty
-            }
-            if (rightSidebarWrapper) {
-                rightSidebarWrapper.style.display = 'flex'; // Upewnij się, że prawy sidebar jest widoczny
-            }
-            if (backButton) {
-                backButton.style.display = 'none'; // Przycisk Wstecz niepotrzebny na desktopie
-            }
-        }
-    }
-
-    // Dołącz nasłuchiwanie zapytania mediów i wywołaj obsługę początkowo
-    const mq = window.matchMedia('(max-width: 768px)');
-    mq.addListener(handleMediaQueryChange);
-    handleMediaQueryChange(mq); // Początkowe wywołanie w celu ustawienia poprawnego układu
-
-    // Obsługa wysyłania wiadomości
-    if (sendButton) {
-        sendButton.addEventListener('click', () => {
-            const messageContent = messageInput.value.trim();
-            if (messageContent && socket && socket.readyState === WebSocket.OPEN && activeChatRecipientId) {
-                const chatMessage = {
-                    type: 'chat_message',
-                    senderId: userId,
-                    receiverId: activeChatRecipientId,
-                    content: messageContent,
-                    timestamp: new Date().toISOString()
-                };
-                socket.send(JSON.stringify(chatMessage));
-                messageInput.value = ''; // Wyczyść pole wprowadzania
-                displayMessage(chatMessage); // Wyświetl własną wiadomość od razu
+            if (onlineUsersMobile) onlineUsersMobile.style.display = 'none'; // Upewnij się, że mobilna lista online jest ukryta
+            activeChatRecipientId = null; // Zresetuj aktywnego odbiorcę
+            // Możesz również zresetować styl aktywnej konwersacji
+            const activeConvoItem = contactsListEl.querySelector('.conversation-item.active');
+            if (activeConvoItem) {
+                activeConvoItem.classList.remove('active');
             }
         });
+    }
+
+    // Nasłuchiwanie na przycisk wysyłania
+    if (sendButton) {
+        sendButton.addEventListener('click', sendMessage);
     }
 
     // Nasłuchiwanie na Enter w polu wiadomości
+    let typingTimeout;
     if (messageInput) {
         messageInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
@@ -639,11 +825,12 @@ async function initializeApp() {
                 sendButton.click(); // Symuluj kliknięcie przycisku "Wyślij"
             }
         });
-        
-        let typingTimeout;
+
         messageInput.addEventListener('input', () => {
-            if (socket && socket.readyState === WebSocket.OPEN && activeChatRecipientId) {
+            if (socket && socket.readyState === WebSocket.OPEN && activeChatRecipientId && userId) {
+                // Wyślij status "pisze"
                 socket.send(JSON.stringify({ type: 'typing_status', senderId: userId, receiverId: activeChatRecipientId, isTyping: true }));
+                // Ustaw timer na wysłanie statusu "nie pisze" po 3 sekundach bez wprowadzania
                 clearTimeout(typingTimeout);
                 typingTimeout = setTimeout(() => {
                     socket.send(JSON.stringify({ type: 'typing_status', senderId: userId, receiverId: activeChatRecipientId, isTyping: false }));
@@ -651,6 +838,11 @@ async function initializeApp() {
             }
         });
     }
+
+    // Dołącz nasłuchiwanie zapytania mediów i wywołaj obsługę początkowo
+    const mq = window.matchMedia('(max-width: 768px)');
+    mq.addListener(handleMediaQueryChange);
+    handleMediaQueryChange(mq); // Początkowe wywołanie w celu ustawienia poprawnego układu
 
     console.log("[initializeApp] Aplikator Komunikator zainicjalizowany pomyślnie.");
 }
