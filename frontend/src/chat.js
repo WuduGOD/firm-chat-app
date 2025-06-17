@@ -298,7 +298,7 @@ function handleWebSocketMessage(message) {
                     displayMessage(data.senderId, data.content, data.timestamp);
                 }
                 // Niezależnie od tego, czy czat jest aktywny, zaktualizuj konwersacje
-                loadConversations(); // Odśwież konwersacje po otrzymaniu nowej wiadomości
+                // loadConversations(); // Odśwież konwersacje po otrzymaniu nowej wiadomości
                 break;
             case 'typing_status':
                 if (activeChatRecipientId === data.senderId) {
@@ -361,62 +361,45 @@ function filterContacts() {
 /**
  * Ładuje i wyświetla konwersacje użytkownika.
  */
+// Zmieniona funkcja do ładowania i wyświetlania użytkowników jako konwersacji
 async function loadConversations() {
     if (!userId || !contactsListEl) {
-        console.warn('[loadConversations] Nie można załadować konwersacji: userId lub contactsListEl nie jest dostępne.');
+        console.warn('[loadConversations] Nie można załadować użytkowników: userId lub contactsListEl nie jest dostępne.');
         return;
     }
 
     try {
-        // Pobierz wiadomości, które dotyczą zalogowanego użytkownika (jako nadawca lub odbiorca)
-        const { data, error } = await supabase
-            .from('messages')
-            .select('sender_id, receiver_id, content, created_at')
-            .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-            .order('created_at', { ascending: false }); // Sortuj od najnowszej
-
-        if (error) throw error;
-
-        const conversationsMap = new Map(); // Map: opponent_id -> { lastMessage, timestamp, opponent_id }
-
-        // Przetwarzanie wiadomości w celu znalezienia ostatniej wiadomości dla każdej konwersacji
-        for (const message of data) {
-            const opponentId = message.sender_id === userId ? message.receiver_id : message.sender_id;
-
-            // Jeśli to nowsza wiadomość dla tej konwersacji LUB to pierwsza wiadomość
-            // Upewniamy się, że opponentId nie jest null (na wypadek błędnych danych)
-            if (opponentId && (!conversationsMap.has(opponentId) || new Date(message.created_at) > new Date(conversationsMap.get(opponentId).timestamp))) {
-                conversationsMap.set(opponentId, {
-                    lastMessage: message.content,
-                    timestamp: message.created_at,
-                    opponentId: opponentId
-                });
-            }
-        }
-
-        // Konwertuj mapę na tablicę i posortuj od najnowszej wiadomości (najnowsza na górze)
-        const conversations = Array.from(conversationsMap.values()).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        // Zamiast pobierać wiadomości, pobieramy WSZYSTKIE profile
+        // Funkcja loadAllProfiles() z profiles.js już to robi.
+        const allRegisteredProfiles = await loadAllProfiles();
+        console.log('[loadConversations] Pobrane wszystkie zarejestrowane profile:', allRegisteredProfiles);
 
         // Wyczyść obecną listę konwersacji
         contactsListEl.innerHTML = '';
 
-        if (conversations.length === 0) {
-            contactsListEl.innerHTML = '<li class="no-conversations-message">Brak rozpoczętych konwersacji.</li>';
+        const profilesToDisplay = allRegisteredProfiles.filter(profile => profile.id !== userId); // Odfiltruj zalogowanego użytkownika
+
+        if (profilesToDisplay.length === 0) {
+            contactsListEl.innerHTML = '<li class="no-conversations-message">Brak innych zarejestrowanych użytkowników.</li>';
             return;
         }
 
-        // Renderuj każdą konwersację
-        for (const convo of conversations) {
-            const userProfile = await getProfileById(convo.opponentId); // Pobierz profil użytkownika
-            if (userProfile) {
-                renderConversationItem(convo.opponentId, userProfile.username, convo.lastMessage, convo.timestamp);
-            }
+        // Renderuj każdy profil jako element konwersacji
+        for (const profile of profilesToDisplay) {
+            // Dla tych "konwersacji" początkowo ustawiamy placeholder dla ostatniej wiadomości i czasu.
+            // Możesz to dostosować, np. "Rozpocznij rozmowę"
+            const lastMessage = "Rozpocznij rozmowę";
+            const timestamp = new Date().toISOString(); // Użyj bieżącego czasu, lub po prostu pusty string
+
+            // Użyj istniejącej funkcji renderConversationItem
+            renderConversationItem(profile.id, profile.username, lastMessage, timestamp);
         }
 
     } catch (err) {
-        console.error('[loadConversations] Błąd podczas ładowania konwersacji:', err.message);
+        console.error('[loadConversations] Błąd podczas ładowania zarejestrowanych użytkowników:', err.message);
     }
 }
+
 
 /**
  * Renderuje pojedynczy element listy konwersacji (pojedynczy kontakt/czat).
