@@ -137,7 +137,7 @@ function initializeDOMElements() {
  */
 function connectWebSocket() {
     console.log(`[WebSocket] Próba połączenia z serwerem: ${process.env.VITE_WEBSOCKET_URL}`);
-    socket = new WebSocket(process.env.VITE_WEBSOCKET_URL);
+    socket = new WebSocket(import.meta.env.VITE_WEBSOCKET_URL);
 
     socket.onopen = () => {
         console.log('[WebSocket] Połączono z serwerem WebSocket.');
