@@ -36,7 +36,8 @@ async function testDbConnection() {
 
 testDbConnection();
 
-const wss = new WebSocketServer({ port: process.env.WS_PORT || 8080 });
+// POPRAWKA: Dodano 'export' przed 'const wss'
+export const wss = new WebSocketServer({ port: process.env.WS_PORT || 8080 });
 console.log(`Serwer WebSocket uruchomiony na porcie ${process.env.WS_PORT || 8080}`);
 
 // Mapa do przechowywania aktywnych połączeń WebSocket wraz z ID użytkowników
