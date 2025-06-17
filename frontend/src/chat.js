@@ -422,7 +422,14 @@ function setupSendMessage() {
  * @param {Object} msg - The message object.
  */
 async function addMessageToChat(msg) { // Changed to async
+    console.log("[addMessageToChat] START - Received message object:", msg); // Log the entire message object at start
     console.log("[addMessageToChat] Processing message: sender=" + msg.username + ", room=" + msg.room + ". Global currentRoom (active chat): " + currentRoom);
+
+    // Ensure msg.room is defined before proceeding
+    if (!msg.room) {
+        console.error("[addMessageToChat] ERROR: msg.room is undefined. Cannot update UI. Message:", msg);
+        return; // Exit if room ID is missing
+    }
 
     // Find the conversation item by room ID to update last-message and timestamp
     let convoItemToUpdate = contactsListEl.querySelector(`.contact[data-room-id="${msg.room}"]`);
@@ -454,7 +461,7 @@ async function addMessageToChat(msg) { // Changed to async
         const senderName = senderId === String(currentUser.id) ? "Ja" : (getUserLabelById(senderId) || senderId);
         previewText = `${senderName}: ${msg.text}`; 
         const lastMessageTime = new Date(msg.inserted_at);
-        timeEl.textContent = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+        timeText = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
         console.log(`[addMessageToChat] Updated preview and time for room ${msg.room}. Preview: "${previewText}"`); 
         previewEl.textContent = previewText; 
     } else {
@@ -513,6 +520,7 @@ async function addMessageToChat(msg) { // Changed to async
     } else if (convoItemToMove) {
         console.log(`[addMessageToChat][Reorder] Conversation for room ${msg.room} is already at the top.`);
     }
+    console.log("[addMessageToChat] END - Finished processing message.");
 }
 
 /**
@@ -702,7 +710,8 @@ function initWebSocket() {
 
     socket.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        console.log('[WS MESSAGE] Received via WS (full data object):', data); // Dodatkowy log dla pełnych danych
+        console.log('[WS MESSAGE] RAW Data received via WS:', event.data); // Log raw data
+        console.log('[WS MESSAGE] Parsed Data (full object):', data); // Log parsed object
 
         switch (data.type) {
             case 'message':
@@ -740,7 +749,7 @@ function initWebSocket() {
 
     socket.onclose = (event) => {
         console.log('[initWebSocket] WebSocket disconnected. Code:', event.code, 'Reason:', event.reason);
-        // Send "offline" status when disconnected (this is handled by server on disconnect)
+        // Send "offline" when disconnected (this is handled by server on disconnect)
         // Optionally, update UI here for current user or all users to offline
         if (event.code !== 1000) { // 1000 is normal closure
             console.log('[initWebSocket] Attempting to reconnect...');
