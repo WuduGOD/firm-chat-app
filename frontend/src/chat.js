@@ -118,7 +118,7 @@ function initializeDOMElements() {
     chatHeaderActions = getElement('.chat-header-actions', true);
     chatSettingsButton = getElement('chatSettingsButton');
     chatSettingsDropdown = getElement('chatSettingsDropdown');
-    typingStatusHeader = getElement('typingStatusHeader'); // Upewnij się, że masz takie ID w nagłówku
+    typingStatusHeader = getElement('typingStatus'); // Upewnij się, że masz takie ID w nagłówku
     typingIndicatorMessages = getElement('typingIndicator'); // Animowane kropki na dole czatu
 
     // Poprawka dla chatMessages - bezpośrednie użycie querySelector
