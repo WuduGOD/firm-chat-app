@@ -47,7 +47,7 @@ const rooms = new Map();
 
 // Inicjalizacja serwera WebSocket na porcie 8080 (lub innym z ENV)
 const PORT = process.env.PORT || 8080;
-const wss = new WebSocketServer({ port: PORT }); // Deklaracja wss
+const wss = new WebSocketServer({ noServer: true }); // Deklaracja wss
 
 wss.on('listening', () => {
     console.log(`Serwer WebSocket nasłuchuje na porcie ${PORT}`);
