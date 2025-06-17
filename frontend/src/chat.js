@@ -424,88 +424,81 @@ function setupSendMessage() {
  * @param {boolean} isHistoryMessage - True if this message is part of historical load.
  */
 async function addMessageToChat(msg, isHistoryMessage = false) { 
-    console.log("[addMessageToChat] START - Odebrano obiekt wiadomości:", msg);
-    console.log("[addMessageToChat] Przetwarzanie wiadomości: nadawca=" + msg.username + ", pokój=" + msg.room + ". Globalny currentRoom (aktywny czat): " + currentRoom + ". Czy historia? " + isHistoryMessage);
+    console.log(`[addMessageToChat] START - Processing msg:`, msg, `isHistory: ${isHistoryMessage}, currentRoom: ${currentRoom}`);
 
-    // Inicjalizacja zmiennych na początku funkcji
-    let previewText = "Brak wiadomości";
-    let timeText = "";
-
-    // Upewnij się, że msg.room jest zdefiniowane
     if (!msg.room) {
         console.error("[addMessageToChat] BŁĄD: msg.room jest niezdefiniowane. Nie można zaktualizować UI. Wiadomość:", msg);
         return;
     }
 
-    // Znajdź element konwersacji po ID pokoju, aby zaktualizować ostatnią wiadomość i timestamp
+    // Find the conversation item in the sidebar
     let convoItemToUpdate = contactsListEl.querySelector(`.contact[data-room-id="${msg.room}"]`);
-    console.log("[addMessageToChat] convoItemToUpdate znaleziono przed potencjalnym loadContacts(): " + (!!convoItemToUpdate ? "Tak" : "Nie") + " dla pokoju " + msg.room);
 
-    // Jeśli element konwersacji nie został znaleziony, oznacza to nową konwersację lub nieaktualną listę kontaktów.
-    // W takim przypadku, przeładuj wszystkie kontakty, aby nowa konwersacja pojawiła się i lista została posortowana.
-    if (!convoItemToUpdate && !isHistoryMessage) { // Nie przeładowuj kontaktów dla wiadomości z historii
-        console.warn(`[addMessageToChat] Element konwersacji dla pokoju ${msg.room} nie znaleziono początkowo. To może być nowa konwersacja lub niezsynchronizowana lista. Przeładowuję kontakty...`);
-        await loadContacts(); // Przeładuj wszystkie kontakty, to spowoduje ich ponowne renderowanie i sortowanie
-        // Po przeładowaniu, spróbuj ponownie znaleźć element konwersacji. Powinien teraz istnieć.
-        convoItemToUpdate = contactsListEl.querySelector(`.contact[data-room-id="${msg.room}"]`);
-        console.log("[addMessageToChat] convoItemToUpdate znaleziono PO loadContacts(): " + (!!convoItemToUpdate ? "Tak" : "Nie") + " dla pokoju " + msg.room);
+    // --- Part 1: Update Sidebar (Preview, Time, Unread Count) ---
+    // This part should ONLY run for NEW messages that are NOT part of a historical load.
+    // It should also run if `convoItemToUpdate` is not found, meaning a new conversation
+    // was started by someone else, so we need to reload contacts.
+    if (!isHistoryMessage) {
         if (!convoItemToUpdate) {
-            console.error(`[addMessageToChat] Element konwersacji dla pokoju ${msg.room} nadal NIE znaleziono po przeładowaniu kontaktów. Nie można zaktualizować UI.`);
-            return;
-        }
-    }
-
-    // TYLKO jeśli NIE JEST to wiadomość historyczna, aktualizuj podgląd i licznik nieprzeczytanych
-    if (!isHistoryMessage && convoItemToUpdate) {
-        const previewEl = convoItemToUpdate.querySelector('.last-message');
-        const timeEl = convoItemToUpdate.querySelector('.message-time');
-        const unreadCountEl = convoItemToUpdate.querySelector('.unread-count');
-
-        if (previewEl && timeEl) {
-            const senderId = String(msg.username);
-            const senderName = senderId === String(currentUser.id) ? "Ja" : (getUserLabelById(senderId) || senderId);
-            previewText = `${senderName}: ${msg.text}`; 
-            const lastMessageTime = new Date(msg.inserted_at);
-            timeText = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
-            console.log(`[addMessageToChat] Aktualizuję podgląd i czas dla elementu konwersacji (pokój: ${msg.room}). Podgląd: "${previewText}", Czas: "${timeText}"`); 
-            previewEl.textContent = previewText; 
-            timeEl.textContent = timeText;
-        } else {
-            console.warn(`[addMessageToChat] Nie można znaleźć previewEl lub timeEl dla pokoju ${msg.room} na elemencie konwersacji. Pomijam aktualizację podglądu/czasu.`);
-        }
-
-        // Inkrementuj licznik nieprzeczytanych wiadomości TYLKO jeśli wiadomość jest dla INNEGO pokoju I nie jest od bieżącego użytkownika (wysłana przez siebie)
-        if (String(msg.username) !== String(currentUser.id) && msg.room !== currentRoom) {
-            if (unreadCountEl) {
-                let currentUnread = parseInt(unreadCountEl.textContent, 10);
-                if (isNaN(currentUnread)) currentUnread = 0;
-                unreadCountEl.textContent = currentUnread + 1;
-                unreadCountEl.classList.remove('hidden');
-                console.log(`[addMessageToChat] Licznik nieprzeczytanych dla pokoju ${msg.room} inkrementowany do: ${unreadCountEl.textContent} (ponieważ to nie jest bieżący czat i nie jest od siebie).`);
-            } else {
-                console.warn(`[addMessageToChat] Nie można znaleźć unreadCountEl dla pokoju ${msg.room}. Pomijam aktualizację licznika nieprzeczytanych.`);
-            }
-        } else {
-            console.log(`[addMessageToChat] Wiadomość jest od bieżącego użytkownika (${String(msg.username) === String(currentUser.id)}) LUB dla aktywnego pokoju (${msg.room === currentRoom}). Upewniam się, że licznik nieprzeczytanych jest ukryty, jeśli jest widoczny.`);
-            if (unreadCountEl) {
-                unreadCountEl.textContent = '0';
-                unreadCountEl.classList.add('hidden');
+            console.warn(`[addMessageToChat] Element konwersacji dla pokoju ${msg.room} nie znaleziono. To może być nowa konwersacja lub niezsynchronizowana lista. Przeładowuję kontakty...`);
+            await loadContacts(); // Przeładowuje i ponownie renderuje listę kontaktów
+            convoItemToUpdate = contactsListEl.querySelector(`.contact[data-room-id="${msg.room}"]`); // Spróbuj znaleźć ponownie
+            if (!convoItemToUpdate) {
+                console.error(`[addMessageToChat] Element konwersacji dla pokoju ${msg.room} nadal NIE znaleziono po przeładowaniu kontaktów. Nie można zaktualizować UI sidebara.`);
+                // Możemy nadal wyświetlić w czacie, jeśli msg.room pasuje do currentRoom, ale sidebar się nie zaktualizuje.
             }
         }
 
-        // Przenieś konwersację na liście kontaktów na górę, tylko jeśli to nowa wiadomość (nie historia)
-        const convoItemToMove = contactsListEl.querySelector(`.contact[data-room-id="${msg.room}"]`);
-        if (convoItemToMove && contactsListEl.firstChild !== convoItemToMove) {
-            contactsListEl.prepend(convoItemToMove);
-            console.log(`[addMessageToChat][Reorder] Przeniesiono konwersację dla pokoju ${msg.room} na górę z powodu nowej wiadomości.`);
-        } else {
-            console.log(`[addMessageToChat][Reorder] Konwersacja dla pokoju ${msg.room} jest już na górze.`);
+        if (convoItemToUpdate) { // Kontynuuj aktualizacje sidebara tylko, jeśli convoItemToUpdate zostało znalezione/istnieje
+            const previewEl = convoItemToUpdate.querySelector('.last-message');
+            const timeEl = convoItemToUpdate.querySelector('.message-time');
+            const unreadCountEl = convoItemToUpdate.querySelector('.unread-count');
+
+            if (previewEl && timeEl) {
+                const senderId = String(msg.username);
+                const senderName = senderId === String(currentUser.id) ? "Ja" : (getUserLabelById(senderId) || senderId);
+                const previewText = `${senderName}: ${msg.text}`;
+                const lastMessageTime = new Date(msg.inserted_at);
+                const timeString = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+                
+                console.log(`[addMessageToChat] Aktualizuję podgląd sidebara dla pokoju ${msg.room}. Podgląd: "${previewText}", Czas: "${timeString}"`);
+                previewEl.textContent = previewText;
+                timeEl.textContent = timeString;
+            }
+
+            // Inkrementuj licznik nieprzeczytanych wiadomości TYLKO jeśli wiadomość jest dla INNEGO pokoju I nie jest od bieżącego użytkownika (wysłana przez siebie)
+            if (String(msg.username) !== String(currentUser.id) && msg.room !== currentRoom) {
+                if (unreadCountEl) {
+                    let currentUnread = parseInt(unreadCountEl.textContent, 10);
+                    if (isNaN(currentUnread)) currentUnread = 0;
+                    unreadCountEl.textContent = currentUnread + 1;
+                    unreadCountEl.classList.remove('hidden');
+                    console.log(`[addMessageToChat] Licznik nieprzeczytanych dla pokoju ${msg.room} inkrementowany do: ${unreadUnread.textContent} (nie jest to bieżący czat i nie jest od siebie).`);
+                }
+            } else { // Wiadomość jest od bieżącego użytkownika LUB dla aktywnego pokoju, upewnij się, że licznik nieprzeczytanych jest ukryty
+                console.log(`[addMessageToChat] Wiadomość jest od bieżącego użytkownika (${String(msg.username) === String(currentUser.id)}) LUB dla aktywnego pokoju (${msg.room === currentRoom}). Upewniam się, że licznik nieprzeczytanych jest ukryty.`);
+                if (unreadCountEl) {
+                    unreadCountEl.textContent = '0';
+                    unreadCountEl.classList.add('hidden');
+                }
+            }
+
+            // Przenieś konwersację na górę listy dla nowych wiadomości
+            const convoItemToMove = contactsListEl.querySelector(`.contact[data-room-id="${msg.room}"]`);
+            if (convoItemToMove && contactsListEl.firstChild !== convoItemToMove) {
+                contactsListEl.prepend(convoItemToMove);
+                console.log(`[addMessageToChat][Reorder] Przeniesiono konwersację dla pokoju ${msg.room} na górę z powodu nowej wiadomości.`);
+            } else if (convoItemToMove) {
+                console.log(`[addMessageToChat][Reorder] Konwersacja dla pokoju ${msg.room} jest już na górze.`);
+            }
         }
     }
 
-    // Wyświetl wiadomość w aktywnym czacie tylko, jeśli należy do bieżącego pokoju LUB jest wiadomością historyczną dla tego pokoju
-    console.log(`[addMessageToChat Display Check] Porównuję msg.room (${msg.room}) z currentRoom (${currentRoom}). Dopasowanie: ${msg.room === currentRoom}. Czy historia? ${isHistoryMessage}`);
-    if (msg.room === currentRoom) { // Zawsze wyświetlaj, jeśli jest to aktywny czat
+    // --- Part 2: Display in Main Chat Area ---
+    // Ta część powinna ZAWSZE działać, jeśli pokój wiadomości odpowiada aktualnie aktywnemu pokojowi (`currentRoom`).
+    // Dotyczy to zarówno nowych wiadomości przychodzących, jak i wiadomości historycznych.
+    console.log(`[addMessageToChat Display Check] Porównuję msg.room (${msg.room}) z currentRoom (${currentRoom}). Dopasowanie: ${msg.room === currentRoom}.`);
+    if (msg.room === currentRoom) { // Zawsze wyświetl, jeśli to pokój aktywnego czatu
         const div = document.createElement('div');
         div.classList.add('message', String(msg.username) === String(currentUser.id) ? 'sent' : 'received');
 
@@ -518,13 +511,13 @@ async function addMessageToChat(msg, isHistoryMessage = false) {
         `;
         if (messageContainer) {
             messageContainer.appendChild(div);
-            messageContainer.scrollTop = messageContainer.scrollHeight; // Przewiń do dołu
-            console.log(`[addMessageToChat] Wiadomość wyświetlona w aktywnym czacie dla pokoju: ${msg.room}`);
+            messageContainer.scrollTop = messageContainer.scrollHeight;
+            console.log(`[addMessageToChat] Wiadomość wyświetlona w aktywnym czacie dla pokoju: ${msg.room}. Treść wiadomości: "${msg.text}"`);
         } else {
             console.error("[addMessageToChat] messageContainer jest nullem podczas próby dodania wiadomości do aktywnego czatu.");
         }
     } else {
-        console.log(`[addMessageToChat] Wiadomość nie jest dla aktywnego pokoju i nie jest wiadomością historyczną, nie dodaję do widoku czatu. Pokój: ${msg.room}, Obecny aktywny pokój: ${currentRoom}`);
+        console.log(`[addMessageToChat] Wiadomość NIE jest dla aktywnego pokoju (${msg.room} vs ${currentRoom}). Nie dodaję do widoku czatu.`);
     }
     console.log("[addMessageToChat] KONIEC - Zakończono przetwarzanie wiadomości.");
 }
@@ -737,7 +730,7 @@ function initWebSocket() {
                 break;
             case 'history':
                 console.log("[WS MESSAGE] Ładowanie historii wiadomości. Pokój historii:", data.room, "Obecny pokój:", currentRoom);
-                if (messageContainer && data.room === currentRoom) {
+                if (messageContainer && data.room === currentRoom) { // Tylko jeśli historia jest dla aktywnego pokoju
                     messageContainer.innerHTML = ''; // Wyczyść bieżące wiadomości
                     // Przekazujemy true dla isHistoryMessage, aby uniknąć zbędnych operacji
                     data.messages.forEach((msg) => addMessageToChat(msg, true)); 
@@ -1042,7 +1035,7 @@ async function initializeApp() {
 
     chatHeader = document.querySelector('.chat-header');
     backButton = document.getElementById('backButton');
-    chatUserAvatar = document.querySelector('.chat-area-wrapper .chat-header .avatar'); // NOWA REFERENCJA - selektor do avatara w nagłówku czatu
+    chatUserAvatar = document.getElementById('chatUserAvatar'); // NOWA REFERENCJA - używamy ID
     chatUserName = document.getElementById('chatUserName');
     userStatusSpan = document.getElementById('userStatus');
     chatHeaderActions = chatHeader.querySelector('.chat-header-actions');
