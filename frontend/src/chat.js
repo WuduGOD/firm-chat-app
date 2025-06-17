@@ -104,7 +104,7 @@ function initializeDOMElements() {
     typingStatusHeader = getElement('typingStatus');
     typingIndicatorMessages = getElement('typingIndicator');
 
-    chatMessages = getElement('.chat-messages', true); // Użycie selektora klasowego
+    chatMessages = document.querySelector('.chat-messages'); // Użycie selektora klasowego
     messageInput = getElement('messageInput');
     sendButton = getElement('sendButton');
     emojiButton = getElement('.emoji-button', true); // Użycie selektora klasowego
