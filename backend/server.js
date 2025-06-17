@@ -22,7 +22,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const server = createServer(app); // Tworzymy serwer HTTP
 
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT;
 const DATABASE_URL = process.env.DATABASE_URL;
 const SUPABASE_JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
 const SUPABASE_PROJECT_ID = process.env.SUPABASE_PROJECT_ID; // Twój Project ID Supabase
