@@ -71,10 +71,10 @@ wss.on('connection', (ws) => {
                         type: 'history',
                         room: data.room,
                         messages: history.map(msg => ({
-                            username: msg.sender_id, // Mapujemy sender_id na username
-                            text: msg.content, // Mapujemy content na text
-                            inserted_at: msg.created_at, // Mapujemy created_at na inserted_at
-                            room: msg.room_id // Mapujemy room_id na room
+                            username: msg.username, // Mapujemy z powrotem na username
+                            text: msg.text, // Mapujemy z powrotem na text
+                            inserted_at: msg.inserted_at, // Mapujemy z powrotem na inserted_at
+                            room: msg.room // Zapewniamy, że room jest przekazywany dalej
                         })),
                     }));
                     console.log(`Sent history to room ${data.room} for user ${userData.userId}:`, history.length, 'messages.');
