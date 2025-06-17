@@ -136,8 +136,8 @@ function initializeDOMElements() {
  * Uruchamia połączenie WebSocket.
  */
 function connectWebSocket() {
-    console.log(`[WebSocket] Próba połączenia z serwerem: ${process.env.VITE_WEBSOCKET_URL}`);
-    socket = new WebSocket(import.meta.env.VITE_WEBSOCKET_URL);
+    console.log(`[WebSocket] Próba połączenia z serwerem: ${import.meta.env.VITE_CHAT_WS_URL}`);
+    socket = new WebSocket(import.meta.env.VITE_CHAT_WS_URL);
 
     socket.onopen = () => {
         console.log('[WebSocket] Połączono z serwerem WebSocket.');
@@ -160,6 +160,7 @@ function connectWebSocket() {
                 console.log(`[WebSocket] Zalogowano jako użytkownik ID: ${message.userId}`);
                 // Po udanym zalogowaniu, załaduj listę konwersacji
                 userId = message.userId;
+				localStorage.setItem('userId', message.userId);
                 await loadConversations();
                 break;
             case 'user_status':
