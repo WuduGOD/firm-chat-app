@@ -456,6 +456,7 @@ async function addMessageToChat(msg) { // Changed to async
     const unreadCountEl = convoItemToUpdate.querySelector('.unread-count'); // Get reference here once
 
     let previewText = "Brak wiadomości"; 
+	let timeText = "";
 
     if (previewEl && timeEl) {
         const senderId = String(msg.username); // msg.username to teraz sender_id
@@ -465,6 +466,7 @@ async function addMessageToChat(msg) { // Changed to async
         timeText = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
         console.log(`Updated preview and time for room ${msg.room}. Preview: "${previewText}"`); 
         previewEl.textContent = previewText; 
+		timeEl.textContent = timeText;
     } else {
         console.warn(`Could not find previewEl or timeEl for room ${msg.room}.`);
     }
@@ -505,11 +507,11 @@ async function addMessageToChat(msg) { // Changed to async
         div.classList.add('message', String(msg.username) === String(currentUser.id) ? 'sent' : 'received');
 
         const timestamp = new Date(msg.inserted_at || Date.now()); // msg.inserted_at to teraz created_at
-        const timeString = timestamp.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+        const messageTimeString = timestamp.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" }); // Użyj innej nazwy zmiennej
 
         div.innerHTML = `
             <p>${msg.text}</p>
-            <span class="timestamp">${timeString}</span>
+            <span class="timestamp">${messageTimeString}</span>
         `;
         if (messageContainer) {
             messageContainer.appendChild(div);
