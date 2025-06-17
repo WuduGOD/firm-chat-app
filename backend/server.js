@@ -7,7 +7,6 @@ dotenv.config();
 
 const { Pool } = pkg;
 
-// Konfiguracja połączenia z PostgreSQL
 const pool = new Pool({
     user: process.env.DB_USER,
     host: process.env.DB_HOST,
@@ -19,7 +18,7 @@ const pool = new Pool({
     keepAlive: true
 });
 
-// Testuj połączenie z bazą danych na starcie
+// Test connection (your existing code)
 pool.connect()
     .then(client => {
         console.log("Successfully connected to PostgreSQL!");
@@ -27,244 +26,195 @@ pool.connect()
     })
     .catch(err => {
         console.error("Failed to connect to PostgreSQL on startup:", err.message);
-        // Ważne: Jeśli połączenie z bazą danych jest krytyczne, możesz tu zakończyć proces.
-        // process.exit(1);
     });
-
 
 export const wss = new WebSocketServer({ noServer: true });
 
-// Zmieniona struktura clients: Map(ws, { userId, currentRoom })
-// 'userId' to ID użytkownika Supabase, 'currentRoom' to ID pokoju, w którym użytkownik aktualnie "słucha"
-const clients = new Map(); 
+const clients = new Map(); // Map(ws, { userId, activeRoom }) - userId to Supabase ID
+// NOWA STRUKTURA: rooms Map(roomName, Set(ws_clients_in_this_room))
+const rooms = new Map(); // Map(string (roomName), Set<WebSocket>)
 
 wss.on('connection', (ws) => {
-    // Inicjalizujemy dane użytkownika dla nowego połączenia
-    // Domyślnie użytkownik nie jest w żadnym konkretnym pokoju czatu na początku (null lub 'global')
-    let userData = { userId: null, currentRoom: null }; 
-    clients.set(ws, userData); // Dodajemy nowe połączenie do mapy klientów
+    // let userData = null; // Stores { username, room } - to będzie bardziej dynamiczne teraz
 
     ws.on('message', async (message) => {
-        try {
-            const data = JSON.parse(message);
-            console.log('Parsed incoming WebSocket data:', data);
+        const data = JSON.parse(message);
+        console.log(`Received message from client: type=${data.type}, user=${data.username}, room=${data.room}`);
 
-            if (data.type === 'join') {
-                // Gdy klient dołącza, aktualizujemy jego userId i currentRoom
-                // data.name to currentUser.id z frontendu
-                userData.userId = data.name; 
-                userData.currentRoom = data.room; // Pokój, do którego klient chce dołączyć
-                clients.set(ws, userData); // Aktualizujemy mapę clients
+        switch (data.type) {
+            case 'join':
+                // Client wants to join a room
+                const userId = data.name; // 'name' from frontend is userId
+                const requestedRoom = data.room;
 
-                console.log(`User ${userData.userId} joined room ${userData.currentRoom}.`);
+                // Update client's current active room
+                clients.set(ws, { userId: userId, activeRoom: requestedRoom });
 
-                // Aktualizujemy status w bazie danych na online (jeśli to pierwsze dołączenie użytkownika)
-                // Ta część odpowiedzialności pozostaje tutaj, ale wywołujemy ją tylko raz per user (można dodać flagę)
-                await updateProfileStatus(userData.userId, true);
-                broadcastUserStatus(userData.userId, true); // Rozgłaszamy status online
+                // Add client to the requested room's set
+                if (!rooms.has(requestedRoom)) {
+                    rooms.set(requestedRoom, new Set());
+                }
+                rooms.get(requestedRoom).add(ws);
+                console.log(`User ${userId} joined room: ${requestedRoom}. Current clients in room ${requestedRoom}: ${rooms.get(requestedRoom).size}`);
 
-                // Wysyłamy historię wiadomości tylko do klienta, który dołączył,
-                // i tylko jeśli pokój nie jest 'global' (bo dla 'global' nie ma historii czatu)
-                if (data.room && data.room !== 'global') {
-                    const history = await getLastMessages(data.room);
-                    ws.send(JSON.stringify({
-                        type: 'history',
-                        room: data.room,
-                        messages: history.map(msg => ({
-                            username: msg.username,
-                            text: msg.text,
-                            inserted_at: msg.inserted_at,
-                            room: data.room
-                        })),
-                    }));
-                    console.log(`Sent history to room ${data.room} for user ${userData.userId}:`, history.length, 'messages.');
-                } else if (data.room === 'global') {
-                    console.log(`User ${userData.userId} joined global room, not sending chat history.`);
-                } else {
-                    console.warn("Join message received without a room, or room is null/undefined:", data);
+                // Send history for the joined room
+                if (requestedRoom !== 'global') { // Don't send history for 'global' room
+                    const history = await getLastMessages(requestedRoom);
+                    ws.send(JSON.stringify({ type: 'history', room: requestedRoom, messages: history }));
+                    console.log(`Sent history for room ${requestedRoom} to user ${userId}.`);
+                }
+                
+                // If it's a global join (on connection init), send active users
+                if (requestedRoom === 'global') {
+                     sendActiveUsersToClient(ws);
+                }
+                // Broadcast 'online' status immediately after joining 'global' room
+                if (requestedRoom === 'global') {
+                    broadcastUserStatus(userId, true);
                 }
 
-            }
-            else if (data.type === 'message' && userData.userId) { // Wiadomość czatu
-                const targetRoom = data.room; 
-                console.log(`Processing MESSAGE type for room: ${targetRoom} from user: ${userData.userId}. Data:`, data);
+                break;
 
-                // Zapisz wiadomość w bazie danych
-                const inserted_at = await saveMessage(userData.userId, targetRoom, data.text);
-                const msgObj = {
-                    type: 'message',
-                    username: userData.userId, // Używamy userId, nie username z frontendu
-                    text: data.text,
-                    inserted_at,
-                    room: targetRoom, // Ważne: Upewniamy się, że `room` jest zawarty
-                };
-                console.log('Message saved to DB, attempting to broadcast to relevant clients:', msgObj);
-                
-                // KLUCZOWA ZMIANA: Rozsyłamy wiadomość tylko do klientów, którzy są w TYM SAMYM POKOJU
-                broadcastToRoom(targetRoom, JSON.stringify(msgObj)); 
+            case 'leave':
+                // Client wants to leave a room
+                const userToLeave = data.name;
+                const roomToLeave = data.room;
 
-            }
-            else if (data.type === 'typing' && userData.userId) { // Wskaźnik pisania
-                const typingMsg = {
-                    type: 'typing',
-                    username: userData.userId,
-                    room: data.room 
-                };
-                // Wysyłamy typing do klientów w TYM SAMYM pokoju, z wyłączeniem nadawcy
-                for (const [client, clientData] of clients.entries()) {
-                    // Sprawdzamy, czy klient jest w tym samym pokoju i nie jest nadawcą
-                    if (client.readyState === WebSocket.OPEN && 
-                        clientData.currentRoom === data.room && 
-                        client !== ws) {
-                        client.send(JSON.stringify(typingMsg));
+                if (rooms.has(roomToLeave)) {
+                    rooms.get(roomToLeave).delete(ws);
+                    if (rooms.get(roomToLeave).size === 0) {
+                        rooms.delete(roomToLeave); // Clean up empty rooms
                     }
+                    console.log(`User ${userToLeave} left room: ${roomToLeave}. Remaining clients in room ${roomToLeave}: ${rooms.has(roomToLeave) ? rooms.get(roomToLeave).size : 0}`);
                 }
-                console.log(`Broadcasted typing status for user ${userData.userId} in room ${data.room}.`);
-            }
-            else if (data.type === 'leave' && userData.userId) { // Klient opuszcza pokój (np. wraca do listy)
-                if (data.room && data.room === userData.currentRoom) { // Tylko jeśli opuszcza aktualny pokój
-                    userData.currentRoom = null; // Ustawiamy pokój na null (nie jest w żadnym konkretnym czacie)
-                    clients.set(ws, userData); // Aktualizujemy mapę
-                    console.log(`User ${userData.userId} explicitly left room ${data.room}. WS state updated to null room.`);
+                // Also update client's activeRoom if they leave the one they were in
+                const clientData = clients.get(ws);
+                if (clientData && clientData.activeRoom === roomToLeave) {
+                    clients.set(ws, { userId: clientData.userId, activeRoom: null }); // Or set to 'global'
+                }
+                break;
+
+            case 'message':
+                // Handle chat messages - now, only send to clients in the specific room
+                const { username, text, room } = data;
+                const insertedAt = await saveMessage(username, room, text); // Save to DB
+
+                const msgToBroadcast = JSON.stringify({
+                    type: 'message',
+                    username,
+                    text,
+                    room, // Include room in broadcast for frontend filtering
+                    inserted_at: insertedAt,
+                });
+
+                if (rooms.has(room)) {
+                    rooms.get(room).forEach(client => {
+                        if (client.readyState === WebSocket.OPEN) {
+                            client.send(msgToBroadcast);
+                        }
+                    });
+                    console.log(`Broadcasted message to room ${room}.`);
                 } else {
-                     console.log(`User ${userData.userId} sent leave for room ${data.room}, but they were in room ${userData.currentRoom}. No change.`);
+                    console.warn(`Attempted to send message to non-existent room: ${room}`);
                 }
-            }
-            else if (data.type === 'get_active_users' && userData.userId) {
-                console.log(`Received request for active users from ${userData.userId}.`);
-                const activeUsersFromDb = await getOnlineStatusesFromDb(); 
-                const formattedUsers = activeUsersFromDb.map(user => ({
-                    id: user.id,
-                    username: user.username, 
-                    online: user.is_online
-                }));
-                ws.send(JSON.stringify({
-                    type: 'active_users',
-                    users: formattedUsers
-                }));
-                console.log(`Sent active users list to ${userData.userId}. List size: ${formattedUsers.length}`);
-            }
-            else if (data.type === 'status') { // Ten typ wiadomości służy do aktualizacji globalnego statusu
-                const userId = data.user;
-                const isOnline = data.online;
+                break;
 
-                // Upewniamy się, że userData jest zawsze aktualne dla tego połączenia
-                if (!userData.userId) { // Jeśli userId nie było ustawione, ustaw je
-                    userData.userId = userId;
-                    clients.set(ws, userData);
+            case 'typing':
+                // Broadcast typing status only within the specific room
+                const { username: typingUser, room: typingRoom } = data;
+                const typingMsg = JSON.stringify({
+                    type: 'typing',
+                    username: typingUser,
+                    room: typingRoom,
+                });
+
+                if (rooms.has(typingRoom)) {
+                    rooms.get(typingRoom).forEach(client => {
+                        if (client.readyState === WebSocket.OPEN && client !== ws) { // Don't send to self
+                            client.send(typingMsg);
+                        }
+                    });
                 }
-                
-                await updateProfileStatus(userId, isOnline);
-                console.log(`User ${userId} status updated to ${isOnline}. (from 'status' message)`);
+                break;
 
-                broadcastUserStatus(userId, isOnline); // Status zawsze rozsyłany globalnie
-            }
-            else {
-                console.warn('Unhandled message type or missing userData.userId:', data);
-            }
+            case 'status':
+                // Status updates (online/offline) are typically global.
+                // You already have a broadcastUserStatus function.
+                broadcastUserStatus(data.user, data.online);
+                break;
+            
+            case 'get_active_users':
+                sendActiveUsersToClient(ws); // Send current active users list to the requesting client
+                break;
 
-        } catch (err) {
-            console.error('Error receiving WebSocket message:', err);
+            default:
+                console.warn('Unknown message type received:', data.type);
         }
     });
 
-    ws.on('close', async () => {
-        // Po zamknięciu połączenia WS, usuwamy klienta z mapy
-        // I ustawiamy jego status offline w bazie danych
-        if (userData.userId) { // Sprawdzamy, czy userId było ustawione dla tego połączenia
-            clients.delete(ws);
-            await updateProfileStatus(userData.userId, false);
-            console.log(`User ${userData.userId} disconnected. Database status updated to offline.`);
+    ws.on('close', () => {
+        // When a client disconnects, remove them from all rooms they were in
+        // and update their status to offline globally.
+        const disconnectedClientData = clients.get(ws);
+        if (disconnectedClientData) {
+            console.log(`Client disconnected: ${disconnectedClientData.userId}`);
+            // Remove from all rooms
+            rooms.forEach((clientSet, roomName) => {
+                if (clientSet.has(ws)) {
+                    clientSet.delete(ws);
+                    if (clientSet.size === 0) {
+                        rooms.delete(roomName);
+                    }
+                    console.log(`Removed ${disconnectedClientData.userId} from room ${roomName}.`);
+                }
+            });
+            clients.delete(ws); // Remove from main clients map
 
-            broadcastUserStatus(userData.userId, false); // Rozgłaszamy status offline
+            // Broadcast offline status
+            broadcastUserStatus(disconnectedClientData.userId, false);
         } else {
-            console.log("A WebSocket connection closed, but no userId was associated.");
-            clients.delete(ws); // Usuń połączenie nawet bez userId
+            console.log("Unknown client disconnected.");
         }
     });
 
     ws.on('error', (error) => {
-        console.error('WebSocket error for client:', error);
-        // Ważne: błąd często prowadzi do zamknięcia połączenia, więc onclose też zadziała
+        console.error('WebSocket Error on server:', error);
     });
 });
 
-// ---------------------- Helper functions --------------------------
-
-async function updateProfileStatus(userId, isOnline) {
-    const client = await pool.connect();
-    try {
-        const query = `
-            UPDATE public.profiles
-            SET is_online = $1, last_seen_at = NOW()
-            WHERE id = $2;
-        `;
-        await client.query(query, [isOnline, userId]);
-        console.log(`DB: User ${userId} status updated to ${isOnline ? 'online' : 'offline'}`);
-    } catch (err) {
-        console.error(`DB Error: Failed to update user status for ${userId}:`, err);
-    } finally {
-        client.release();
-    }
-}
-
-async function getOnlineStatusesFromDb() {
-    const client = await pool.connect();
-    try {
-        const query = `
-            SELECT id, is_online, username, email
-            FROM public.profiles
-            WHERE is_online = TRUE;
-        `;
-        const res = await client.query(query);
-        console.log(`DB: Fetched ${res.rows.length} online users.`);
-        return res.rows;
-    } catch (err) {
-        console.error('DB Error: Failed to get online statuses:', err);
-        return [];
-    } finally {
-        client.release();
-    }
-}
-
-/**
- * Broadcasts a message to all clients who are currently in the specified room.
- * @param {string} roomId - The ID of the room to broadcast to.
- * @param {string} msg - The JSON string message to send.
- */
-function broadcastToRoom(roomId, msg) {
-    console.log(`Attempting to broadcast message to room: ${roomId}.`);
-    let sentCount = 0;
-    for (const [client, clientData] of clients.entries()) { 
-        // Wysyłamy wiadomość tylko jeśli klient jest w trybie OPEN i jego currentRoom zgadza się z targetRoomId
-        if (client.readyState === WebSocket.OPEN && clientData.currentRoom === roomId) {
-            client.send(msg); 
-            sentCount++;
-        }
-    }
-    console.log(`Broadcasted message to room ${roomId}. Sent to ${sentCount} clients.`);
-}
-
-/**
- * Broadcasts a user's online/offline status to ALL connected clients.
- * This is different from broadcastToRoom because status updates are global.
- * @param {string} userId - The ID of the user whose status is changing.
- * @param {boolean} isOnline - True if the user is online, false if offline.
- */
+// Helper function to broadcast user status (online/offline)
 function broadcastUserStatus(userId, isOnline) {
     const msg = JSON.stringify({
         type: 'status',
-        user: userId, 
+        user: userId,
         online: isOnline,
     });
 
-    for (const client of clients.keys()) {
-        // Wysyłamy status do wszystkich, niezależnie od tego, w którym pokoju się znajdują
-        if (client.readyState === WebSocket.OPEN) {
-            client.send(msg);
+    // Send status to all clients that are in the 'global' room (or all clients, if you want)
+    // For a status update, you probably want to send it to all connected clients,
+    // as knowing status is usually a global concern.
+    clients.forEach((clientData, clientWs) => {
+        if (clientWs.readyState === WebSocket.OPEN) {
+            clientWs.send(msg);
         }
-    }
+    });
     console.log(`Broadcasted user ${userId} status: ${isOnline ? 'online' : 'offline'}.`);
+}
+
+// Function to send current active users to a newly connected client
+function sendActiveUsersToClient(clientWs) {
+    const activeUsers = Array.from(clients.values())
+                             .filter(client => client.userId && client.activeRoom === 'global') // Only consider those who explicitly joined 'global' or are generally active
+                             .map(client => ({ id: client.userId })); // Only send IDs for now
+
+    const msg = JSON.stringify({
+        type: 'active_users',
+        users: activeUsers,
+    });
+    if (clientWs.readyState === WebSocket.OPEN) {
+        clientWs.send(msg);
+        console.log(`Sent active users list to a client.`);
+    }
 }
 
 async function saveMessage(username, room, text) {
@@ -276,17 +226,20 @@ async function saveMessage(username, room, text) {
     } catch (err) {
         console.error('DB Error: Failed to save message:', err);
     }
-    return new Date(); 
+    return new Date(); // Return current date even if save fails
 }
 
 async function getLastMessages(room, limit = 50) {
-    const query = 'SELECT username, text, inserted_at FROM messages WHERE room = $1 ORDER BY inserted_at DESC LIMIT $2';
+    const query = 'SELECT username, text, inserted_at FROM messages WHERE room = $1 ORDER BY inserted_at ASC LIMIT $2'; // ASC for chronological order
     try {
         const res = await pool.query(query, [room, limit]);
         console.log(`DB: Fetched ${res.rows.length} messages for room ${room}.`);
-        return res.rows.reverse();
+        return res.rows;
     } catch (err) {
-        console.error('DB Error: Failed to get message history:', err);
-        return [];
+        console.error('DB Error: Failed to fetch last messages:', err);
     }
+    return [];
 }
+
+// Ensure you also export the wss instance if this file is imported elsewhere
+// export { wss }; // You already have this
