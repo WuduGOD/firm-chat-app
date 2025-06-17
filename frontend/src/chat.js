@@ -1,3 +1,6 @@
+// NEW: Add a very prominent log to confirm this specific version of the script is loading
+console.log("[Client Init] === chat-entry.js (v4-final) HAS STARTED ===");
+
 // Importy zależności
 import { loadAllProfiles, getUserLabelById } from './profiles.js';
 import { supabase } from './supabaseClient.js';
@@ -32,7 +35,7 @@ let chatHeaderActions;
 let chatSettingsButton;
 let chatSettingsDropdown;
 let typingStatusHeader;
-let typingIndicatorMessages;
+let typingIndicatorMessages; // Now refers to the animated dots, not header status
 
 let messageContainer;
 
@@ -281,7 +284,10 @@ async function handleConversationClick(user, clickedConvoItemElement) {
         sendButton.disabled = false;
         messageInput.focus();
         console.log("[handleConversationClick] Pole wiadomości i przycisk WYŚLIJ włączone.");
+    } else {
+        console.error("[handleConversationClick] Krytyczne elementy UI (chatUserName, messageInput, sendButton, userStatusSpan) nie znalezione podczas handleConversationClick.");
     }
+
 
     // Logika przełączania widoku mobilnego/desktopowego
     if (window.matchMedia('(max-width: 768px)').matches) {
@@ -362,19 +368,28 @@ function setupSendMessage() {
 
     // Wyślij wiadomość po kliknięciu przycisku
     sendButton.onclick = () => {
-        console.log("[setupSendMessage] *** Próba wysłania wiadomości ***");
+        console.log("[setupSendMessage] --- Próba wysłania wiadomości ---");
         const text = messageInput.value.trim();
 
-        console.log(`[setupSendMessage] Stan przed wysłaniem:
-            Tekst wiadomości: "${text}" (pusty? ${!text})
-            currentChatUser: ${currentChatUser ? currentChatUser.username : 'BRAK'} (null? ${!currentChatUser})
-            socket: ${socket ? 'Obiekt' : 'BRAK'} (null? ${!socket})
-            socket.readyState: ${socket ? socket.readyState : 'N/A'} (OPEN? ${socket && socket.readyState === WebSocket.OPEN})
-            currentRoom: "${currentRoom}" (null? ${!currentRoom})
-        `);
-
-        if (!text || !currentChatUser || !socket || socket.readyState !== WebSocket.OPEN || !currentRoom) {
-            console.warn("[setupSendMessage] Wysyłka zablokowana: Brak tekstu, odbiorcy, otwartego połączenia WS lub pokoju.");
+        // Wzmocnione logowanie warunków blokujących wysyłkę
+        if (!text) {
+            console.warn("[setupSendMessage] Wysyłka zablokowana: Brak tekstu wiadomości.");
+            return;
+        }
+        if (!currentChatUser) {
+            console.warn("[setupSendMessage] Wysyłka zablokowana: Brak wybranego odbiorcy (currentChatUser jest null).");
+            return;
+        }
+        if (!socket) {
+            console.warn("[setupSendMessage] Wysyłka zablokowana: Obiekt WebSocket jest null.");
+            return;
+        }
+        if (socket.readyState !== WebSocket.OPEN) {
+            console.warn(`[setupSendMessage] Wysyłka zablokowana: WebSocket nie jest otwarty. Stan: ${socket.readyState}.`);
+            return;
+        }
+        if (!currentRoom) {
+            console.warn("[setupSendMessage] Wysyłka zablokowana: currentRoom nie jest ustawiony.");
             return;
         }
 
@@ -468,7 +483,6 @@ async function addMessageToChat(msg) {
         if (previewEl && timeEl) {
             previewEl.textContent = previewText;
             timeEl.textContent = timeText;
-            console.log(`[addMessageToChat] Zaktualizowano istniejący element konwersacji (pokój: ${msg.room}).`);
         }
     }
 
@@ -480,7 +494,6 @@ async function addMessageToChat(msg) {
             if (isNaN(currentUnread)) currentUnread = 0;
             unreadCountEl.textContent = currentUnread + 1;
             unreadCountEl.classList.remove('hidden');
-            console.log(`[addMessageToChat] Licznik nieprzeczytanych wiadomości dla pokoju ${msg.room} zwiększony do: ${unreadCountEl.textContent}.`);
         }
     } else {
         if (unreadCountEl) {
@@ -512,12 +525,9 @@ async function addMessageToChat(msg) {
         if (messageContainer) {
             messageContainer.appendChild(div);
             messageContainer.scrollTop = messageContainer.scrollHeight;
-            console.log(`[addMessageToChat] Wiadomość wyświetlona w aktywnym czacie dla pokoju: ${msg.room}`);
         } else {
             console.error("[addMessageToChat] messageContainer jest nullem podczas próby dodania wiadomości do aktywnego czatu.");
         }
-    } else {
-        console.log(`[addMessageToChat] Wiadomość nie jest dla aktywnego pokoju, nie dodawana do widoku czatu. Pokój: ${msg.room}, Obecnie aktywny pokój: ${currentRoom}`);
     }
     console.log("[addMessageToChat] KONIEC - Zakończono przetwarzanie wiadomości.");
 }
@@ -528,7 +538,6 @@ async function addMessageToChat(msg) {
  * @param {boolean} isOnline - True if the user is online, false otherwise.
  */
 function updateUserStatusIndicator(userId, isOnline) {
-    console.log(`[Status Update] Funkcja wywołana dla userId: ${userId}, isOnline: ${isOnline}`);
     onlineUsers.set(String(userId), isOnline);
 
     // Aktualizuj status w nagłówku aktywnego czatu
@@ -671,14 +680,13 @@ function initWebSocket() {
                 user: currentUser.id,
                 online: true
             }));
-            console.log(`[initWebSocket] Wysłano status 'online' dla użytkownika ${currentUser.id}`);
         }
         loadActiveUsers();
     };
 
     socket.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        console.log('[WS MESSAGE] Odebrano dane WS:', data);
+        // console.log('[WS MESSAGE] Odebrano dane WS:', data); // Zostaw ten log dla wglądu
 
         switch (data.type) {
             case 'message':
@@ -786,12 +794,12 @@ function displayActiveUsers(activeUsersData) {
             `;
             
             divMobile.addEventListener('click', async () => {
-                const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(userId));
+                const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(user.id));
                 if (userProfile) {
                     const mockConvoItem = document.createElement('li');
-                    mockConvoItem.dataset.convoId = userId;
+                    mockConvoItem.dataset.convoId = user.id;
                     mockConvoItem.dataset.email = userProfile.email;
-                    mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(userId));
+                    mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(user.id));
                     handleConversationClick(userProfile, mockConvoItem);
                 }
             });
