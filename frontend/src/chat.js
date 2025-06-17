@@ -397,6 +397,7 @@ function setupSendMessage() {
         socket.send(JSON.stringify(msgData)); // Send message via WebSocket
         
         // NOWA LOGIKA: Przenieś konwersację na górę dla wysłanych wiadomości
+        // To jest celowe, aby wysłane wiadomości również aktualizowały pozycję konwersacji
         const convoItemToMove = contactsListEl.querySelector(`.contact[data-room-id="${currentRoom}"]`);
         if (convoItemToMove && contactsListEl.firstChild !== convoItemToMove) {
             contactsListEl.prepend(convoItemToMove);
@@ -437,7 +438,7 @@ async function addMessageToChat(msg) { // Changed to async
 
     // Find the conversation item by room ID to update last-message and timestamp
     let convoItemToUpdate = contactsListEl.querySelector(`.contact[data-room-id="${msg.room}"]`);
-    console.log("[addMessageToChat] convoItemToUpdate found: " + (!!convoItemToUpdate ? "Yes" : "No") + " for room " + msg.room);
+    console.log("[addMessageToChat] convoItemToUpdate found before potential loadContacts(): " + (!!convoItemToUpdate ? "Yes" : "No") + " for room " + msg.room);
 
     // If the conversation item is not found, it means it's a new conversation or the contacts list is outdated.
     // In this case, reload all contacts to ensure the new conversation appears and the list is sorted.
@@ -446,7 +447,7 @@ async function addMessageToChat(msg) { // Changed to async
         await loadContacts(); // Re-load all contacts, this will re-render and sort them
         // After reloading, try to find the conversation item again. It should now exist.
         convoItemToUpdate = contactsListEl.querySelector(`.contact[data-room-id="${msg.room}"]`);
-        console.log("[addMessageToChat] convoItemToUpdate found after loadContacts: " + (!!convoItemToUpdate ? "Yes" : "No") + " for room " + msg.room);
+        console.log("[addMessageToChat] convoItemToUpdate found AFTER loadContacts(): " + (!!convoItemToUpdate ? "Yes" : "No") + " for room " + msg.room);
         if (!convoItemToUpdate) { // Double check in case of unexpected errors during loadContacts
             console.error(`[addMessageToChat] Conversation item for room ${msg.room} still NOT found after reloading contacts. Cannot update UI.`);
             return; // Exit if still not found
@@ -465,10 +466,11 @@ async function addMessageToChat(msg) { // Changed to async
         previewText = `${senderName}: ${msg.text}`; 
         const lastMessageTime = new Date(msg.inserted_at);
         timeText = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
-        console.log(`[addMessageToChat] Updated preview and time for room ${msg.room}. Preview: "${previewText}"`); 
+        console.log(`[addMessageToChat] Updating preview and time for convoItem (room: ${msg.room}). Preview: "${previewText}", Time: "${timeText}"`); 
         previewEl.textContent = previewText; 
+        timeEl.textContent = timeText; // Ensure time is updated
     } else {
-        console.warn(`[addMessageToChat] Could not find previewEl or timeEl for room ${msg.room}.`);
+        console.warn(`[addMessageToChat] Could not find previewEl or timeEl for room ${msg.room} on convoItem. Skipping preview/time update.`);
     }
 
     // Increment unread count ONLY if the message is for a DIFFERENT room AND it's not from the current user (sent by self)
@@ -479,12 +481,12 @@ async function addMessageToChat(msg) { // Changed to async
             if (isNaN(currentUnread)) currentUnread = 0;
             unreadCountEl.textContent = currentUnread + 1;
             unreadCountEl.classList.remove('hidden'); // Make unread count visible
-            console.log(`[addMessageToChat] Unread count for room ${msg.room} incremented to: ${unreadCountEl.textContent}`);
+            console.log(`[addMessageToChat] Unread count for room ${msg.room} incremented to: ${unreadCountEl.textContent} (because it's not the current chat and not from self).`);
         } else {
-            console.warn(`[addMessageToChat] Could not find unreadCountEl for room ${msg.room}.`);
+            console.warn(`[addMessageToChat] Could not find unreadCountEl for room ${msg.room}. Skipping unread count update.`);
         }
     } else {
-        console.log(`[addMessageToChat] Message is from current user (${String(msg.username) === String(currentUser.id)}) OR for the active room (${msg.room === currentRoom}). Ensuring unread count is hidden.`);
+        console.log(`[addMessageToChat] Message is from current user (${String(msg.username) === String(currentUser.id)}) OR for the active room (${msg.room === currentRoom}). Ensuring unread count is hidden if visible.`);
         if (unreadCountEl) {
             unreadCountEl.textContent = '0';
             unreadCountEl.classList.add('hidden');
@@ -512,16 +514,20 @@ async function addMessageToChat(msg) { // Changed to async
             console.error("[addMessageToChat] messageContainer is null when trying to add message to active chat.");
         }
     } else {
-        console.log(`[addMessageToChat] Message is not for the active room, not adding to chat view.`);
+        console.log(`[addMessageToChat] Message is not for the active room, not adding to chat view. Room: ${msg.room}, Current Active Room: ${currentRoom}`);
     }
 
     // Reorder the conversation in the contacts list to the top
     const convoItemToMove = contactsListEl.querySelector(`.contact[data-room-id="${msg.room}"]`);
-    if (convoItemToMove && contactsListEl.firstChild !== convoItemToMove) {
-        contactsListEl.prepend(convoItemToMove);
-        console.log(`[addMessageToChat][Reorder] Moved conversation for room ${msg.room} to top due to new message.`);
-    } else if (convoItemToMove) {
-        console.log(`[addMessageToChat][Reorder] Conversation for room ${msg.room} is already at the top.`);
+    if (convoItemToMove) { // Ensure the element exists before attempting to prepend
+        if (contactsListEl.firstChild !== convoItemToMove) {
+            contactsListEl.prepend(convoItemToMove);
+            console.log(`[addMessageToChat][Reorder] Moved conversation for room ${msg.room} to top due to new message.`);
+        } else {
+            console.log(`[addMessageToChat][Reorder] Conversation for room ${msg.room} is already at the top.`);
+        }
+    } else {
+        console.warn(`[addMessageToChat][Reorder] Convo item for room ${msg.room} not found for reordering. This should have been handled by loadContacts earlier.`);
     }
     console.log("[addMessageToChat] END - Finished processing message.");
 }
