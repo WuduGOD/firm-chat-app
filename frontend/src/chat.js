@@ -22,7 +22,7 @@ let onlineUsersMobile; // Kontener dla aktywnych użytkowników na mobile
 let sidebarEl; // <aside class="sidebar" id="sidebar">
 let searchInput; // <input id="sidebarSearchInput">
 let contactsListEl; // <ul class="conversations-list" id="contactsList"> - Lista konwersacji/kontaktów
-let searchBar; // Zmienna dla paska wyszukiwania (jeśli jest)
+let searchBarEl; // Zmienna dla paska wyszukiwania (jeśli jest)
 
 let chatAreaWrapper; // <div class="chat-area-wrapper">
 let logoScreen; // <div id="logoScreen">
@@ -49,7 +49,7 @@ let rightSidebar; // <div class="right-sidebar" id="rightSidebar">
 let activeUsersList; // <ul class="active-users-list" id="activeUsersList">
 let noActiveUsersText; // <div id="noActiveUsersText">
 
-let typingIndicatorMessages; // <div class="typing-indicator-messages" id="typingIndicatorMessages">
+let typingIndicator; // <div class="typing-indicator-messages" id="typingIndicatorMessages">
 
 let userId; // ID zalogowanego użytkownika (aktualnie zalogowany)
 let activeChatRecipientId = null; // ID użytkownika, z którym obecnie czatujemy (dla czatów 1-na-1)
@@ -101,7 +101,6 @@ function initializeDOMElements() {
     sidebarEl = getElement('sidebar');
     searchInput = getElement('sidebarSearchInput');
     contactsListEl = getElement('contactsList'); // Powinno być ul z listą konwersacji/kontaktów
-    searchBar = getElement('searchBar'); // Sprawdź czy to ID istnieje w HTML
 
     chatAreaWrapper = document.querySelector('.chat-area-wrapper');
     logoScreen = getElement('logoScreen');
@@ -128,7 +127,7 @@ function initializeDOMElements() {
     activeUsersList = getElement('activeUsersList');
     noActiveUsersText = getElement('noActiveUsersText');
 
-    typingIndicatorMessages = getElement('typingIndicatorMessages');
+    typingIndicator = getElement('typingIndicator');
 
     console.log("[initializeDOMElements] Zakończono inicjalizację elementów DOM.");
 }
@@ -444,11 +443,11 @@ function handleTypingStatus(senderId, isTyping) {
         if (isTyping) {
             typingStatusHeader.textContent = 'pisze...';
             // Jeśli masz animację, aktywuj ją
-            if (typingIndicatorMessages) typingIndicatorMessages.classList.remove('hidden');
+            if (typingIndicator) typingIndicator.classList.remove('hidden');
         } else {
             typingStatusHeader.textContent = '';
             // Jeśli masz animację, dezaktywuj ją
-            if (typingIndicatorMessages) typingIndicatorMessages.classList.add('hidden');
+            if (typingIndicator) typingIndicator.classList.add('hidden');
         }
     }
 }
