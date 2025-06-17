@@ -56,6 +56,7 @@ let reconnectAttempts = 0;
 let typingTimeout;
 let currentActiveConvoItem = null;
 let onlineUsers = new Map(); // userID -> boolean
+let loadContactsDebounceTimeout; // Dodana zmienna dla opóźnionego ładowania kontaktów
 
 
 /**
@@ -398,9 +399,7 @@ function setupSendMessage() {
         console.log("[setupSendMessage] Wysyłanie wiadomości przez WS:", msgData);
         socket.send(JSON.stringify(msgData));
         
-        // Przenieś konwersację na górę dla wysłanych wiadomości
-        // Używamy addMessageToChat, aby ono załadowało i posortowało całą listę
-        // Wywołujemy ją tylko dla efektu wizualnego na liście, bez dodawania do samego czatu
+        // Wywołaj addMessageToChat, aby zaktualizować widok czatu i wyzwolić debounced loadContacts
         addMessageToChat(msgData);
 
         messageInput.value = ''; // Wyczyść pole
@@ -419,7 +418,7 @@ function setupSendMessage() {
 
 /**
  * Adds a message to the chat view and updates the conversation preview in the list.
- * This function will reorder the list by calling loadContacts if necessary.
+ * This function schedules a full list reload and sort.
  * @param {Object} msg - The message object.
  */
 async function addMessageToChat(msg) {
@@ -430,65 +429,64 @@ async function addMessageToChat(msg) {
         return;
     }
 
+    // Zaplanuj pełne przeładowanie i posortowanie kontaktów po krótkim opóźnieniu.
+    // To zapewni spójność globalnego sortowania listy.
+    clearTimeout(loadContactsDebounceTimeout);
+    loadContactsDebounceTimeout = setTimeout(async () => {
+        console.log("[addMessageToChat] Debounced call to loadContacts to ensure global sort is accurate.");
+        const previousActiveConvoId = currentChatUser ? currentChatUser.id : null;
+        await loadContacts();
+        // Po załadowaniu kontaktów, ponownie aktywuj bieżący element czatu, jeśli był zaznaczony
+        if (previousActiveConvoId) {
+            const reSelectedConvoItem = contactsListEl.querySelector(`.contact[data-convo-id="${previousActiveConvoId}"]`);
+            if (reSelectedConvoItem) {
+                reSelectedConvoItem.classList.add('active');
+                currentActiveConvoItem = reSelectedConvoItem; // Zaktualizuj referencję
+                console.log(`[addMessageToChat] Ponownie aktywowano konwersację dla ID: ${previousActiveConvoId}`);
+            } else {
+                console.warn(`[addMessageToChat] Nie znaleziono poprzednio aktywnej konwersacji po przeładowaniu kontaktów (ID: ${previousActiveConvoId}).`);
+            }
+        }
+    }, 200); // Debounce na 200ms
+
+    // Obsłuż licznik nieprzeczytanych wiadomości natychmiast
+    // (Ponieważ loadContacts jest opóźnione, ten update musi być natychmiastowy)
     let convoItemToUpdate = contactsListEl.querySelector(`.contact[data-room-id="${msg.room}"]`);
+    if (convoItemToUpdate) {
+        const previewEl = convoItemToUpdate.querySelector('.last-message');
+        const timeEl = convoItemToUpdate.querySelector('.message-time');
+        const unreadCountEl = convoItemToUpdate.querySelector('.unread-count');
 
-    // Jeśli element konwersacji nie istnieje, załaduj ponownie kontakty
-    // To obsłuży zarówno nowe konwersacje, jak i zdesynchronizowaną listę
-    if (!convoItemToUpdate) {
-        console.warn(`[addMessageToChat] Element konwersacji dla pokoju ${msg.room} nie znaleziony. Przeładowuję kontakty...`);
-        await loadContacts(); // Przeładuj kontakty, co powinno dodać nowy element i posortować listę
-        convoItemToUpdate = contactsListEl.querySelector(`.contact[data-room-id="${msg.room}"]`); // Spróbuj znaleźć ponownie
-        if (!convoItemToUpdate) {
-            console.error(`[addMessageToChat] BŁĄD: Element konwersacji dla pokoju ${msg.room} nadal nie znaleziony po przeładowaniu. Nie można zaktualizować UI.`);
-            return;
+        const senderId = String(msg.username);
+        const senderName = senderId === String(currentUser.id) ? "Ja" : (getUserLabelById(senderId) || senderId);
+        const previewText = `${senderName}: ${msg.text}`;
+        const lastMessageTime = new Date(msg.inserted_at);
+        const timeText = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+
+        if (previewEl && timeEl) {
+            previewEl.textContent = previewText;
+            timeEl.textContent = timeText;
+            console.log(`[addMessageToChat] Natychmiast zaktualizowano podgląd i czas dla pokoju ${msg.room}.`);
         }
-        console.log(`[addMessageToChat] Element konwersacji dla pokoju ${msg.room} znaleziony po przeładowaniu kontaktów.`);
-    }
 
-    const senderId = String(msg.username);
-    const senderName = senderId === String(currentUser.id) ? "Ja" : (getUserLabelById(senderId) || senderId);
-    const previewText = `${senderName}: ${msg.text}`;
-    const lastMessageTime = new Date(msg.inserted_at);
-    const timeText = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
-
-    // Aktualizuj zawartość elementu konwersacji
-    const previewEl = convoItemToUpdate.querySelector('.last-message');
-    const timeEl = convoItemToUpdate.querySelector('.message-time');
-    if (previewEl && timeEl) {
-        previewEl.textContent = previewText;
-        timeEl.textContent = timeText;
-        console.log(`[addMessageToChat] Zaktualizowano podgląd i czas dla pokoju ${msg.room}. Podgląd: "${previewText}", Czas: "${timeText}"`);
-    }
-
-    // Obsłuż licznik nieprzeczytanych wiadomości
-    const unreadCountEl = convoItemToUpdate.querySelector('.unread-count');
-    // Inkrementuj licznik tylko jeśli wiadomość NIE jest od obecnego użytkownika i NIE jest dla aktywnego czatu
-    if (String(msg.username) !== String(currentUser.id) && msg.room !== currentRoom) {
-        if (unreadCountEl) {
-            let currentUnread = parseInt(unreadCountEl.textContent, 10);
-            if (isNaN(currentUnread)) currentUnread = 0;
-            unreadCountEl.textContent = currentUnread + 1;
-            unreadCountEl.classList.remove('hidden');
-            console.log(`[addMessageToChat] Licznik nieprzeczytanych dla pokoju ${msg.room} inkrementowany do: ${unreadCountEl.textContent}`);
+        if (String(msg.username) !== String(currentUser.id) && msg.room !== currentRoom) {
+            if (unreadCountEl) {
+                let currentUnread = parseInt(unreadCountEl.textContent, 10);
+                if (isNaN(currentUnread)) currentUnread = 0;
+                unreadCountEl.textContent = currentUnread + 1;
+                unreadCountEl.classList.remove('hidden');
+                console.log(`[addMessageToChat] Licznik nieprzeczytanych dla pokoju ${msg.room} inkrementowany do: ${unreadCountEl.textContent}`);
+            }
+        } else {
+            if (unreadCountEl) {
+                unreadCountEl.textContent = '0';
+                unreadCountEl.classList.add('hidden');
+            }
         }
     } else {
-        // Jeśli wiadomość jest od obecnego użytkownika LUB dla aktywnego czatu, upewnij się, że licznik jest ukryty
-        if (unreadCountEl) {
-            unreadCountEl.textContent = '0';
-            unreadCountEl.classList.add('hidden');
-            console.log(`[addMessageToChat] Wiadomość od bieżącego użytkownika lub dla aktywnego czatu. Ukrywam licznik nieprzeczytanych.`);
-        }
+        console.warn(`[addMessageToChat] Nie znaleziono convoItemToUpdate dla pokoju ${msg.room} do natychmiastowej aktualizacji preview/unread count. loadContacts to naprawi.`);
     }
 
-    // Przenieś konwersację na początek listy, jeśli jeszcze tam nie jest
-    // To jest dodatkowa optymalizacja, ale `loadContacts` już sortuje całą listę.
-    // Zachowujemy to dla natychmiastowego efektu wizualnego.
-    if (contactsListEl.firstChild !== convoItemToUpdate) {
-        contactsListEl.prepend(convoItemToUpdate);
-        console.log(`[addMessageToChat][Reorder] Przeniesiono konwersację dla pokoju ${msg.room} na początek.`);
-    } else {
-        console.log(`[addMessageToChat][Reorder] Konwersacja dla pokoju ${msg.room} jest już na początku.`);
-    }
 
     // Wyświetl wiadomość w aktywnym czacie tylko, jeśli należy do bieżącego pokoju
     if (msg.room === currentRoom) {
@@ -610,9 +608,9 @@ function updateUserStatusIndicator(userId, isOnline) {
                     const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(userId));
                     if (userProfile) {
                         const mockConvoItem = document.createElement('li');
-                        mockConvoItem.dataset.convoId = userId;
+                        mockConvoItem.dataset.convoId = user.id; // Corrected to user.id
                         mockConvoItem.dataset.email = userProfile.email;
-                        mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(userId));
+                        mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(user.id)); // Corrected to user.id
                         handleConversationClick(userProfile, mockConvoItem);
                     }
                 });
@@ -819,11 +817,10 @@ function displayActiveUsers(activeUsersData) {
             divMobile.addEventListener('click', async () => {
                 const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(user.id));
                 if (userProfile) {
-                    // Stwórz mockowy element clickedConvoItemElement
                     const mockConvoItem = document.createElement('li');
-                    mockConvoItem.dataset.convoId = user.id; // Corrected to user.id
+                    mockConvoItem.dataset.convoId = user.id;
                     mockConvoItem.dataset.email = userProfile.email;
-                    mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(user.id)); // Corrected to user.id
+                    mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(user.id));
                     handleConversationClick(userProfile, mockConvoItem);
                 }
             });
@@ -908,9 +905,6 @@ function setupChatSettingsDropdown() {
                     }
 
                     console.log('Ustawiono nowy nick:', newNickname, 'dla użytkownika:', currentUser.id);
-                    // Zastąp alert modalem w prawdziwej aplikacji
-                    // alert(`Nick '${newNickname}' został pomyślnie ustawiony.`);
-                    // Lepsze byłoby wyświetlenie komunikatu w UI, np. w divie na krótki czas.
                     showTemporaryMessage(`Nick '${newNickname}' został pomyślnie ustawiony.`);
                     await loadAllProfiles(); // Przeładuj profile, aby zaktualizować pamięć podręczną
                     // Zaktualizuj nagłówek czatu, jeśli jest to czat bieżącego użytkownika
@@ -921,11 +915,9 @@ function setupChatSettingsDropdown() {
 
                 } catch (error) {
                     console.error('Błąd aktualizacji nicku:', error.message);
-                    // alert(`Błąd ustawiania nicku: ${error.message}`);
                     showTemporaryMessage(`Błąd ustawiania nicku: ${error.message}`, true);
                 }
             } else if (!currentUser) {
-                // alert("Błąd: Nie jesteś zalogowany, aby ustawić nick.");
                 showTemporaryMessage("Błąd: Nie jesteś zalogowany, aby ustawić nick.", true);
             }
         });
@@ -938,7 +930,6 @@ function setupChatSettingsDropdown() {
         searchMessagesButton.addEventListener('click', () => {
             const searchTerm = messageSearchInput.value.trim();
             console.log('Wyszukiwanie wiadomości dla:', searchTerm, '(funkcjonalność do zaimplementowania)');
-            // alert(`Wyszukiwanie wiadomości dla '${searchTerm}' (funkcjonalność do zaimplementowania).`);
             showTemporaryMessage(`Wyszukiwanie wiadomości dla '${searchTerm}' (funkcjonalność do zaimplementowania).`);
         });
     }
