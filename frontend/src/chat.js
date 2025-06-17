@@ -1,5 +1,4 @@
-// Importy zależności - dopasowane do ścieżek z Twojego działającego HTML
-// Zakładając, że wszystkie pliki JS są w /src/
+// Importy zależności
 import { loadAllProfiles, getUserLabelById } from './profiles.js';
 import { supabase } from './supabaseClient.js';
 
@@ -147,18 +146,25 @@ function getRoomName(user1Id, user2Id) {
  * @returns {Promise<Object|null>} The last message object or null if no messages.
  */
 async function getLastMessageForRoom(roomId) {
+    // Zaktualizowane kolumny i filtr zgodnie ze schematem bazy danych
     const { data, error } = await supabase
         .from('messages')
-        .select('text, username, inserted_at')
-        .eq('room', roomId)
-        .order('inserted_at', { ascending: false })
+        .select('content, sender_id, created_at') // Używamy content, sender_id, created_at
+        .eq('room_id', roomId) // Używamy room_id do filtrowania pokoju
+        .order('created_at', { ascending: false }) // Używamy created_at do sortowania
         .limit(1);
 
     if (error) {
         console.error('Error fetching last message:', error);
         return null;
     }
-    return data && data.length > 0 ? data[0] : null;
+    // Zwracamy obiekt wiadomości, zmieniając nazwy kluczy na oczekiwane przez frontend, jeśli to konieczne
+    // W przeciwnym razie, cały kod wyświetlający wiadomości musi być dostosowany do 'content', 'sender_id', 'created_at'
+    return data && data.length > 0 ? {
+        text: data[0].content, // Mapowanie content na text
+        username: data[0].sender_id, // Mapowanie sender_id na username
+        inserted_at: data[0].created_at // Mapowanie created_at na inserted_at
+    } : null;
 }
 
 /**
@@ -168,6 +174,7 @@ async function getLastMessageForRoom(roomId) {
  */
 function sortConversations(conversations) {
     return [...conversations].sort((a, b) => {
+        // Zaktualizowane, aby używać 'inserted_at' zgodnie z mapowaniem w getLastMessageForRoom
         const timeA = a.lastMessage ? new Date(a.lastMessage.inserted_at) : new Date(0);
         const timeB = b.lastMessage ? new Date(b.lastMessage.inserted_at) : new Date(0);
         return timeB.getTime() - timeA.getTime();
@@ -220,6 +227,7 @@ async function loadContacts() {
         let timeText = "";
 
         if (lastMessage) {
+            // Używamy lastMessage.username, które zostało zmapowane z sender_id
             const senderName = String(lastMessage.username) === String(currentUser.id) ? "Ja" : (getUserLabelById(lastMessage.username) || lastMessage.username);
             previewText = `${senderName}: ${lastMessage.text}`;
 
@@ -386,8 +394,8 @@ function setupSendMessage() {
 
         const msgData = {
             type: 'message',
-            username: currentUser.id,
-            text,
+            username: currentUser.id, // Używamy currentUser.id jako nadawcy
+            text: text, // Używamy text dla treści wiadomości
             room: currentRoom, // Używamy currentRoom (konkretny pokój czatu)
             inserted_at: new Date().toISOString() // Add timestamp
         };
@@ -450,11 +458,11 @@ async function addMessageToChat(msg) { // Changed to async
     let previewText = "Brak wiadomości"; 
 
     if (previewEl && timeEl) {
-        const senderId = String(msg.username);
+        const senderId = String(msg.username); // msg.username to teraz sender_id
         const senderName = senderId === String(currentUser.id) ? "Ja" : (getUserLabelById(senderId) || senderId);
-        previewText = `${senderName}: ${msg.text}`; 
-        const lastMessageTime = new Date(msg.inserted_at);
-        timeEl.textContent = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+        previewText = `${senderName}: ${msg.text}`; // msg.text to teraz content
+        const lastMessageTime = new Date(msg.inserted_at); // msg.inserted_at to teraz created_at
+        timeText = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
         console.log(`Updated preview and time for room ${msg.room}. Preview: "${previewText}"`); 
         previewEl.textContent = previewText; 
     } else {
@@ -496,7 +504,7 @@ async function addMessageToChat(msg) { // Changed to async
         const div = document.createElement('div');
         div.classList.add('message', String(msg.username) === String(currentUser.id) ? 'sent' : 'received');
 
-        const timestamp = new Date(msg.inserted_at || Date.now());
+        const timestamp = new Date(msg.inserted_at || Date.now()); // msg.inserted_at to teraz created_at
         const timeString = timestamp.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
 
         div.innerHTML = `
@@ -608,7 +616,7 @@ function updateUserStatusIndicator(userId, isOnline) {
                 
                 // Add click listener for mobile item
                 div.addEventListener('click', async () => {
-                    const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(userId));
+                    const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(user.id));
                     if (userProfile) {
                         // Stwórz mockowy element clickedConvoItemElement
                         const mockConvoItem = document.createElement('li');
@@ -707,10 +715,10 @@ function initWebSocket() {
         switch (data.type) {
             case 'message':
                 addMessageToChat({
-                    username: data.username,
-                    text: data.text,
-                    inserted_at: data.inserted_at,
-                    room: data.room, // Ważne: używamy data.room
+                    username: data.username, // to jest sender_id z bazy danych
+                    text: data.text, // to jest content z bazy danych
+                    inserted_at: data.inserted_at, // to jest created_at z bazy danych
+                    room: data.room, // to jest room_id z bazy danych
                 });
                 // NOWA LOGIKA: Przenieś konwersację na górę tylko dla nowych wiadomości
                 const convoItemToMove = contactsListEl.querySelector(`.contact[data-room-id="${data.room}"]`);
@@ -726,7 +734,14 @@ function initWebSocket() {
                 console.log("Loading message history. History room:", data.room, "Current room:", currentRoom);
                 if (messageContainer) {
                     messageContainer.innerHTML = ''; // Clear current messages
-                    data.messages.forEach((msg) => addMessageToChat(msg)); // Add historical messages
+                    // Mapowanie danych historii, aby były zgodne z oczekiwaniami addMessageToChat
+                    const mappedMessages = data.messages.map(msg => ({
+                        username: msg.username, // sender_id
+                        text: msg.text, // content
+                        inserted_at: msg.inserted_at, // created_at
+                        room: data.room // room_id
+                    }));
+                    mappedMessages.forEach((msg) => addMessageToChat(msg)); // Add historical messages
                 }
                 break;
             case 'status':
@@ -835,9 +850,9 @@ function displayActiveUsers(activeUsersData) {
                 if (userProfile) {
                     // Stwórz mockowy element clickedConvoItemElement
                     const mockConvoItem = document.createElement('li');
-                    mockConvoItem.dataset.convoId = userId;
+                    mockConvoItem.dataset.convoId = user.id; // Corrected: use user.id
                     mockConvoItem.dataset.email = userProfile.email;
-                    mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(userId));
+                    mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(user.id)); // Corrected: use user.id
                     handleConversationClick(userProfile, mockConvoItem);
                 }
             });
