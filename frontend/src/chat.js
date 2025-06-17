@@ -60,57 +60,57 @@ function generateRoomId(userId1, userId2) {
 }
 
 // Funkcja pomocnicza do pobierania elementów DOM
-function getElement(id, isQuerySelector = false) {
-    const element = isQuerySelector ? document.querySelector(id) : document.getElementById(id);
+function getElement(idOrSelector, isQuerySelector = false) {
+    const element = isQuerySelector ? document.querySelector(idOrSelector) : document.getElementById(idOrSelector);
     if (!element) {
-        console.warn(`Element with ${isQuerySelector ? 'selector' : 'ID'} "${id}" not found.`);
+        console.warn(`Element with ${isQuerySelector ? 'selector' : 'ID'} "${idOrSelector}" not found.`);
     }
     return element;
 }
 
 // Inicjalizacja elementów DOM
 function initializeDOMElements() {
-    mainHeader = getElement('mainHeader', true);
+    mainHeader = getElement('.main-header', true); // Użycie selektora klasowego
     menuButton = getElement('menuButton');
     dropdownMenu = getElement('dropdownMenu');
     themeToggle = getElement('themeToggle');
     logoutButton = getElement('logoutButton');
 
-    container = getElement('container', true);
-    sidebarWrapper = getElement('sidebarWrapper', true);
-    mainNavIcons = getElement('mainNavIcons', true);
+    container = getElement('.container', true); // Użycie selektora klasowego
+    sidebarWrapper = getElement('.sidebar-wrapper', true); // Użycie selektora klasowego
+    mainNavIcons = getElement('.main-nav-icons', true); // Użycie selektora klasowego
     navIcons = document.querySelectorAll('.nav-icon');
 
-    onlineUsersMobile = getElement('onlineUsersMobile', true);
+    // onlineUsersMobile: Zostawiamy pobieranie przez ID.
+    // Musisz DODAĆ TEN ELEMENT DO HTML, jeśli go tam nie ma, aby uniknąć błędu.
+    onlineUsersMobile = getElement('onlineUsersMobile');
 
-    sidebarEl = getElement('sidebar'); // Zakładamy, że to jest główny kontener listy konwersacji
+    sidebarEl = getElement('sidebar');
     searchInput = getElement('sidebarSearchInput');
-    contactsListEl = getElement('contactsList'); // Może być tym samym co sidebarEl, jeśli lista jest bezpośrednio w nim
+    contactsListEl = getElement('contactsList');
 
-    chatAreaWrapper = getElement('chatAreaWrapper', true);
+    chatAreaWrapper = getElement('.chat-area-wrapper', true); // Użycie selektora klasowego
     logoScreen = getElement('logoScreen');
     chatArea = getElement('chatArea');
 
-    // Elementy wewnątrz chatArea, które są dynamicznie aktualizowane
-    // Użyto querySelector, ponieważ te elementy mogą nie mieć unikalnych ID, a są wewnątrz chatArea
-    chatHeader = getElement('.chat-header', true);
+    chatHeader = getElement('.chat-header', true); // Użycie selektora klasowego
     backButton = getElement('backButton');
-    chatUserAvatar = getElement('chatUserAvatar');
+    chatUserAvatar = getElement('chatUserAvatar'); // Poprawne, jeśli masz ID "chatUserAvatar" w HTML
     chatUserName = getElement('chatUserName');
     userStatusSpan = getElement('userStatus');
-    chatHeaderActions = getElement('.chat-header-actions', true);
+    chatHeaderActions = getElement('.chat-header-actions', true); // Użycie selektora klasowego
     chatSettingsButton = getElement('chatSettingsButton');
     chatSettingsDropdown = getElement('chatSettingsDropdown');
     typingStatusHeader = getElement('typingStatus');
     typingIndicatorMessages = getElement('typingIndicator');
 
-    chatMessages = getElement('chatMessages');
+    chatMessages = getElement('.chat-messages', true); // Użycie selektora klasowego
     messageInput = getElement('messageInput');
     sendButton = getElement('sendButton');
-    emojiButton = getElement('.emoji-button', true);
-    attachButton = getElement('.attach-button', true);
+    emojiButton = getElement('.emoji-button', true); // Użycie selektora klasowego
+    attachButton = getElement('.attach-button', true); // Użycie selektora klasowego
 
-    rightSidebarWrapper = getElement('.right-sidebar-wrapper', true);
+    rightSidebarWrapper = getElement('.right-sidebar-wrapper', true); // Użycie selektora klasowego
     rightSidebar = getElement('rightSidebar');
     activeUsersList = getElement('activeUsersList');
     noActiveUsersText = getElement('noActiveUsersText');
@@ -218,7 +218,7 @@ async function updateConversationPreview(participantId, lastMessage, timestamp) 
     }
 
     const timeString = new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const isOnline = activeUsersList.querySelector(`li[data-user-id="${participantId}"]`) ? true : false;
+    const isOnline = activeUsersList && activeUsersList.querySelector(`li[data-user-id="${participantId}"]`) ? true : false;
 
     if (!conversationItem) {
         // Jeśli element konwersacji nie istnieje, stwórz go
@@ -292,6 +292,7 @@ async function displayChatArea(recipientId, recipientName, isOnline) {
         if (chatAreaWrapper) chatAreaWrapper.classList.add('active-on-mobile');
         if (backButton) backButton.style.display = 'block';
         if (rightSidebarWrapper) rightSidebarWrapper.style.display = 'none';
+        if (onlineUsersMobile) onlineUsersMobile.classList.add('hidden'); // Ukryj mobilną listę aktywnych użytkowników, gdy czat jest otwarty
     }
     console.log(`Aktywny czat z użytkownikiem: ${recipientName} (ID: ${recipientId})`);
 }
@@ -449,6 +450,7 @@ function handleMediaQueryChange(mq) {
             if (chatAreaWrapper) chatAreaWrapper.classList.add('active-on-mobile');
             if (backButton) backButton.style.display = 'block'; // Pokaż przycisk wstecz w czacie
             if (rightSidebarWrapper) rightSidebarWrapper.style.display = 'none';
+            if (onlineUsersMobile) onlineUsersMobile.classList.add('hidden'); // Ukryj mobilną listę aktywnych użytkowników
         } else {
             // Jeśli nie ma aktywnego czatu, pokaż sidebar, ukryj chatArea
             if (sidebarWrapper) sidebarWrapper.classList.remove('hidden-on-mobile');
@@ -456,6 +458,7 @@ function handleMediaQueryChange(mq) {
             if (chatArea) chatArea.classList.remove('active');
             if (logoScreen) logoScreen.classList.remove('hidden'); // Pokaż ekran logo
             if (backButton) backButton.style.display = 'none';
+            if (onlineUsersMobile) onlineUsersMobile.classList.remove('hidden'); // Pokaż mobilną listę aktywnych użytkowników
         }
 
     } else {
@@ -481,6 +484,7 @@ function handleMediaQueryChange(mq) {
         if (backButton) {
             backButton.style.display = 'none'; // Przycisk wstecz niepotrzebny na desktopie
         }
+        if (onlineUsersMobile) onlineUsersMobile.classList.add('hidden'); // Ukryj mobilną listę aktywnych użytkowników na desktopie
     }
 }
 
@@ -568,7 +572,7 @@ async function loadConversations() {
             const timeString = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
             // Sprawdź, czy użytkownik jest online na podstawie listy aktywnych użytkowników
-            const isOnline = activeUsersList.querySelector(`li[data-user-id="${convo.userId}"]`) ? true : false;
+            const isOnline = activeUsersList && activeUsersList.querySelector(`li[data-user-id="${convo.userId}"]`) ? true : false;
 
             conversationItem.innerHTML = `
                 <div class="user-avatar"></div>
@@ -607,7 +611,8 @@ async function initializeApp() {
     // Połącz się z serwerem WebSocket
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     // WAŻNE: Jeśli backend jest na osobnym adresie (np. Render.com), odkomentuj i użyj tego adresu:
-    const wsUrl = 'wss://firm-chat-app-backend.onrender.com'; // Przykładowy adres Render.com
+    // const wsUrl = 'wss://firm-chat-app-backend.onrender.com'; // Przykładowy adres Render.com
+    const wsUrl = `${wsProtocol}//${window.location.hostname}:8080`; // Domyślny url (dla tego samego hosta)
 
     socket = new WebSocket(wsUrl);
 
@@ -660,7 +665,7 @@ async function initializeApp() {
             }
 
             // Zaktualizuj listę aktywnych użytkowników (prawy sidebar)
-            const activeUserListItem = activeUsersList.querySelector(`li[data-user-id="${updatedUserId}"]`);
+            const activeUserListItem = activeUsersList && activeUsersList.querySelector(`li[data-user-id="${updatedUserId}"]`);
             const userLabel = await getUserLabelById(updatedUserId);
             if (isOnline) {
                 if (!activeUserListItem && userLabel) {
@@ -668,7 +673,7 @@ async function initializeApp() {
                     li.dataset.userId = updatedUserId;
                     li.innerHTML = `<span>${userLabel}</span> <span class="status online"></span>`;
                     li.addEventListener('click', () => displayChatArea(updatedUserId, userLabel, true)); // Możliwość otwarcia czatu
-                    activeUsersList.appendChild(li);
+                    if (activeUsersList) activeUsersList.appendChild(li);
                 }
             } else {
                 if (activeUserListItem) {
@@ -677,13 +682,13 @@ async function initializeApp() {
             }
             // Pokaż/ukryj "Brak aktywnych użytkowników"
             if (noActiveUsersText) {
-                noActiveUsersText.style.display = activeUsersList.children.length > 0 ? 'none' : 'block';
+                noActiveUsersText.style.display = activeUsersList && activeUsersList.children.length > 0 ? 'none' : 'block';
             }
 
         } else if (type === 'initialOnlineUsers') {
             const { users } = data;
             console.log('Otrzymano początkową listę aktywnych użytkowników:', users);
-            activeUsersList.innerHTML = ''; // Wyczyść obecną listę
+            if (activeUsersList) activeUsersList.innerHTML = ''; // Wyczyść obecną listę
             if (noActiveUsersText) noActiveUsersText.style.display = 'block';
 
             for (const onlineUserId of users) {
@@ -694,11 +699,11 @@ async function initializeApp() {
                     li.dataset.userId = onlineUserId;
                     li.innerHTML = `<span>${userLabel}</span> <span class="status online"></span>`;
                     li.addEventListener('click', () => displayChatArea(onlineUserId, userLabel, true));
-                    activeUsersList.appendChild(li);
+                    if (activeUsersList) activeUsersList.appendChild(li);
                 }
             }
             if (noActiveUsersText) {
-                noActiveUsersText.style.display = activeUsersList.children.length > 0 ? 'none' : 'block';
+                noActiveUsersText.style.display = activeUsersList && activeUsersList.children.length > 0 ? 'none' : 'block';
             }
 
             // Zaktualizuj statusy online/offline w liście konwersacji
@@ -759,6 +764,7 @@ async function initializeApp() {
             if (window.matchMedia('(min-width: 769px)').matches && rightSidebarWrapper) {
                 rightSidebarWrapper.style.display = 'flex';
             }
+            if (onlineUsersMobile) onlineUsersMobile.classList.remove('hidden'); // Pokaż mobilną listę aktywnych użytkowników
         });
     }
 
@@ -781,17 +787,6 @@ async function initializeApp() {
 
 // Uruchomienie aplikacji po załadowaniu DOM
 document.addEventListener('DOMContentLoaded', () => {
-    // Inicjalizacja elementu sidebarEl (lista konwersacji) po załadowaniu DOM
-    sidebarEl = getElement('sidebar'); // sidebarEl jest również używany w loadConversations
-    if (!sidebarEl) {
-        console.error("Element z ID 'sidebar' (kontener listy konwersacji) nie znaleziony. Sprawdź chat.html.");
-        return; // Zatrzymaj inicjalizację, jeśli kluczowy element nie istnieje
-    }
-
-    // Dodatkowa inicjalizacja elementu activeUsersList (dla prawego sidebara), jeśli potrzebna jest wcześniejsza dostępność
-    activeUsersList = getElement('activeUsersList');
-    noActiveUsersText = getElement('noActiveUsersText');
-
     applySavedTheme(); // Zastosuj zapisany motyw przed inicjalizacją app
     initializeApp();
 });
