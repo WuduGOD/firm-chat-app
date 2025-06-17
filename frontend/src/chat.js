@@ -611,8 +611,7 @@ async function initializeApp() {
     // Połącz się z serwerem WebSocket
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     // WAŻNE: Jeśli backend jest na osobnym adresie (np. Render.com), odkomentuj i użyj tego adresu:
-    // const wsUrl = 'wss://firm-chat-app-backend.onrender.com'; // Przykładowy adres Render.com
-    const wsUrl = `${wsProtocol}//${window.location.hostname}:8080`; // Domyślny url (dla tego samego hosta)
+    const wsUrl = 'wss://firm-chat-app-backend.onrender.com'; // Przykładowy adres Render.com
 
     socket = new WebSocket(wsUrl);
 
