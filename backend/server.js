@@ -11,7 +11,7 @@ const cookie = require('cookie');
 const path = require('path');
 
 const app = express();
-const server = http.createServer(app);
+const server = http.createServer(app); // Tworzymy serwer HTTP
 
 const PORT = process.env.PORT || 10000;
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -178,3 +178,7 @@ wss.on('connection', function connection(ws, req) {
 server.listen(PORT, () => {
     console.log(`Serwer HTTP i WebSocket nasłuchują na porcie ${PORT}`);
 });
+
+// Eksportujemy instancje serwera i wss, aby `index.js` mógł je zaimportować,
+// jeśli `index.js` jest głównym punktem wejścia i potrzebuje tych referencji.
+module.exports = { wss, server };
