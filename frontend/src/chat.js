@@ -1,6 +1,7 @@
-// Importy zależności
+// Importy zależności - dopasowane do ścieżek z Twojego działającego HTML
+// Zakładając, że wszystkie pliki JS są w /src/
 import { loadAllProfiles, getUserLabelById } from './profiles.js';
-import { supabase } from './supabaseClient.js';
+import { supabase } = './supabaseClient.js';
 
 // Globalne zmienne UI i czatu - zadeklarowane na początku, aby były dostępne wszędzie
 let mainHeader;
@@ -142,29 +143,36 @@ function getRoomName(user1Id, user2Id) {
 
 /**
  * Asynchronously fetches the last message for a given chat room from Supabase.
+ * Uses database column names: content, sender_id, created_at, room_id.
+ * Maps them to: text, username, inserted_at, room for frontend consistency.
  * @param {string} roomId - ID of the chat room.
- * @returns {Promise<Object|null>} The last message object or null if no messages.
+ * @returns {Promise<Object|null>} The last message object (mapped) or null if no messages.
  */
 async function getLastMessageForRoom(roomId) {
-    // Zaktualizowane kolumny i filtr zgodnie ze schematem bazy danych
     const { data, error } = await supabase
         .from('messages')
-        .select('content, sender_id, created_at') // Używamy content, sender_id, created_at
-        .eq('room_id', roomId) // Używamy room_id do filtrowania pokoju
-        .order('created_at', { ascending: false }) // Używamy created_at do sortowania
+        .select('content, sender_id, created_at, room_id') // Select actual DB column names
+        .eq('room_id', roomId) // Query using DB column name
+        .order('created_at', { ascending: false }) // Order using DB column name
         .limit(1);
 
     if (error) {
         console.error('Error fetching last message:', error);
         return null;
     }
-    // Zwracamy obiekt wiadomości, zmieniając nazwy kluczy na oczekiwane przez frontend, jeśli to konieczne
-    // W przeciwnym razie, cały kod wyświetlający wiadomości musi być dostosowany do 'content', 'sender_id', 'created_at'
-    return data && data.length > 0 ? {
-        text: data[0].content, // Mapowanie content na text
-        username: data[0].sender_id, // Mapowanie sender_id na username
-        inserted_at: data[0].created_at // Mapowanie created_at na inserted_at
-    } : null;
+    
+    if (data && data.length > 0) {
+        const msg = data[0];
+        console.log(`[getLastMessageForRoom] Raw DB message for room ${roomId}:`, msg);
+        // Map DB column names to frontend expected names
+        return {
+            text: msg.content,
+            username: msg.sender_id,
+            inserted_at: msg.created_at,
+            room: msg.room_id
+        };
+    }
+    return null;
 }
 
 /**
@@ -174,7 +182,6 @@ async function getLastMessageForRoom(roomId) {
  */
 function sortConversations(conversations) {
     return [...conversations].sort((a, b) => {
-        // Zaktualizowane, aby używać 'inserted_at' zgodnie z mapowaniem w getLastMessageForRoom
         const timeA = a.lastMessage ? new Date(a.lastMessage.inserted_at) : new Date(0);
         const timeB = b.lastMessage ? new Date(b.lastMessage.inserted_at) : new Date(0);
         return timeB.getTime() - timeA.getTime();
@@ -209,6 +216,7 @@ async function loadContacts() {
     const contactsWithLastMessage = await Promise.all(users.map(async user => {
         const roomId = getRoomName(String(currentUser.id), String(user.id));
         const lastMessage = await getLastMessageForRoom(roomId);
+        console.log(`[loadContacts] Last message for room ${roomId}:`, lastMessage); // Added log
         return { user, lastMessage, roomId };
     }));
 
@@ -227,18 +235,23 @@ async function loadContacts() {
         let timeText = "";
 
         if (lastMessage) {
-            // Używamy lastMessage.username, które zostało zmapowane z sender_id
             const senderName = String(lastMessage.username) === String(currentUser.id) ? "Ja" : (getUserLabelById(lastMessage.username) || lastMessage.username);
             previewText = `${senderName}: ${lastMessage.text}`;
 
             const lastMessageTime = new Date(lastMessage.inserted_at);
-            timeText = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+            // Ensure lastMessageTime is a valid date before formatting
+            if (isNaN(lastMessageTime.getTime())) {
+                console.warn(`Invalid Date for room ${roomId}. Raw inserted_at: ${lastMessage.inserted_at}`);
+                timeText = "Invalid Date"; 
+            } else {
+                timeText = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+            }
         }
 
         convoItem.innerHTML = `
             <img src="${avatarSrc}" alt="Avatar" class="avatar">
             <div class="contact-info">
-                <span class="contact-name">${getUserLabelById(user.id) || user.email}</span>
+                <span class="contact-name">${getUserLabelById(user.id) || user.email || 'Nieznany'}</span>
                 <span class="last-message">${previewText}</span>
             </div>
             <div class="contact-meta">
@@ -394,8 +407,8 @@ function setupSendMessage() {
 
         const msgData = {
             type: 'message',
-            username: currentUser.id, // Używamy currentUser.id jako nadawcy
-            text: text, // Używamy text dla treści wiadomości
+            username: currentUser.id,
+            text,
             room: currentRoom, // Używamy currentRoom (konkretny pokój czatu)
             inserted_at: new Date().toISOString() // Add timestamp
         };
@@ -456,17 +469,21 @@ async function addMessageToChat(msg) { // Changed to async
     const unreadCountEl = convoItemToUpdate.querySelector('.unread-count'); // Get reference here once
 
     let previewText = "Brak wiadomości"; 
-	let timeText = "";
 
     if (previewEl && timeEl) {
-        const senderId = String(msg.username); // msg.username to teraz sender_id
+        const senderId = String(msg.username);
         const senderName = senderId === String(currentUser.id) ? "Ja" : (getUserLabelById(senderId) || senderId);
-        previewText = `${senderName}: ${msg.text}`; // msg.text to teraz content
-        const lastMessageTime = new Date(msg.inserted_at); // msg.inserted_at to teraz created_at
-        timeText = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+        previewText = `${senderName}: ${msg.text}`; 
+        const lastMessageTime = new Date(msg.inserted_at);
+        // Ensure lastMessageTime is a valid date before formatting
+        if (isNaN(lastMessageTime.getTime())) {
+            console.warn(`Invalid Date found in addMessageToChat. Raw inserted_at: ${msg.inserted_at}`);
+            timeEl.textContent = "Invalid Date"; // Set a fallback text
+        } else {
+            timeEl.textContent = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+        }
         console.log(`Updated preview and time for room ${msg.room}. Preview: "${previewText}"`); 
         previewEl.textContent = previewText; 
-		timeEl.textContent = timeText;
     } else {
         console.warn(`Could not find previewEl or timeEl for room ${msg.room}.`);
     }
@@ -506,12 +523,12 @@ async function addMessageToChat(msg) { // Changed to async
         const div = document.createElement('div');
         div.classList.add('message', String(msg.username) === String(currentUser.id) ? 'sent' : 'received');
 
-        const timestamp = new Date(msg.inserted_at || Date.now()); // msg.inserted_at to teraz created_at
-        const messageTimeString = timestamp.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" }); // Użyj innej nazwy zmiennej
+        const timestamp = new Date(msg.inserted_at || Date.now());
+        const timeString = timestamp.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
 
         div.innerHTML = `
             <p>${msg.text}</p>
-            <span class="timestamp">${messageTimeString}</span>
+            <span class="timestamp">${timeString}</span>
         `;
         if (messageContainer) {
             messageContainer.appendChild(div);
@@ -618,7 +635,7 @@ function updateUserStatusIndicator(userId, isOnline) {
                 
                 // Add click listener for mobile item
                 div.addEventListener('click', async () => {
-                    const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(user.id));
+                    const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(userId));
                     if (userProfile) {
                         // Stwórz mockowy element clickedConvoItemElement
                         const mockConvoItem = document.createElement('li');
@@ -717,10 +734,10 @@ function initWebSocket() {
         switch (data.type) {
             case 'message':
                 addMessageToChat({
-                    username: data.username, // to jest sender_id z bazy danych
-                    text: data.text, // to jest content z bazy danych
-                    inserted_at: data.inserted_at, // to jest created_at z bazy danych
-                    room: data.room, // to jest room_id z bazy danych
+                    username: data.username,
+                    text: data.text,
+                    inserted_at: data.inserted_at,
+                    room: data.room, // Ważne: używamy data.room
                 });
                 // NOWA LOGIKA: Przenieś konwersację na górę tylko dla nowych wiadomości
                 const convoItemToMove = contactsListEl.querySelector(`.contact[data-room-id="${data.room}"]`);
@@ -736,14 +753,7 @@ function initWebSocket() {
                 console.log("Loading message history. History room:", data.room, "Current room:", currentRoom);
                 if (messageContainer) {
                     messageContainer.innerHTML = ''; // Clear current messages
-                    // Mapowanie danych historii, aby były zgodne z oczekiwaniami addMessageToChat
-                    const mappedMessages = data.messages.map(msg => ({
-                        username: msg.username, // sender_id
-                        text: msg.text, // content
-                        inserted_at: msg.inserted_at, // created_at
-                        room: data.room // room_id
-                    }));
-                    mappedMessages.forEach((msg) => addMessageToChat(msg)); // Add historical messages
+                    data.messages.forEach((msg) => addMessageToChat(msg)); // Add historical messages
                 }
                 break;
             case 'status':
@@ -831,7 +841,7 @@ function displayActiveUsers(activeUsersData) {
 
             li.innerHTML = `
                     <img src="${avatarSrc}" alt="Avatar" class="avatar">
-                    <span class="username">${getUserLabelById(user.id) || user.username}</span>
+                    <span class="username">${getUserLabelById(user.id) || user.username || user.email || 'Nieznany'}</span>
                     <span class="status-dot online"></span>
                 `;
             activeUsersListEl.appendChild(li);
@@ -843,7 +853,7 @@ function displayActiveUsers(activeUsersData) {
 
             divMobile.innerHTML = `
                     <img src="${avatarSrc}" alt="Avatar" class="avatar">
-                    <span class="username">${getUserLabelById(user.id) || user.username}</span>
+                    <span class="username">${getUserLabelById(user.id) || user.username || user.email || 'Nieznany'}</span>
                 `;
             
             // Add click listener for mobile item
@@ -852,9 +862,9 @@ function displayActiveUsers(activeUsersData) {
                 if (userProfile) {
                     // Stwórz mockowy element clickedConvoItemElement
                     const mockConvoItem = document.createElement('li');
-                    mockConvoItem.dataset.convoId = user.id; // Corrected: use user.id
+                    mockConvoItem.dataset.convoId = user.id; // Corrected: user.id
                     mockConvoItem.dataset.email = userProfile.email;
-                    mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(user.id)); // Corrected: use user.id
+                    mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(user.id)); // Corrected: user.id
                     handleConversationClick(userProfile, mockConvoItem);
                 }
             });
@@ -914,7 +924,7 @@ function setupChatSettingsDropdown() {
                 // Remove existing background themes
                 messageContainer.classList.remove('default-bg', 'dark-bg', 'pattern-bg');
                 if (bgTheme !== 'default') {
-                    messageContainer.classList.add(`${bgTheme}-bg`); // Add new background
+                    messageContainer.classList.add(`${bgTheme}`); // Add new background (removed -bg as it's in class name already)
                 }
             }
             console.log('Chat background changed to:', bgTheme);
