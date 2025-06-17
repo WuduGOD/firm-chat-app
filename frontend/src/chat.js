@@ -466,6 +466,7 @@ async function initializeApp() {
 
     // Sprawdź, czy użytkownik jest już zalogowany w lokalnym magazynie
     userId = localStorage.getItem('userId');
+	connectWebSocket();
     if (userId) {
         console.log(`[initializeApp] Znaleziono ID użytkownika w localStorage: ${userId}`);
         connectWebSocket(); // Połącz z WebSocket, jeśli użytkownik jest zalogowany
