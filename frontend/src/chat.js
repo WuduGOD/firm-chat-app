@@ -425,6 +425,10 @@ async function addMessageToChat(msg) { // Changed to async
     console.log("[addMessageToChat] START - Received message object:", msg); // Log the entire message object at start
     console.log("[addMessageToChat] Processing message: sender=" + msg.username + ", room=" + msg.room + ". Global currentRoom (active chat): " + currentRoom);
 
+    // Inicjalizacja zmiennych na początku funkcji, aby zapobiec ReferenceError
+    let previewText = "Brak wiadomości";
+    let timeText = "";
+
     // Ensure msg.room is defined before proceeding
     if (!msg.room) {
         console.error("[addMessageToChat] ERROR: msg.room is undefined. Cannot update UI. Message:", msg);
@@ -454,8 +458,7 @@ async function addMessageToChat(msg) { // Changed to async
     const timeEl = convoItemToUpdate.querySelector('.message-time');
     const unreadCountEl = convoItemToUpdate.querySelector('.unread-count'); // Get reference here once
 
-    let previewText = "Brak wiadomości"; 
-
+    // Zaktualizuj previewText i timeText po upewnieniu się, że convoItemToUpdate istnieje
     if (previewEl && timeEl) {
         const senderId = String(msg.username);
         const senderName = senderId === String(currentUser.id) ? "Ja" : (getUserLabelById(senderId) || senderId);
