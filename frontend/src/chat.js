@@ -1,7 +1,7 @@
 // Importy zależności - dopasowane do ścieżek z Twojego działającego HTML
 // Zakładając, że wszystkie pliki JS są w /src/
 import { loadAllProfiles, getUserLabelById } from './profiles.js';
-import { supabase } = './supabaseClient.js';
+import { supabase } from './supabaseClient.js'; // POPRAWKA: Zmieniono '=' na 'from'
 
 // Globalne zmienne UI i czatu - zadeklarowane na początku, aby były dostępne wszędzie
 let mainHeader;
@@ -254,11 +254,11 @@ async function loadContacts() {
                 <span class="contact-name">${getUserLabelById(user.id) || user.email || 'Nieznany'}</span>
                 <span class="last-message">${previewText}</span>
             </div>
-            <div class="contact-meta">
-                <span class="message-time">${timeText}</span>
-                <span class="unread-count hidden">0</span>
-            </div>
-        `;
+                <div class="contact-meta">
+                    <span class="message-time">${timeText}</span>
+                    <span class="unread-count hidden">0</span>
+                </div>
+            `;
 
         convoItem.addEventListener('click', () => {
             handleConversationClick(user, convoItem);
@@ -1166,8 +1166,10 @@ async function initializeApp() {
                 logoScreen.classList.add('hidden'); // Ensure logo screen remains hidden on mobile
             }
             if (backButton) {
-                backButton.style.display = 'none'; // Hide back button
+                backButton.style.display = 'none'; // Back button hidden initially
             }
+            // Prawy sidebar zawsze ukryty na mobile (obsługiwane przez CSS: display: none !important)
+
         } else {
             // On desktop, show logo screen, hide chat area, sidebar remains visible
             if (logoScreen) {
