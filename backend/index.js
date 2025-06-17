@@ -1,42 +1,19 @@
-import http from 'http';
-import { wss } from './server.js'; // Importujemy nasz WebSocketServer z server.js
+// backend/index.js
 
-// Pobierz port z zmiennych środowiskowych Render.com, domyślnie 8080
-const PORT = process.env.PORT || 8080;
+// Importujemy instancję serwera HTTP oraz WebSocketServer z naszego pliku server.js.
+// server.js teraz sam zarządza uruchomieniem serwera HTTP i powiązaniem z nim WSS.
+import { wss, server } from './server.js';
 
-// 1. Utwórz prosty serwer HTTP
-const server = http.createServer((req, res) => {
-    // Tutaj możesz dodać obsługę zwykłych żądań HTTP, jeśli potrzebujesz.
-    // Na przykład, możesz serwować pliki statyczne dla frontendu, jeśli Twój backend to robi.
-    // Na potrzeby samej komunikacji WebSocket, ten serwer może być minimalistyczny.
-    if (req.url === '/') {
-        res.writeHead(200, { 'Content-Type': 'text/plain' });
-        res.end('WebSocket server is running.');
-    } else {
-        res.writeHead(404, { 'Content-Type': 'text/plain' });
-        res.end('Not Found');
-    }
-});
+// Ten plik index.js jest teraz tylko punktem wejścia,
+// który upewnia się, że server.js jest załadowany i uruchomiony.
+// Cała logika nasłuchiwania na porcie i obsługi połączeń jest już w server.js.
 
-// 2. Podłącz serwer WebSocket do istniejącego serwera HTTP
-// Zamiast wss tworzyć własny serwer na porcie, teraz będzie nasłuchiwał na połączeniach przekazywanych przez 'server'.
-// W server.js, upewnij się, że wss jest tworzone BEZ opcji 'port', jeśli chcesz, aby używało istniejącego serwera HTTP.
-// W tym przypadku zmieniam `new WebSocketServer({ port: PORT })` na `new WebSocketServer({ server: server })`
-// w server.js, ale skoro dostarczyłem Ci pełen server.js z opcją portu, zostawmy to na razie tak.
-// Ważne jest, aby server.js eksportował `wss` i NIE URUCHAMIAŁ WŁASNEGO `listen()` na porcie.
-// Zatem, w `server.js` należy zmienić:
-// `const wss = new WebSocketServer({ port: PORT });`
-// NA:
-// `const wss = new WebSocketServer({ noServer: true });` // Aby wss nie tworzył własnego serwera HTTP
+// Możesz dodać tutaj jakieś logowanie, jeśli chcesz, aby potwierdzić, że index.js został uruchomiony.
+console.log("Index.js uruchomiony. Serwer jest zarządzany przez server.js.");
 
-// ... A następnie w `index.js` będziemy obsługiwać uaktualnienia protokołu:
-server.on('upgrade', (request, socket, head) => {
-    wss.handleUpgrade(request, socket, head, ws => {
-        wss.emit('connection', ws, request);
-    });
-});
+// Nie ma potrzeby dodawania `server.on('upgrade', ...)` tutaj,
+// ponieważ w nowym `server.js` WebSocketServer jest już inicjalizowany z opcją `server: server,`
+// co automatycznie obsługuje upgrady protokołu.
 
-// 3. Uruchom serwer HTTP na odpowiednim porcie
-server.listen(PORT, () => {
-    console.log(`Serwer HTTP i WebSocket nasłuchują na porcie ${PORT}`);
-});
+// Nie ma potrzeby dodawania `server.listen(...)` tutaj,
+// ponieważ w nowym `server.js` już jest `server.listen(PORT, ...)`.
