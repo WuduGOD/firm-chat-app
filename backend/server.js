@@ -21,7 +21,7 @@ const pool = new Pool({
     database: process.env.DB_NAME,
     password: process.env.DB_PASS,
     port: parseInt(process.env.DB_PORT || '5432'), // Domyślny port 5432, jeśli nie ustawiono
-    ssl: { rejectUnauthorized: false }, // Ustawienie SSL, może być wymagane dla niektórych hostingów
+    ssl: { rejectUnauthorized: false }, // Ustawienie SSL, może być wymagane dla niektórych hostingów (np. Render.com)
     connectionTimeoutMillis: 5000, // Limit czasu na nawiązanie połączenia
     keepAlive: true // Utrzymuj połączenie aktywne
 });
@@ -55,10 +55,15 @@ const rooms = new Map(); // Map(string (roomName), Set<WebSocket>)
 
 /**
  * Funkcja pomocnicza do rozgłaszania statusu użytkownika (online/offline) do wszystkich podłączonych klientów.
+ * Przesyła status tylko, jeśli user ID jest dostępne.
  * @param {string} userId - ID użytkownika, którego status się zmienia.
  * @param {boolean} isOnline - True, jeśli użytkownik jest online; false, jeśli offline.
  */
 function broadcastUserStatus(userId, isOnline) {
+    if (!userId) {
+        console.warn("Serwer: Próba rozgłoszenia statusu dla niezdefiniowanego userId.");
+        return;
+    }
     const msg = JSON.stringify({
         type: 'status',
         user: userId, // ID użytkownika
@@ -143,14 +148,25 @@ wss.on('connection', (ws) => {
 
     // Obsługa wiadomości przychodzących od klienta
     ws.on('message', async (message) => {
-        const data = JSON.parse(message); // Parsuj JSON odebrany od klienta
-        console.log(`Serwer: Odebrano wiadomość od klienta: typ=${data.type}, user=${data.username || data.name}, room=${data.room}`);
+        let data;
+        try {
+            data = JSON.parse(message); // Parsuj JSON odebrany od klienta
+            console.log(`Serwer: Odebrano wiadomość od klienta: typ=${data.type}, user=${data.username || data.name}, room=${data.room}`);
+        } catch (e) {
+            console.error("Serwer: Błąd parsowania wiadomości JSON:", e);
+            return; // Przerwij, jeśli wiadomość nie jest poprawnym JSON-em
+        }
 
         switch (data.type) {
             case 'join':
                 // Klient chce dołączyć do pokoju
                 const userId = data.name; // 'name' z frontendu to ID użytkownika
                 const requestedRoom = data.room; // Nazwa pokoju, do którego klient chce dołączyć
+
+                if (!userId || !requestedRoom) {
+                    console.warn("Serwer: Wiadomość 'join' bez userId lub requestedRoom.");
+                    return;
+                }
 
                 // Zaktualizuj dane klienta w mapie 'clients'
                 clients.set(ws, { userId: userId, activeRoom: requestedRoom });
@@ -181,6 +197,11 @@ wss.on('connection', (ws) => {
                 const userToLeave = data.name;
                 const roomToLeave = data.room;
 
+                if (!userToLeave || !roomToLeave) {
+                    console.warn("Serwer: Wiadomość 'leave' bez userToLeave lub roomToLeave.");
+                    return;
+                }
+
                 if (rooms.has(roomToLeave)) {
                     rooms.get(roomToLeave).delete(ws); // Usuń klienta z Setu pokoju
                     if (rooms.get(roomToLeave).size === 0) {
@@ -200,9 +221,9 @@ wss.on('connection', (ws) => {
                 const { username, text, room } = data; // Pobierz nadawcę, treść i pokój z danych
 
                 // Walidacja: upewnij się, że ID pokoju jest dostępne
-                if (!room) {
-                    console.error(`Serwer: Odebrano wiadomość bez ID pokoju od użytkownika ${username}. Nie można przetworzyć.`);
-                    return; // Przerwij przetwarzanie, jeśli brakuje ID pokoju
+                if (!room || !username || !text) {
+                    console.error(`Serwer: Odebrano wiadomość z brakującymi danymi (pokój, nadawca lub tekst). Wiadomość odrzucona.`);
+                    return; // Przerwij przetwarzanie, jeśli brakuje danych
                 }
 
                 // Zapisz wiadomość w bazie danych i uzyskaj timestamp
@@ -234,9 +255,9 @@ wss.on('connection', (ws) => {
                 // Obsługa statusu pisania
                 const { username: typingUser, room: typingRoom } = data; // Pobierz użytkownika i pokój
 
-                // Walidacja: upewnij się, że ID pokoju jest dostępne
-                if (!typingRoom) {
-                     console.error(`Serwer: Odebrano status pisania bez ID pokoju od użytkownika ${typingUser}. Nie można przetworzyć.`);
+                // Walidacja: upewnij się, że ID pokoju i użytkownik są dostępne
+                if (!typingRoom || !typingUser) {
+                     console.error(`Serwer: Odebrano status pisania z brakującymi danymi (pokój lub użytkownik). Nie można przetworzyć.`);
                      return;
                 }
 
@@ -250,7 +271,8 @@ wss.on('connection', (ws) => {
                 // Rozgłoś status pisania tylko do klientów w docelowym pokoju (oprócz samego nadawcy)
                 if (rooms.has(typingRoom)) {
                     rooms.get(typingRoom).forEach(client => {
-                        if (client.readyState === WebSocket.OPEN && client !== ws) { // Nie wysyłaj do siebie
+                        // Sprawdź, czy klient ma przypisany userId i nie jest nadawcą
+                        if (client.readyState === WebSocket.OPEN && clients.get(client)?.userId !== typingUser) {
                             client.send(typingMsg);
                         }
                     });
@@ -262,7 +284,11 @@ wss.on('connection', (ws) => {
 
             case 'status':
                 // Obsługa globalnych aktualizacji statusu (online/offline)
-                broadcastUserStatus(data.user, data.online);
+                if (data.user) {
+                    broadcastUserStatus(data.user, data.online);
+                } else {
+                    console.warn("Serwer: Wiadomość 'status' bez zdefiniowanego użytkownika.");
+                }
                 break;
             
             case 'get_active_users':
@@ -278,7 +304,7 @@ wss.on('connection', (ws) => {
     // Obsługa zamknięcia połączenia WebSocket
     ws.on('close', () => {
         const disconnectedClientData = clients.get(ws); // Pobierz dane odłączonego klienta
-        if (disconnectedClientData) {
+        if (disconnectedClientData && disconnectedClientData.userId) { // Upewnij się, że userId istnieje
             console.log(`Serwer: Klient rozłączony: ${disconnectedClientData.userId}`);
             
             // Usuń klienta ze wszystkich pokojów, do których należał
@@ -296,7 +322,8 @@ wss.on('connection', (ws) => {
             // Rozgłoś status offline dla odłączonego użytkownika
             broadcastUserStatus(disconnectedClientData.userId, false);
         } else {
-            console.log("Serwer: Nieznany klient rozłączony.");
+            console.log("Serwer: Nieznany klient rozłączony (brak userId lub danych).");
+            clients.delete(ws); // Na wszelki wypadek usuń nawet bez userId
         }
     });
 
