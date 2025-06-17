@@ -1,17 +1,26 @@
-// server.js
+// server.js (ES Module syntax)
 
-require('dotenv').config(); // Ładuje zmienne środowiskowe z pliku .env
+// Pamiętaj, aby mieć "type": "module" w swoim package.json,
+// lub zmienić nazwę pliku na server.mjs, aby Node.js traktował go jako ES Module.
 
-const express = require('express');
-const http = require('http');
-const WebSocket = require('ws');
-const { Pool } = require('pg');
-const jwt = require('jsonwebtoken');
-const cookie = require('cookie');
-const path = require('path');
+import dotenv from 'dotenv';
+dotenv.config(); // Ładuje zmienne środowiskowe z pliku .env
+
+import express from 'express';
+import { createServer } from 'http';
+import { WebSocketServer } from 'ws'; // Poprawiony import dla WebSocketServer
+import pg from 'pg';
+import jwt from 'jsonwebtoken';
+import cookie from 'cookie';
+import path from 'path';
+import { fileURLToPath } from 'url'; // Do obsługi __dirname w ES Modules
+
+// __dirname w ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
-const server = http.createServer(app); // Tworzymy serwer HTTP
+const server = createServer(app); // Tworzymy serwer HTTP
 
 const PORT = process.env.PORT || 10000;
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -24,7 +33,7 @@ if (!DATABASE_URL || !SUPABASE_JWT_SECRET || !SUPABASE_PROJECT_ID) {
 }
 
 // Połączenie z bazą danych PostgreSQL
-const pool = new Pool({
+const pool = new pg.Pool({ // Używamy importowanego pg
     connectionString: DATABASE_URL,
     ssl: {
         rejectUnauthorized: false // Wymagane dla połączeń z Supabase na niektórych środowiskach (Render)
@@ -48,7 +57,7 @@ app.get('*', (req, res) => {
 });
 
 // ---------- SERWER WEBSOCKET ----------
-const wss = new WebSocket.Server({
+const wss = new WebSocketServer({ // Używamy importowanego WebSocketServer
     server: server, // Powiązanie serwera WebSocket z istniejącym serwerem HTTP
     // Funkcja verifyClient autoryzuje połączenie WebSocket na podstawie nagłówków HTTP
     verifyClient: function(info, done) {
@@ -179,6 +188,5 @@ server.listen(PORT, () => {
     console.log(`Serwer HTTP i WebSocket nasłuchują na porcie ${PORT}`);
 });
 
-// Eksportujemy instancje serwera i wss, aby `index.js` mógł je zaimportować,
-// jeśli `index.js` jest głównym punktem wejścia i potrzebuje tych referencji.
-module.exports = { wss, server };
+// Eksportujemy instancje serwera i wss, aby `index.js` mógł je zaimportować.
+export { wss, server };
