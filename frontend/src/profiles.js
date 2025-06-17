@@ -13,23 +13,28 @@ let allProfiles = [];
  * Buforuje profile w zmiennej 'allProfiles'.
  * @returns {Array<Object>} Tablica załadowanych obiektów profilu.
  */
-export async function loadAllProfiles() {
+export async function getUserLabelById(userId) {
     try {
-        const { data, error } = await supabase
-            .from('profiles') // Nazwa Twojej tabeli z profilami użytkowników (może być 'users')
-            .select('id, username'); // Wybierz potrzebne kolumny
+        const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('username, full_name') // Upewnij się, że pobierasz 'username' lub 'full_name'
+            .eq('id', userId)
+            .single();
 
         if (error) {
-            console.error('Błąd podczas ładowania wszystkich profili:', error.message);
-            throw error;
+            console.error('Błąd pobierania profilu:', error);
+            return 'Nieznany Użytkownik'; // Zwróć domyślną etykietę w przypadku błędu
         }
 
-        allProfiles = data || []; // Zapisz załadowane profile
-        console.log(`Załadowano ${allProfiles.length} profili użytkowników.`);
-        return allProfiles;
+        if (profile) {
+            // Zwróć username, jeśli istnieje, w przeciwnym razie full_name, a jeśli oba brak, to domyślną etykietę
+            return profile.username || profile.full_name || `Użytkownik (${userId.substring(0, 4)}...)`;
+        } else {
+            return 'Nieznany Użytkownik'; // Użytkownik nie znaleziony
+        }
     } catch (err) {
-        console.error('Wyjątek w loadAllProfiles:', err.message);
-        return [];
+        console.error('Wyjątek w getUserLabelById:', err);
+        return 'Błąd Użytkownika'; // Zwróć etykietę błędu w przypadku wyjątku
     }
 }
 
