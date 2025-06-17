@@ -1,192 +1,311 @@
-// server.js (ES Module syntax)
-
-// Pamiętaj, aby mieć "type": "module" w swoim package.json,
-// lub zmienić nazwę pliku na server.mjs, aby Node.js traktował go jako ES Module.
-
+// server.js
+// Importy niezbędnych modułów:
+// WebSocketServer i WebSocket z biblioteki 'ws' do obsługi połączeń WebSocket.
+// 'pg' do interakcji z bazą danych PostgreSQL.
+// 'dotenv' do ładowania zmiennych środowiskowych z pliku .env.
+import { WebSocketServer, WebSocket } from 'ws';
+import pkg from 'pg';
 import dotenv from 'dotenv';
-dotenv.config(); // Ładuje zmienne środowiskowe z pliku .env
 
-import express from 'express';
-import { createServer } from 'http';
-import { WebSocketServer } from 'ws'; // Poprawiony import dla WebSocketServer
-import pg from 'pg';
-import jwt from 'jsonwebtoken';
-import cookie from 'cookie';
-import path from 'path';
-import { fileURLToPath } from 'url'; // Do obsługi __dirname w ES Modules
+// Konfiguracja dotenv do ładowania zmiennych środowiskowych
+dotenv.config();
 
-// __dirname w ES Modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Destrukturyzacja modułu 'pg' do uzyskania klasy Pool
+const { Pool } = pkg;
 
-const app = express();
-const server = createServer(app); // Tworzymy serwer HTTP
+// Konfiguracja połączenia z bazą danych PostgreSQL
+// Dane do połączenia są pobierane ze zmiennych środowiskowych
+const pool = new Pool({
+    user: process.env.DB_USER,
+    host: process.env.DB_HOST,
+    database: process.env.DB_NAME,
+    password: process.env.DB_PASS,
+    port: parseInt(process.env.DB_PORT || '5432'), // Domyślny port 5432, jeśli nie ustawiono
+    ssl: { rejectUnauthorized: false }, // Ustawienie SSL, może być wymagane dla niektórych hostingów
+    connectionTimeoutMillis: 5000, // Limit czasu na nawiązanie połączenia
+    keepAlive: true // Utrzymuj połączenie aktywne
+});
 
-const PORT = process.env.PORT;
-const DATABASE_URL = process.env.DATABASE_URL;
-const SUPABASE_JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
-const SUPABASE_PROJECT_ID = process.env.SUPABASE_PROJECT_ID; // Twój Project ID Supabase
+// Testowanie połączenia z bazą danych na starcie serwera
+pool.connect()
+    .then(client => {
+        console.log("Serwer: Pomyślnie połączono z PostgreSQL!");
+        client.release(); // Zwolnij klienta z powrotem do puli
+    })
+    .catch(err => {
+        console.error("Serwer: Błąd połączenia z PostgreSQL na starcie:", err.message);
+        // Opcjonalnie: Zakończ proces, jeśli połączenie z bazą danych jest krytyczne
+        // process.exit(1);
+    });
 
-if (!DATABASE_URL || !SUPABASE_JWT_SECRET || !SUPABASE_PROJECT_ID) {
-    console.error('Błąd: Brak wymaganych zmiennych środowiskowych (DATABASE_URL, SUPABASE_JWT_SECRET, SUPABASE_PROJECT_ID).');
-    process.exit(1);
+// Inicjalizacja serwera WebSocket
+// noServer: true oznacza, że nie tworzy własnego serwera HTTP,
+// będzie używany w połączeniu z istniejącym serwerem HTTP (np. Express)
+export const wss = new WebSocketServer({ noServer: true });
+
+// Mapa do przechowywania aktywnych klientów WebSocket
+// Klucz: instancja WebSocket
+// Wartość: obiekt zawierający userId (ID użytkownika Supabase) i activeRoom (aktualny pokój czatu)
+const clients = new Map(); // Map(ws, { userId, activeRoom })
+
+// Mapa do zarządzania pokojami czatu
+// Klucz: nazwa pokoju (string, np. "user1_user2")
+// Wartość: Set zawierający instancje WebSocket klientów w tym pokoju
+const rooms = new Map(); // Map(string (roomName), Set<WebSocket>)
+
+/**
+ * Funkcja pomocnicza do rozgłaszania statusu użytkownika (online/offline) do wszystkich podłączonych klientów.
+ * @param {string} userId - ID użytkownika, którego status się zmienia.
+ * @param {boolean} isOnline - True, jeśli użytkownik jest online; false, jeśli offline.
+ */
+function broadcastUserStatus(userId, isOnline) {
+    const msg = JSON.stringify({
+        type: 'status',
+        user: userId, // ID użytkownika
+        online: isOnline, // Status online/offline
+    });
+
+    // Przesyłanie statusu do wszystkich aktywnych klientów
+    clients.forEach((clientData, clientWs) => {
+        if (clientWs.readyState === WebSocket.OPEN) {
+            clientWs.send(msg);
+        }
+    });
+    console.log(`Serwer: Rozgłoszono status użytkownika ${userId}: ${isOnline ? 'online' : 'offline'}.`);
 }
 
-// Połączenie z bazą danych PostgreSQL
-const pool = new pg.Pool({ // Używamy importowanego pg
-    connectionString: DATABASE_URL,
-    ssl: {
-        rejectUnauthorized: false // Wymagane dla połączeń z Supabase na niektórych środowiskach (Render)
-    }
-});
+/**
+ * Funkcja pomocnicza do wysyłania listy aktywnych użytkowników do konkretnego klienta.
+ * Używana zazwyczaj, gdy klient dołącza do globalnego pokoju.
+ * @param {WebSocket} clientWs - Instancja WebSocket klienta, do którego ma zostać wysłana lista.
+ */
+function sendActiveUsersToClient(clientWs) {
+    // Tworzenie listy aktywnych użytkowników (tylko ID)
+    // Filtrowane są tylko te klienty, które mają przypisane userId (czyli są zalogowane)
+    const activeUsers = Array.from(clients.values())
+                             .filter(client => client.userId)
+                             .map(client => ({ id: client.userId }));
 
-pool.connect()
-    .then(() => console.log('Serwer: Połączono z bazą danych PostgreSQL!'))
-    .catch(err => console.error('Serwer: Błąd połączenia z bazą danych:', err.message));
-
-// ---------- SERWOWANIE PLIKÓW STATYCZNYCH (Frontend) ----------
-// Serwowanie plików statycznych z katalogu 'public'
-app.use(express.static(path.join(__dirname, 'public')));
-// Jeśli pliki są w 'src' w katalogu 'public' to możesz dodać
-app.use('/src', express.static(path.join(__dirname, 'public', 'src')));
-
-// Obsługa wszystkich innych zapytań (dla aplikacji SPA, jak React/Vue/Angular)
-// W przypadku czystego HTML, to może być nadmiarowe, ale jest bezpieczne
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'chat.html'));
-});
-
-// ---------- SERWER WEBSOCKET ----------
-const wss = new WebSocketServer({ // Używamy importowanego WebSocketServer
-    server: server, // Powiązanie serwera WebSocket z istniejącym serwerem HTTP
-    // Funkcja verifyClient autoryzuje połączenie WebSocket na podstawie nagłówków HTTP
-    verifyClient: function(info, done) {
-        try {
-            // Parsowanie ciasteczek z nagłówka 'cookie' żądania HTTP upgrade
-            const cookies = cookie.parse(info.req.headers.cookie || '');
-            // Nazwa ciasteczka Supabase, np. 'sb-your-project-ref-auth-token'
-            const supabaseCookieName = `sb-${SUPABASE_PROJECT_ID}-auth-token`;
-            const supabaseToken = cookies[supabaseCookieName];
-
-            if (!supabaseToken) {
-                console.log('Serwer: Odrzucono połączenie WebSocket - brak tokena Supabase w ciasteczkach.');
-                return done(false, 401, 'Unauthorized - No Supabase token');
-            }
-
-            // Dekodowanie i weryfikacja tokena JWT
-            const decoded = jwt.verify(supabaseToken, SUPABASE_JWT_SECRET);
-
-            // 'sub' (subject) w tokenie JWT Supabase to zazwyczaj userId
-            info.req.userId = decoded.sub; // Przypisz userId do obiektu żądania (będzie dostępne w 'connection')
-            console.log(`Serwer: Połączenie WebSocket uwierzytelnione dla userId: ${decoded.sub}`);
-            done(true); // Akceptuj połączenie
-        } catch (err) {
-            console.error('Serwer: Błąd weryfikacji tokena Supabase JWT:', err.message);
-            done(false, 401, 'Unauthorized - Invalid Supabase token');
-        }
-    }
-});
-
-// Mapa do przechowywania aktywnych połączeń WebSocket i ich userId
-// Key: userId, Value: WebSocket object
-const clients = new Map();
-
-wss.on('connection', function connection(ws, req) {
-    // req.userId jest dostępne dzięki funkcji verifyClient,
-    // która już zweryfikowała token i przypisała userId do żądania.
-    const userId = req.userId;
-
-    if (!userId) {
-        // Ten przypadek powinien być rzadki, bo verifyClient już to sprawdziło
-        console.log('Serwer: Nowe połączenie WebSocket, ale brak userId po weryfikacji. Rozłączam.');
-        ws.close(1008, 'Unauthorized'); // Kod 1008 oznacza naruszenie zasad
-        return;
-    }
-
-    console.log(`Serwer: Nowe połączenie WebSocket od userId: ${userId}`);
-
-    // Przypisz userId bezpośrednio do obiektu WebSocket dla łatwego dostępu
-    ws.userId = userId;
-    clients.set(userId, ws); // Dodaj klienta do mapy aktywnych połączeń
-
-    // Wysłanie listy aktywnych użytkowników do nowo połączonego klienta
-    const activeUsersList = Array.from(clients.keys());
-    ws.send(JSON.stringify({ type: 'user_list', users: activeUsersList }));
-
-    // Poinformuj wszystkich pozostałych klientów o nowym użytkowniku online
-    clients.forEach((clientWs) => {
-        if (clientWs !== ws && clientWs.readyState === WebSocket.OPEN) {
-            clientWs.send(JSON.stringify({ type: 'user_status', userId: userId, status: 'online' }));
-        }
+    const msg = JSON.stringify({
+        type: 'active_users',
+        users: activeUsers,
     });
+    if (clientWs.readyState === WebSocket.OPEN) {
+        clientWs.send(msg);
+        console.log(`Serwer: Wysłano listę aktywnych użytkowników do klienta.`);
+    }
+}
 
-    // NATYCHMIAST WYŚLIJ AUTH_SUCCESS DO KLIENTA
-    // To jest wiadomość oczekiwana przez frontend po udanej autoryzacji
-    ws.send(JSON.stringify({ type: 'auth_success', userId: userId }));
+/**
+ * Zapisuje wiadomość do bazy danych PostgreSQL.
+ * @param {string} username - Nazwa użytkownika/ID nadawcy wiadomości.
+ * @param {string} room - Nazwa pokoju, do którego wiadomość należy.
+ * @param {string} text - Treść wiadomości.
+ * @returns {Promise<string>} Obiekt Date (ISO string) timestampu, kiedy wiadomość została wstawiona.
+ */
+async function saveMessage(username, room, text) {
+    // Zapytanie SQL do wstawienia wiadomości
+    const query = 'INSERT INTO messages (username, room, text) VALUES ($1, $2, $3) RETURNING inserted_at';
+    try {
+        const res = await pool.query(query, [username, room, text]);
+        console.log(`Serwer: Wiadomość użytkownika ${username} w pokoju ${room} została zapisana w DB.`);
+        return res.rows[0].inserted_at; // Zwróć timestamp wstawienia
+    } catch (err) {
+        console.error('Serwer: Błąd DB - Nie udało się zapisać wiadomości:', err);
+    }
+    return new Date().toISOString(); // Zwróć bieżący czas w przypadku błędu
+}
 
-    ws.on('message', async function incoming(message) {
-        console.log(`Otrzymano wiadomość od ${ws.userId}: ${message}`);
-        try {
-            const parsedMessage = JSON.parse(message);
+/**
+ * Pobiera ostatnie wiadomości dla danego pokoju z bazy danych.
+ * @param {string} room - Nazwa pokoju, dla którego pobierane są wiadomości.
+ * @param {number} limit - Maksymalna liczba wiadomości do pobrania.
+ * @returns {Promise<Array<Object>>} Tablica obiektów wiadomości.
+ */
+async function getLastMessages(room, limit = 50) {
+    // Zapytanie SQL do pobrania wiadomości, posortowane chronologicznie
+    const query = 'SELECT username, text, inserted_at, room FROM messages WHERE room = $1 ORDER BY inserted_at ASC LIMIT $2';
+    try {
+        const res = await pool.query(query, [room, limit]);
+        console.log(`Serwer: Pobrano ${res.rows.length} wiadomości dla pokoju ${room}.`);
+        return res.rows;
+    } catch (err) {
+        console.error('Serwer: Błąd DB - Nie udało się pobrać wiadomości:', err);
+    }
+    return []; // Zwróć pustą tablicę w przypadku błędu
+}
 
-            switch (parsedMessage.type) {
-                case 'chat_message':
-                    // Zapisz wiadomość do bazy danych
-                    const { senderId, receiverId, content, timestamp } = parsedMessage;
-                    await pool.query(
-                        'INSERT INTO messages (sender_id, receiver_id, content, timestamp, read) VALUES ($1, $2, $3, $4, $5)',
-                        [senderId, receiverId, content, timestamp, false] // Domyślnie 'read' na false
-                    );
-                    console.log(`Wiadomość zapisana w DB: ${senderId} -> ${receiverId}: ${content}`);
+// Obsługa nowych połączeń WebSocket
+wss.on('connection', (ws) => {
+    // Dodaj nowego klienta do mapy 'clients' z domyślnymi danymi
+    clients.set(ws, { userId: null, activeRoom: null });
+    console.log('Serwer: Nowe połączenie WebSocket nawiązane.');
 
-                    // Przekaż wiadomość do odbiorcy, jeśli jest online
-                    const receiverWs = clients.get(receiverId);
-                    if (receiverWs && receiverWs.readyState === WebSocket.OPEN) {
-                        receiverWs.send(JSON.stringify(parsedMessage));
-                        console.log(`Wiadomość przekazana do ${receiverId}.`);
-                    } else {
-                        console.log(`Odbiorca ${receiverId} jest offline lub niepołączony.`);
+    // Obsługa wiadomości przychodzących od klienta
+    ws.on('message', async (message) => {
+        const data = JSON.parse(message); // Parsuj JSON odebrany od klienta
+        console.log(`Serwer: Odebrano wiadomość od klienta: typ=${data.type}, user=${data.username || data.name}, room=${data.room}`);
+
+        switch (data.type) {
+            case 'join':
+                // Klient chce dołączyć do pokoju
+                const userId = data.name; // 'name' z frontendu to ID użytkownika
+                const requestedRoom = data.room; // Nazwa pokoju, do którego klient chce dołączyć
+
+                // Zaktualizuj dane klienta w mapie 'clients'
+                clients.set(ws, { userId: userId, activeRoom: requestedRoom });
+
+                // Dodaj klienta do Setu dla danego pokoju w mapie 'rooms'
+                if (!rooms.has(requestedRoom)) {
+                    rooms.set(requestedRoom, new Set()); // Jeśli pokój nie istnieje, utwórz nowy Set
+                }
+                rooms.get(requestedRoom).add(ws); // Dodaj klienta do Setu pokoju
+                console.log(`Serwer: Użytkownik ${userId} dołączył do pokoju: ${requestedRoom}. Aktualna liczba klientów w pokoju ${requestedRoom}: ${rooms.get(requestedRoom).size}`);
+
+                // Jeśli dołączono do pokoju czatu (nie 'global'), wyślij historię wiadomości
+                if (requestedRoom !== 'global') {
+                    const history = await getLastMessages(requestedRoom);
+                    ws.send(JSON.stringify({ type: 'history', room: requestedRoom, messages: history }));
+                    console.log(`Serwer: Wysłano historię dla pokoju ${requestedRoom} do użytkownika ${userId}.`);
+                }
+                
+                // Jeśli dołączono do pokoju 'global' (zazwyczaj na początku połączenia), wyślij listę aktywnych użytkowników
+                if (requestedRoom === 'global') {
+                     sendActiveUsersToClient(ws); // Wyślij aktualną listę aktywnych użytkowników
+                     broadcastUserStatus(userId, true); // Rozgłoś status online dla nowo połączonego użytkownika
+                }
+                break;
+
+            case 'leave':
+                // Klient chce opuścić pokój
+                const userToLeave = data.name;
+                const roomToLeave = data.room;
+
+                if (rooms.has(roomToLeave)) {
+                    rooms.get(roomToLeave).delete(ws); // Usuń klienta z Setu pokoju
+                    if (rooms.get(roomToLeave).size === 0) {
+                        rooms.delete(roomToLeave); // Jeśli pokój jest pusty, usuń go z mapy
                     }
-                    break;
-                case 'typing_status':
-                    // Przekaż status pisania do odbiorcy
-                    const { senderId: typingSenderId, receiverId: typingReceiverId, isTyping } = parsedMessage;
-                    const targetUserWs = clients.get(typingReceiverId);
-                    if (targetUserWs && targetUserWs.readyState === WebSocket.OPEN) {
-                        targetUserWs.send(JSON.stringify({ type: 'typing_status', senderId: typingSenderId, isTyping: isTyping }));
-                    }
-                    break;
-                // Możesz dodać inne typy wiadomości, np. authenticate, disconnect itp.
-                // Ale w tym modelu 'authenticate' jest obsługiwane przez verifyClient
-                default:
-                    console.warn(`Nieznany typ wiadomości od ${ws.userId}: ${parsedMessage.type}`);
-            }
-        } catch (error) {
-            console.error('Błąd parsowania lub obsługi wiadomości WebSocket:', error);
+                    console.log(`Serwer: Użytkownik ${userToLeave} opuścił pokój: ${roomToLeave}. Pozostałych klientów w pokoju ${roomToLeave}: ${rooms.has(roomToLeave) ? rooms.get(roomToLeave).size : 0}`);
+                }
+                // Zaktualizuj activeRoom klienta w mapie 'clients'
+                const clientDataAfterLeave = clients.get(ws);
+                if (clientDataAfterLeave && clientDataAfterLeave.activeRoom === roomToLeave) {
+                    clients.set(ws, { userId: clientDataAfterLeave.userId, activeRoom: null }); // Ustaw activeRoom na null
+                }
+                break;
+
+            case 'message':
+                // Obsługa wiadomości czatu
+                const { username, text, room } = data; // Pobierz nadawcę, treść i pokój z danych
+
+                // Walidacja: upewnij się, że ID pokoju jest dostępne
+                if (!room) {
+                    console.error(`Serwer: Odebrano wiadomość bez ID pokoju od użytkownika ${username}. Nie można przetworzyć.`);
+                    return; // Przerwij przetwarzanie, jeśli brakuje ID pokoju
+                }
+
+                // Zapisz wiadomość w bazie danych i uzyskaj timestamp
+                const insertedAt = await saveMessage(username, room, text);
+
+                // Przygotuj wiadomość do rozgłoszenia (dołączając ID pokoju)
+                const msgToBroadcast = JSON.stringify({
+                    type: 'message',
+                    username,
+                    text,
+                    room, // Włącz ID pokoju w rozgłaszanej wiadomości
+                    inserted_at: insertedAt, // Dołącz timestamp
+                });
+
+                // Rozgłoś wiadomość tylko do klientów w docelowym pokoju
+                if (rooms.has(room)) {
+                    rooms.get(room).forEach(client => {
+                        if (client.readyState === WebSocket.OPEN) {
+                            client.send(msgToBroadcast);
+                        }
+                    });
+                    console.log(`Serwer: Rozgłoszono wiadomość do pokoju ${room}.`);
+                } else {
+                    console.warn(`Serwer: Próbowano wysłać wiadomość do nieistniejącego pokoju: ${room}. Wiadomość odrzucona.`);
+                }
+                break;
+
+            case 'typing':
+                // Obsługa statusu pisania
+                const { username: typingUser, room: typingRoom } = data; // Pobierz użytkownika i pokój
+
+                // Walidacja: upewnij się, że ID pokoju jest dostępne
+                if (!typingRoom) {
+                     console.error(`Serwer: Odebrano status pisania bez ID pokoju od użytkownika ${typingUser}. Nie można przetworzyć.`);
+                     return;
+                }
+
+                // Przygotuj wiadomość o statusie pisania
+                const typingMsg = JSON.stringify({
+                    type: 'typing',
+                    username: typingUser,
+                    room: typingRoom,
+                });
+
+                // Rozgłoś status pisania tylko do klientów w docelowym pokoju (oprócz samego nadawcy)
+                if (rooms.has(typingRoom)) {
+                    rooms.get(typingRoom).forEach(client => {
+                        if (client.readyState === WebSocket.OPEN && client !== ws) { // Nie wysyłaj do siebie
+                            client.send(typingMsg);
+                        }
+                    });
+                    console.log(`Serwer: Rozgłoszono status pisania w pokoju ${typingRoom}.`);
+                } else {
+                    console.warn(`Serwer: Próbowano wysłać status pisania do nieistniejącego pokoju: ${typingRoom}.`);
+                }
+                break;
+
+            case 'status':
+                // Obsługa globalnych aktualizacji statusu (online/offline)
+                broadcastUserStatus(data.user, data.online);
+                break;
+            
+            case 'get_active_users':
+                // Klient żąda listy aktywnych użytkowników
+                sendActiveUsersToClient(ws); // Wyślij listę do konkretnego klienta
+                break;
+
+            default:
+                console.warn('Serwer: Odebrano nieznany typ wiadomości:', data.type);
         }
     });
 
-    ws.on('close', function close() {
-        console.log(`Serwer: Użytkownik ${ws.userId || 'Nieznany klient'} rozłączony.`);
-        // Usuń klienta z mapy aktywnych połączeń
-        clients.delete(ws.userId);
-        // Poinformuj pozostałych klientów o statusie offline
-        clients.forEach((clientWs) => {
-            if (clientWs.readyState === WebSocket.OPEN) {
-                clientWs.send(JSON.stringify({ type: 'user_status', userId: ws.userId, status: 'offline' }));
-            }
-        });
+    // Obsługa zamknięcia połączenia WebSocket
+    ws.on('close', () => {
+        const disconnectedClientData = clients.get(ws); // Pobierz dane odłączonego klienta
+        if (disconnectedClientData) {
+            console.log(`Serwer: Klient rozłączony: ${disconnectedClientData.userId}`);
+            
+            // Usuń klienta ze wszystkich pokojów, do których należał
+            rooms.forEach((clientSet, roomName) => {
+                if (clientSet.has(ws)) {
+                    clientSet.delete(ws);
+                    if (clientSet.size === 0) {
+                        rooms.delete(roomName); // Usuń pokój, jeśli jest pusty
+                    }
+                    console.log(`Serwer: Usunięto ${disconnectedClientData.userId} z pokoju ${roomName}.`);
+                }
+            });
+            clients.delete(ws); // Usuń klienta z głównej mapy klientów
+
+            // Rozgłoś status offline dla odłączonego użytkownika
+            broadcastUserStatus(disconnectedClientData.userId, false);
+        } else {
+            console.log("Serwer: Nieznany klient rozłączony.");
+        }
     });
 
-    ws.on('error', function error(err) {
-        console.error(`Serwer: Błąd WebSocket dla ${ws.userId || 'Nieznany klient'}:`, err);
+    // Obsługa błędów połączenia WebSocket
+    ws.on('error', (error) => {
+        console.error('Serwer: Błąd WebSocket:', error);
+        // Zamknij połączenie w przypadku błędu, aby wyzwolić zdarzenie 'close' i ponowne połączenie
+        if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+            ws.close();
+        }
     });
 });
-
-// ---------- URUCHOMIENIE SERWERA ----------
-server.listen(PORT, () => {
-    console.log(`Serwer HTTP i WebSocket nasłuchują na porcie ${PORT}`);
-});
-
-// Eksportujemy instancje serwera i wss, aby `index.js` mógł je zaimportować.
-export { wss, server };

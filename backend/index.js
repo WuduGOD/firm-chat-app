@@ -1,20 +1,25 @@
-// backend/index.js
+import express from 'express';
+import http from 'http';
+import { wss } from './server.js';  // import WebSocketServer
 
-// Importujemy nasz główny plik serwera.
-// server.js teraz sam zarządza uruchomieniem serwera HTTP,
-// konfiguracją Express, obsługą tras i powiązaniem z nim WebSocketServer.
-import './server.js';
+const app = express();
+const server = http.createServer(app);
 
-// Ten plik index.js jest teraz tylko punktem wejścia,
-// który upewnia się, że server.js jest załadowany i jego kod wykonywany.
-// Cała logika nasłuchiwania na porcie i obsługa połączeń HTTP/WebSocket
-// jest już zaimplementowana w server.js.
+// Obsługa żądań HTTP zwykłych
+app.get('/', (req, res) => {
+  res.send('Hello, chat server is running');
+});
 
-// Możesz dodać tutaj jakieś logowanie, jeśli chcesz, aby potwierdzić, że index.js został uruchomiony.
-console.log("Index.js uruchomiony. Główna logika serwera jest zarządzana przez server.js.");
+// Obsługa upgrade na WebSocket
+server.on('upgrade', (request, socket, head) => {
+  // Możesz tu zrobić np. autoryzację
 
-// W tym pliku nie ma potrzeby dodawania żadnego kodu związanego z:
-// - `http.createServer()`
-// - `server.on('upgrade', ...)`
-// - `server.listen(...)`
-// Ponieważ wszystko to jest już w server.js.
+  wss.handleUpgrade(request, socket, head, (ws) => {
+    wss.emit('connection', ws, request);
+  });
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
