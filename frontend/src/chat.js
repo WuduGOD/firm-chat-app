@@ -34,7 +34,8 @@ let chatSettingsDropdown; // ID: chatSettingsDropdown, Klasa: dropdown chat-sett
 let typingStatusHeader; // ID: typingStatus, Klasa: typing-status (status w nagłówku czatu)
 let typingIndicatorMessages; // ID: typingIndicator (animowane kropki w obszarze wiadomości)
 
-let messageContainer = document.getElementById('chatMessages'); // Zmieniona nazwa zmiennej zgodnie z HTML na chatMessages
+// POPRAWKA: Zmieniono 'chatMessages' z powrotem na 'messageContainer' aby zgadzało się z chat.html
+let messageContainer = document.getElementById('messageContainer'); 
 
 let chatFooter;
 let attachButton;
@@ -631,7 +632,7 @@ async function addMessageToChat(msg) {
             const senderId = String(msg.username);
             const senderName = senderId === String(currentUser.id) ? "Ja" : (getUserLabelById(senderId) || senderId);
             previewText = `${senderName}: ${msg.text}`; 
-            const lastMessageTime = new Date(msg.inserted_at);
+            const lastMessageTime = new Date(msg.inserted_at || Date.now()); // Fallback to current time if inserted_at is missing
             const timeString = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" }); 
             timeEl.textContent = timeString; 
             console.log(`[addMessageToChat] Updated preview and time for room ${msg.room}. Preview: "${previewText}"`); 
@@ -1068,11 +1069,11 @@ function setupChatSettingsDropdown() {
         });
 
         document.addEventListener('click', (event) => {
-            if (!chatSettingsDropdown.classList.contains('hidden') && !chatSettingsButton.contains(event.target)) {
+            if (!chatSettingsDropdown.classList.contains('hidden') && chatSettingsButton && !chatSettingsButton.contains(event.target)) {
                 chatSettingsDropdown.classList.add('hidden');
                 console.log("[setupChatSettingsDropdown] Chat settings dropdown hidden due to outside click.");
             }
-            if (!dropdownMenu.classList.contains('hidden') && !menuButton.contains(event.target)) { // Also close main dropdown
+            if (!dropdownMenu.classList.contains('hidden') && menuButton && !menuButton.contains(event.target)) { // Also close main dropdown
                 dropdownMenu.classList.add('hidden');
             }
         });
@@ -1229,8 +1230,9 @@ async function initializeApp() {
         typingStatusHeader = document.getElementById('typingStatus'); console.log(`UI Element: typingStatusHeader found: ${!!typingStatusHeader}`);
         typingIndicatorMessages = document.getElementById('typingIndicator'); console.log(`UI Element: typingIndicatorMessages found: ${!!typingIndicatorMessages}`);
 
-        messageContainer = document.getElementById('chatMessages'); // Zmieniono z 'messageContainer' na 'chatMessages'
-        console.log(`UI Element: messageContainer (now chatMessages) found: ${!!messageContainer}`);
+        // Aktualizacja tej linii
+        messageContainer = document.getElementById('messageContainer'); 
+        console.log(`UI Element: messageContainer found: ${!!messageContainer}`); // Dostosowane logowanie
 
         chatFooter = document.querySelector('.chat-footer'); console.log(`UI Element: chatFooter found: ${!!chatFooter}`);
         attachButton = chatFooter ? chatFooter.querySelector('.attach-button') : null; console.log(`UI Element: attachButton found: ${!!attachButton}`);
@@ -1250,28 +1252,28 @@ async function initializeApp() {
             chatAreaWrapper, logoScreen, chatArea,
             chatHeader, backButton, chatUserName, userStatusSpan,
             chatHeaderActions, chatSettingsButton, chatSettingsDropdown,
-            typingStatusHeader, typingIndicatorMessages, messageContainer, // Sprawdź nową nazwę
+            typingStatusHeader, typingIndicatorMessages, messageContainer, 
             chatFooter, attachButton, messageInput, emojiButton, sendButton,
             rightSidebarWrapper, rightSidebar, activeUsersListEl, noActiveUsersText
         };
 
         let allElementsFound = true;
         for (const key in criticalElementsCheck) {
-            if (criticalElementsCheck[key] === null || criticalElementsCheck[key] === undefined) {
-                console.error(`[initializeApp] ERROR: Critical UI element '${key}' not found. Please check your HTML.`, criticalElementsCheck[key]);
+            // Check for null or undefined. For NodeLists, also check if length is 0 (like navIcons)
+            if (criticalElementsCheck[key] === null || criticalElementsCheck[key] === undefined || (criticalElementsCheck[key] instanceof NodeList && criticalElementsCheck[key].length === 0)) {
+                console.error(`[initializeApp] ERROR: Critical UI element '${key}' not found or is empty. Please check your HTML. Current value:`, criticalElementsCheck[key]);
                 allElementsFound = false;
             }
         }
-        // Special check for NodeList `navIcons`
-        if (!navIcons || navIcons.length === 0) {
-            console.error(`[initializeApp] ERROR: 'navIcons' (NodeList) is empty or not found.`);
-            allElementsFound = false;
-        }
+        // Special check for NodeList `navIcons` - already handled in loop now, but keeping for emphasis
+        // if (!navIcons || navIcons.length === 0) {
+        //     console.error(`[initializeApp] ERROR: 'navIcons' (NodeList) is empty or not found.`);
+        //     allElementsFound = false;
+        // }
 
         if (!allElementsFound) {
             console.error('[initializeApp] Initialization failed due to missing critical UI elements. Aborting.');
-            // Consider displaying a user-friendly error or redirecting to an error page
-            showCustomMessage('Wystąpił krytyczny błąd inicjalizacji. Brakuje elementów interfejsu.', 'error');
+            showCustomMessage('Wystąpił krytyczny błąd inicjalizacji. Brakuje elementów interfejsu. Sprawdź konsolę przeglądarki.', 'error');
             return; 
         } else {
             console.log('[initializeApp] All critical UI elements found. Proceeding with app initialization.');
