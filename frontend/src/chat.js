@@ -344,10 +344,10 @@ async function handleConversationClick(user, clickedConvoItemElement) {
         chatUserName.textContent = currentChatUser.username;
         
         const isUserOnline = onlineUsers.get(String(user.id)) === true; 
-        userStatusSpan.textContent = isUserOnline ? 'Online' : 'Offline';
-        userStatusSpan.classList.toggle('online', isUserOnline); 
-        userStatusSpan.classList.toggle('offline', !isUserOnline); 
-        console.log(`[handleConversationClick] Initial status for active chat user ${currentChatUser.username} (from onlineUsers map): ${isUserOnline ? 'Online' : 'Offline'}`);
+        userStatusSpan.textContent = isOnline ? 'Online' : 'Offline';
+        userStatusSpan.classList.toggle('online', isOnline); 
+        userStatusSpan.classList.toggle('offline', !isOnline); 
+        console.log(`[handleConversationClick] Initial status for active chat user ${currentChatUser.username} (from onlineUsers map): ${isOnline ? 'Online' : 'Offline'}`);
 
         messageInput.disabled = false;
         sendButton.disabled = false;
@@ -736,7 +736,7 @@ function showTypingIndicator(usernameId) {
             }
             if (typingIndicatorMessages) {
                 typingIndicatorMessages.classList.add('hidden');
-                console.log(`[showTypingIndicator] Typing indicator messages hidden for ${getUserLabelById(usernameId)}`);
+                console.log(`[showTypingIndicator] Typing indicator messages hidden for ${usernameId}`);
             }
         }, 3000); 
         console.log(`${getUserLabelById(usernameId)} is typing...`);
@@ -811,8 +811,8 @@ function initWebSocket() {
                     // Przenieś konwersację na górę tylko dla nowo otrzymanych wiadomości
                     if (String(data.username) !== String(currentUser.id)) { // Tylko jeśli wiadomość nie jest od nas samych
                         const convoItemToMove = contactsListEl.querySelector(`.contact[data-room-id="${data.room}"]`);
-                        if (convoItemToMove && contactsListEl.firstChild !== convoItemToMove) {
-                            contactsListEl.prepend(convoItemToMove);
+                        if (convoItemToMove && contactsListEl.firstChild !== convoItemToUpdate) { // Poprawka tutaj
+                            contactsListEl.prepend(convoItemToUpdate);
                             console.log(`[Reorder] Moved conversation for room ${data.room} to top due to new received message.`);
                         }
                     }
@@ -1073,6 +1073,7 @@ function showCustomMessage(message, type = 'info') {
 // --- Główna inicjalizacja aplikacji po zalogowaniu ---
 /**
  * Initializes the main chat application components once the user is authenticated.
+ * This function should only be called when a user session is confirmed.
  */
 async function initializeChatAppComponents() {
     if (appInitializedAfterLogin) {
@@ -1303,7 +1304,7 @@ async function initializeChatAppComponents() {
             showCustomMessage(`Błąd wylogowania: ${error.message}`, 'error');
         } else {
             console.log('Logged out successfully. Redirecting to login.html');
-            window.location.href = 'login.html';
+            window.location.href = window.location.origin + '/login.html'; 
         }
     });
 
@@ -1366,49 +1367,68 @@ async function initializeChatAppComponents() {
     handleMediaQueryChange(mq);
 
     console.log("[initializeChatAppComponents] Komunikator application components initialized successfully.");
+    // Upewnij się, że widoczne elementy UI są tylko te, które powinny być widoczne po zalogowaniu
+    document.body.style.display = 'block'; // Pokaż ciało strony po załadowaniu
 }
 
 // --- Główna funkcja inicjalizująca aplikację po załadowaniu DOM ---
 /**
  * Main application initialization function.
- * This will primarily set up the Supabase authentication listener.
+ * This will primarily set up the Supabase authentication listener and handle initial page load.
  */
 async function initializeApp() {
     console.log("Starting Komunikator application initialization process...");
 
-    // Słuchaj zmian stanu uwierzytelnienia Supabase
-    supabase.auth.onAuthStateChange(async (event, session) => {
+    // Ukryj ciało strony na początku, aby zapobiec "mignięciu" interfejsu czatu przed przekierowaniem/załadowaniem
+    document.body.style.display = 'none'; 
+
+    // Słuchaj zmian stanu uwierzytelbnienia Supabase
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
         console.log(`[onAuthStateChange] Event: ${event}, Session: ${session ? 'present' : 'null'}`);
 
-        if (event === 'SIGNED_IN' && session?.user) {
-            currentUser = session.user;
-            console.log('[onAuthStateChange] User SIGNED_IN. Current user ID:', currentUser.id);
-            // Jeśli jesteśmy na stronie logowania, przekieruj do chat.html po zalogowaniu
-            if (window.location.pathname.endsWith('login.html') || window.location.pathname === '/') {
-                console.log("[onAuthStateChange] Redirecting to chat.html after successful login.");
-                window.location.href = 'chat.html';
-            } else if (!appInitializedAfterLogin) {
-                // Jeśli jesteśmy już na chat.html i użytkownik się zalogował, zainicjuj komponenty
-                console.log("[onAuthStateChange] User signed in on chat.html. Initializing app components.");
-                await initializeChatAppComponents();
+        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+            if (session?.user) {
+                currentUser = session.user;
+                console.log('[onAuthStateChange] User SIGNED_IN or INITIAL_SESSION. Current user ID:', currentUser.id);
+                // Jeśli jesteśmy na stronie logowania, przekieruj do chat.html
+                if (window.location.pathname.endsWith('login.html') || window.location.pathname === '/') {
+                    console.log("[onAuthStateChange] Redirecting from login.html to chat.html.");
+                    window.location.href = window.location.origin + '/chat.html';
+                } else if (!appInitializedAfterLogin) {
+                    // Jesteśmy na chat.html i mamy sesję, zainicjuj komponenty
+                    console.log("[onAuthStateChange] Session active on chat.html. Initializing app components.");
+                    await initializeChatAppComponents();
+                } else {
+                    // Już zainicjalizowane, tylko pokaż body
+                    document.body.style.display = 'block';
+                }
+            } else {
+                // To jest przypadek, gdy event to SIGNED_IN/INITIAL_SESSION, ale session.user jest null (np. błąd Supabase)
+                console.warn("[onAuthStateChange] Session event indicates sign-in/initial, but user is null. Redirecting to login.html.");
+                if (!window.location.pathname.endsWith('login.html')) {
+                    window.location.href = window.location.origin + '/login.html';
+                } else {
+                    document.body.style.display = 'block'; // Jeśli już na login, po prostu pokaż
+                }
             }
-        } else if (event === 'SIGNED_OUT' || !session) {
+        } else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
             currentUser = null;
-            console.log('[onAuthStateChange] User SIGNED_OUT or session expired.');
+            console.log('[onAuthStateChange] User SIGNED_OUT or USER_DELETED.');
             // Jeśli nie jesteśmy na stronie logowania, przekieruj do login.html
             if (!window.location.pathname.endsWith('login.html')) {
-                console.log("[onAuthStateChange] Redirecting to login.html due to SIGNED_OUT or no session.");
-                window.location.href = 'login.html';
+                console.log("[onAuthStateChange] Redirecting to login.html due to SIGNED_OUT.");
+                window.location.href = window.location.origin + '/login.html';
+            } else {
+                document.body.style.display = 'block'; // Jeśli już na login, po prostu pokaż
             }
-            // Zresetuj flagę, aby przy następnym zalogowaniu appka została zainicjowana od nowa
-            appInitializedAfterLogin = false;
-        } else if (session?.user && !appInitializedAfterLogin) {
-            // Obsługa przypadku, gdy strona chat.html jest odświeżana, a sesja już istnieje
-            currentUser = session.user;
-            console.log("[onAuthStateChange] Existing session detected. Initializing app components.");
-            await initializeChatAppComponents();
+            appInitializedAfterLogin = false; // Reset flag
         }
     });
+
+    // Wyczyść subskrypcję po jej zakończeniu, jeśli jest taka potrzeba (niekoniecznie tu)
+    // if (subscription) {
+    //     // subscription.unsubscribe(); // Zazwyczaj nie unsubscribujemy tego, bo to jest główny listener
+    // }
 }
 
 // Run the application after the DOM is fully loaded
