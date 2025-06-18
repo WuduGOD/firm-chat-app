@@ -59,6 +59,9 @@ let currentActiveConvoItem = null;
 
 let onlineUsers = new Map();
 
+// Flaga do śledzenia, czy inicjalizacja appki po zalogowaniu już się odbyła
+let appInitializedAfterLogin = false;
+
 
 // --- Funkcje pomocnicze ---
 
@@ -1067,13 +1070,18 @@ function showCustomMessage(message, type = 'info') {
 }
 
 
-// --- Główna inicjalizacja aplikacji ---
+// --- Główna inicjalizacja aplikacji po zalogowaniu ---
 /**
- * Main function to initialize the entire application.
- * Fetches DOM elements, checks user session, loads data, and sets up event listeners.
+ * Initializes the main chat application components once the user is authenticated.
  */
-async function initializeApp() {
-    console.log("Initializing Komunikator application...");
+async function initializeChatAppComponents() {
+    if (appInitializedAfterLogin) {
+        console.log("[initializeChatAppComponents] App already initialized after login. Skipping.");
+        return;
+    }
+    appInitializedAfterLogin = true;
+
+    console.log("Initializing Komunikator application components...");
 
     // 1. Get DOM element references
     mainHeader = document.querySelector('.main-header'); console.log(`UI Element: mainHeader found: ${!!mainHeader}`);
@@ -1135,43 +1143,23 @@ async function initializeApp() {
     let allElementsFound = true;
     for (const key in criticalElementsCheck) {
         if (criticalElementsCheck[key] === null || criticalElementsCheck[key] === undefined) {
-            console.error(`[initializeApp] ERROR: Critical UI element '${key}' not found. Please check your HTML.`, criticalElementsCheck[key]);
+            console.error(`[initializeChatAppComponents] ERROR: Critical UI element '${key}' not found. Please check your HTML.`, criticalElementsCheck[key]);
             allElementsFound = false;
         }
     }
     // Special check for NodeList `navIcons`
     if (!navIcons || navIcons.length === 0) {
-        console.error(`[initializeApp] ERROR: 'navIcons' (NodeList) is empty or not found.`);
+        console.error(`[initializeChatAppComponents] ERROR: 'navIcons' (NodeList) is empty or not found.`);
         allElementsFound = false;
     }
 
     if (!allElementsFound) {
-        console.error('[initializeApp] Initialization failed due to missing critical UI elements. Aborting.');
-        // Consider displaying a user-friendly error or redirecting to an error page
+        console.error('[initializeChatAppComponents] Initialization failed due to missing critical UI elements. Aborting.');
         showCustomMessage('Wystąpił krytyczny błąd inicjalizacji. Brakuje elementów interfejsu.', 'error');
         return; 
     } else {
-        console.log('[initializeApp] All critical UI elements found. Proceeding with app initialization.');
+        console.log('[initializeChatAppComponents] All critical UI elements found. Proceeding with app initialization.');
     }
-
-
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError) {
-        console.error('[initializeApp] Error getting Supabase session:', sessionError.message);
-        showCustomMessage(`Błąd uwierzytelniania: ${sessionError.message}. Przekierowuję do logowania.`, 'error');
-        window.location.href = 'login.html';
-        return;
-    }
-
-    if (!session?.user) {
-        console.log('[initializeApp] No active Supabase session found. Redirecting to login.html');
-        window.location.href = 'login.html';
-        return;
-    }
-    
-    currentUser = session.user;
-    console.log('[initializeApp] Current authenticated user ID:', currentUser.id, 'Email:', currentUser.email);
 
     // Handle offline status before page unload
     window.addEventListener('beforeunload', () => {
@@ -1188,30 +1176,30 @@ async function initializeApp() {
             }
         }
     });
-    console.log("[initializeApp] 'beforeunload' listener attached for WebSocket leave signal.");
+    console.log("[initializeChatAppComponents] 'beforeunload' listener attached for WebSocket leave signal.");
 
-    // 4. Load profiles and contacts
-    console.log("[initializeApp] Loading user profiles and contacts...");
+    // Load profiles and contacts
+    console.log("[initializeChatAppComponents] Loading user profiles and contacts...");
     await loadAllProfiles();
     await loadContacts();
-    console.log("[initializeApp] User profiles and contacts loaded.");
+    console.log("[initializeChatAppComponents] User profiles and contacts loaded.");
 
-    // 5. Initialize WebSocket connection
-    console.log("[initializeApp] Initializing WebSocket connection...");
+    // Initialize WebSocket connection
+    console.log("[initializeChatAppComponents] Initializing WebSocket connection...");
     initWebSocket();
 
-    // 6. Set up message sending functionality
-    console.log("[initializeApp] Setting up message sending functionality...");
+    // Set up message sending functionality
+    console.log("[initializeChatAppComponents] Setting up message sending functionality...");
     setupSendMessage();
 
-    // 7. Set default UI state on load
-    console.log("[initializeApp] Setting default UI state...");
+    // Set default UI state on load
+    console.log("[initializeChatAppComponents] Setting default UI state...");
     chatArea.classList.remove('active');
     messageInput.disabled = true;
     sendButton.disabled = true;
 
-    // 8. Add general event listeners for the application UI
-    console.log("[initializeApp] Attaching general UI event listeners...");
+    // Add general event listeners for the application UI
+    console.log("[initializeChatAppComponents] Attaching general UI event listeners...");
     backButton.addEventListener('click', () => {
         console.log('[backButton] Back button clicked (UI)');
         
@@ -1260,7 +1248,7 @@ async function initializeApp() {
     menuButton.addEventListener('click', (event) => {
         event.stopPropagation(); 
         dropdownMenu.classList.toggle('hidden'); 
-        console.log(`[initializeApp] Menu dropdown toggled. Hidden: ${dropdownMenu.classList.contains('hidden')}`);
+        console.log(`[initializeChatAppComponents] Menu dropdown toggled. Hidden: ${dropdownMenu.classList.contains('hidden')}`);
     });
 
     document.addEventListener('click', (event) => {
@@ -1277,11 +1265,11 @@ async function initializeApp() {
         if (document.body.classList.contains('dark-mode')) {
             localStorage.setItem('theme', 'dark');
             themeToggle.innerHTML = '<i class="fas fa-sun"></i> Tryb jasny';
-            console.log("[initializeApp] Switched to dark mode.");
+            console.log("[initializeChatAppComponents] Switched to dark mode.");
         } else {
             localStorage.setItem('theme', 'light');
             themeToggle.innerHTML = '<i class="fas fa-moon"></i> Tryb ciemny';
-            console.log("[initializeApp] Switched to light mode.");
+            console.log("[initializeChatAppComponents] Switched to light mode.");
         }
     });
 
@@ -1377,9 +1365,53 @@ async function initializeApp() {
     mq.addListener(handleMediaQueryChange);
     handleMediaQueryChange(mq);
 
-    console.log("[initializeApp] Komunikator application initialized successfully.");
+    console.log("[initializeChatAppComponents] Komunikator application components initialized successfully.");
 }
 
+// --- Główna funkcja inicjalizująca aplikację po załadowaniu DOM ---
+/**
+ * Main application initialization function.
+ * This will primarily set up the Supabase authentication listener.
+ */
+async function initializeApp() {
+    console.log("Starting Komunikator application initialization process...");
+
+    // Słuchaj zmian stanu uwierzytelnienia Supabase
+    supabase.auth.onAuthStateChange(async (event, session) => {
+        console.log(`[onAuthStateChange] Event: ${event}, Session: ${session ? 'present' : 'null'}`);
+
+        if (event === 'SIGNED_IN' && session?.user) {
+            currentUser = session.user;
+            console.log('[onAuthStateChange] User SIGNED_IN. Current user ID:', currentUser.id);
+            // Jeśli jesteśmy na stronie logowania, przekieruj do chat.html po zalogowaniu
+            if (window.location.pathname.endsWith('login.html') || window.location.pathname === '/') {
+                console.log("[onAuthStateChange] Redirecting to chat.html after successful login.");
+                window.location.href = 'chat.html';
+            } else if (!appInitializedAfterLogin) {
+                // Jeśli jesteśmy już na chat.html i użytkownik się zalogował, zainicjuj komponenty
+                console.log("[onAuthStateChange] User signed in on chat.html. Initializing app components.");
+                await initializeChatAppComponents();
+            }
+        } else if (event === 'SIGNED_OUT' || !session) {
+            currentUser = null;
+            console.log('[onAuthStateChange] User SIGNED_OUT or session expired.');
+            // Jeśli nie jesteśmy na stronie logowania, przekieruj do login.html
+            if (!window.location.pathname.endsWith('login.html')) {
+                console.log("[onAuthStateChange] Redirecting to login.html due to SIGNED_OUT or no session.");
+                window.location.href = 'login.html';
+            }
+            // Zresetuj flagę, aby przy następnym zalogowaniu appka została zainicjowana od nowa
+            appInitializedAfterLogin = false;
+        } else if (session?.user && !appInitializedAfterLogin) {
+            // Obsługa przypadku, gdy strona chat.html jest odświeżana, a sesja już istnieje
+            currentUser = session.user;
+            console.log("[onAuthStateChange] Existing session detected. Initializing app components.");
+            await initializeChatAppComponents();
+        }
+    });
+}
+
+// Run the application after the DOM is fully loaded
 document.addEventListener('DOMContentLoaded', initializeApp);
 
 // --- CSS dla niestandardowego komunikatu ---
