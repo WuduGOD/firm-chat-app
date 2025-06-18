@@ -34,7 +34,7 @@ let chatSettingsDropdown; // ID: chatSettingsDropdown, Klasa: dropdown chat-sett
 let typingStatusHeader; // ID: typingStatus, Klasa: typing-status (status w nagłówku czatu)
 let typingIndicatorMessages; // ID: typingIndicator (animowane kropki w obszarze wiadomości)
 
-let messageContainer; // Zmieniona nazwa zmiennej zgodnie z HTML na chatMessages
+let messageContainer = document.getElementById('chatMessages'); // Zmieniona nazwa zmiennej zgodnie z HTML na chatMessages
 
 let chatFooter;
 let attachButton;
