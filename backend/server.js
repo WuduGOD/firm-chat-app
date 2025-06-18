@@ -98,10 +98,10 @@ wss.on('connection', (ws) => {
                     inserted_at: created_at, // To będzie created_at
                     room: targetRoom, // To będzie room_id
                 };
-                console.log('Message saved to DB, attempting to broadcast to relevant clients:', msgObj);
+                console.log('Message saved to DB, attempting to broadcast to all connected clients:', msgObj);
                 
-                // KLUCZOWA ZMIANA: Rozsyłamy wiadomość tylko do klientów, którzy są w TYM SAMYM POKOJU
-                broadcastToRoom(targetRoom, JSON.stringify(msgObj)); 
+                // KLUCZOWA ZMIANA: Rozsyłamy wiadomość do WSZYSTKICH podłączonych klientów
+                broadcastToAllConnectedClients(JSON.stringify(msgObj)); 
 
             }
             else if (data.type === 'typing' && userData.userId) { // Wskaźnik pisania
@@ -229,6 +229,7 @@ async function getOnlineStatusesFromDb() {
 
 /**
  * Broadcasts a message to all clients who are currently in the specified room.
+ * TYLKO DLA WIADOMOŚCI TYPU 'TYPING'
  * @param {string} roomId - The ID of the room to broadcast to.
  * @param {string} msg - The JSON string message to send.
  */
@@ -243,6 +244,23 @@ function broadcastToRoom(roomId, msg) {
         }
     }
     console.log(`Broadcasted message to room ${roomId}. Sent to ${sentCount} clients.`);
+}
+
+/**
+ * Broadcasts a message to all currently connected WebSocket clients.
+ * This is used for general messages (like chat messages) that might affect multiple client states (e.g., updating conversation lists).
+ * @param {string} msg - The JSON string message to send.
+ */
+function broadcastToAllConnectedClients(msg) {
+    console.log(`Attempting to broadcast message to ALL connected clients.`);
+    let sentCount = 0;
+    for (const client of clients.keys()) { 
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(msg); 
+            sentCount++;
+        }
+    }
+    console.log(`Broadcasted message to ${sentCount} clients.`);
 }
 
 /**
