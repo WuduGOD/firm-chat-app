@@ -34,7 +34,7 @@ let chatSettingsDropdown; // ID: chatSettingsDropdown, Klasa: dropdown chat-sett
 let typingStatusHeader; // ID: typingStatus, Klasa: typing-status (status w nagłówku czatu)
 let typingIndicatorMessages; // ID: typingIndicator (animowane kropki w obszarze wiadomości)
 
-let messageContainer;
+let messageContainer; // Zmieniona nazwa zmiennej zgodnie z HTML na chatMessages
 
 let chatFooter;
 let attachButton;
@@ -71,26 +71,41 @@ function resetChatView() {
         messageContainer.innerHTML = ""; // Clear messages
         // Remove all theme classes for messages container
         messageContainer.classList.remove('blue-theme', 'green-theme', 'red-theme', 'dark-bg', 'pattern-bg');
+    } else {
+        console.warn("[resetChatView] messageContainer not found during reset.");
     }
+
     if (messageInput) {
         messageInput.disabled = true; // Disable input
         messageInput.value = ""; // Clear input value
+    } else {
+        console.warn("[resetChatView] messageInput not found during reset.");
     }
     if (sendButton) {
         sendButton.disabled = true; // Disable send button
+    } else {
+        console.warn("[resetChatView] sendButton not found during reset.");
     }
     if (chatUserName) {
         chatUserName.textContent = ""; // Clear chat user name
+    } else {
+        console.warn("[resetChatView] chatUserName not found during reset.");
     }
     if (userStatusSpan) {
         userStatusSpan.textContent = ""; // Clear user status
         userStatusSpan.classList.remove('online', 'offline'); // Remove status classes
+    } else {
+        console.warn("[resetChatView] userStatusSpan not found during reset.");
     }
     if (typingStatusHeader) { // Status w nagłówku
         typingStatusHeader.classList.add('hidden'); // Hide typing indicator
+    } else {
+        console.warn("[resetChatView] typingStatusHeader not found during reset.");
     }
     if (typingIndicatorMessages) { // Animowane kropki w wiadomościach
         typingIndicatorMessages.classList.add('hidden'); // Hide typing indicator
+    } else {
+        console.warn("[resetChatView] typingIndicatorMessages not found during reset.");
     }
 
     currentChatUser = null; // Reset current chat user
@@ -102,29 +117,37 @@ function resetChatView() {
         if (logoScreen) {
             logoScreen.classList.remove('hidden'); // Show logo screen
             console.log("[resetChatView] Desktop: logoScreen is visible.");
+        } else {
+            console.warn("[resetChatView] logoScreen not found during desktop reset.");
         }
     } else { // On mobile, ensure it stays hidden
         if (logoScreen) {
             logoScreen.classList.add('hidden');
             console.log("[resetChatView] Mobile: logoScreen is hidden.");
+        } else {
+            console.warn("[resetChatView] logoScreen not found during mobile reset.");
         }
     }
 
     if (chatArea) {
         chatArea.classList.remove('active'); // Deactivate chat area
         console.log("[resetChatView] chatArea is deactivated.");
+    } else {
+        console.warn("[resetChatView] chatArea not found during reset.");
     }
     if (chatAreaWrapper) { // Ensure chatAreaWrapper is also hidden on mobile reset
         if (window.matchMedia('(max-width: 768px)').matches) {
             chatAreaWrapper.classList.remove('active-on-mobile'); // Hide wrapper on mobile
-            console.log("[resetChatView] Mobile: chatAreaWrapper removed active-on-mobile.");
+            chatAreaWrapper.style.display = 'none'; // Ensure it's truly hidden on mobile
+            console.log("[resetChatView] Mobile: chatAreaWrapper removed active-on-mobile and set to display none.");
         } else {
             chatAreaWrapper.style.display = 'flex'; // Ensure it's visible to contain logo screen
             chatAreaWrapper.classList.remove('active-on-mobile'); // Remove mobile-specific class
             console.log("[resetChatView] Desktop: chatAreaWrapper set to display flex.");
         }
+    } else {
+        console.warn("[resetChatView] chatAreaWrapper not found during reset.");
     }
-
 
     if (currentActiveConvoItem) {
         currentActiveConvoItem.classList.remove('active'); // Deactivate active conversation item
@@ -135,6 +158,8 @@ function resetChatView() {
     if (chatSettingsDropdown) {
         chatSettingsDropdown.classList.add('hidden'); // Hide chat settings dropdown
         console.log("[resetChatView] chatSettingsDropdown hidden.");
+    } else {
+        console.warn("[resetChatView] chatSettingsDropdown not found during reset.");
     }
 }
 
@@ -371,56 +396,75 @@ async function handleConversationClick(user, clickedConvoItemElement) {
             messageInput.disabled = false;
             sendButton.disabled = false;
             messageInput.focus();
+        } else {
+            console.warn("[handleConversationClick] One or more chat UI elements (chatUserName, messageInput, sendButton, userStatusSpan) not found.");
         }
 
         // NEW LOGIC FOR MOBILE/DESKTOP VIEW SWITCHING
         if (window.matchMedia('(max-width: 768px)').matches) {
-            console.log("[handleConversationClick] Mobile view activated for chat.");
+            console.log("[handleConversationClick] Mobile view activated for chat. Adjusting UI visibility.");
             // Mobile view: Hide sidebar, show chat area (full screen)
             if (sidebarWrapper) {
                 sidebarWrapper.classList.add('hidden-on-mobile'); // Ukryj sidebar
                 console.log("[handleConversationClick] Mobile: sidebarWrapper hidden.");
-            }
+            } else { console.warn("[handleConversationClick] Mobile: sidebarWrapper not found."); }
+            
             if (chatAreaWrapper) {
                 chatAreaWrapper.classList.add('active-on-mobile'); // Pokaż wrapper czatu
-                console.log("[handleConversationClick] Mobile: chatAreaWrapper active-on-mobile.");
-            }
+                chatAreaWrapper.style.display = 'flex'; // Ensure it's flex on mobile too
+                console.log("[handleConversationClick] Mobile: chatAreaWrapper active-on-mobile and set to display flex.");
+            } else { console.warn("[handleConversationClick] Mobile: chatAreaWrapper not found."); }
+            
             if (chatArea) {
                 chatArea.classList.add('active'); // Aktywuj sam obszar czatu
                 console.log("[handleConversationClick] Mobile: chatArea active.");
-            }
+            } else { console.warn("[handleConversationClick] Mobile: chatArea not found."); }
+            
             if (backButton) {
                 backButton.style.display = 'block'; // Pokaż przycisk Wstecz
                 console.log("[handleConversationClick] Mobile: backButton shown.");
-            }
+            } else { console.warn("[handleConversationClick] Mobile: backButton not found."); }
+            
             if (logoScreen) {
                 logoScreen.classList.add('hidden'); // Ensure logo screen is hidden on mobile
                 console.log("[handleConversationClick] Mobile: logoScreen hidden.");
-            }
+            } else { console.warn("[handleConversationClick] Mobile: logoScreen not found."); }
+            
+            // Ensure right sidebar is always hidden on mobile when chat is active
+            if (rightSidebarWrapper) {
+                rightSidebarWrapper.style.display = 'none';
+                console.log("[handleConversationClick] Mobile: rightSidebarWrapper hidden.");
+            } else { console.warn("[handleConversationClick] Mobile: rightSidebarWrapper not found."); }
+
+
         } else {
-            console.log("[handleConversationClick] Desktop view activated for chat.");
+            console.log("[handleConversationClick] Desktop view activated for chat. Adjusting UI visibility.");
             // Desktop view: Sidebar remains visible, chat area shows normally
             if (sidebarWrapper) {
                 sidebarWrapper.classList.remove('hidden-on-mobile'); // Upewnij się, że sidebar jest widoczny
                 console.log("[handleConversationClick] Desktop: sidebarWrapper visible.");
-            }
+            } else { console.warn("[handleConversationClick] Desktop: sidebarWrapper not found."); }
+            
             if (chatAreaWrapper) {
                 chatAreaWrapper.classList.remove('active-on-mobile'); // Usuń klasę mobilną
                 chatAreaWrapper.style.display = 'flex'; // Upewnij się, że jest flex dla desktopu
                 console.log("[handleConversationClick] Desktop: chatAreaWrapper set to flex.");
-            }
+            } else { console.warn("[handleConversationClick] Desktop: chatAreaWrapper not found."); }
+            
             if (chatArea) {
                 chatArea.classList.add('active'); // Aktywuj obszar czatu
                 console.log("[handleConversationClick] Desktop: chatArea active.");
-            }
+            } else { console.warn("[handleConversationClick] Desktop: chatArea not found."); }
+            
             if (logoScreen) {
                 logoScreen.classList.add('hidden'); // Ukryj logo screen, bo czat jest aktywny
                 console.log("[handleConversationClick] Desktop: logoScreen hidden.");
-            }
+            } else { console.warn("[handleConversationClick] Desktop: logoScreen not found."); }
+            
             if (backButton) {
                 backButton.style.display = 'none'; // Ukryj przycisk Wstecz
                 console.log("[handleConversationClick] Desktop: backButton hidden.");
-            }
+            } else { console.warn("[handleConversationClick] Desktop: backButton not found."); }
         }
 
         // Reset unread count for the selected conversation
@@ -429,6 +473,8 @@ async function handleConversationClick(user, clickedConvoItemElement) {
             unreadCount.textContent = '0';
             unreadCount.classList.add('hidden');
             console.log(`[handleConversationClick] Unread count reset for room ${newRoom}.`);
+        } else {
+            console.warn("[handleConversationClick] Unread count element not found for selected conversation.");
         }
 
         // KROK 2: Dołącz do nowego pokoju na serwerze WebSocket
@@ -453,6 +499,8 @@ async function handleConversationClick(user, clickedConvoItemElement) {
                 history.forEach(msg => addMessageToChat(msg)); // Add historical messages
                 messageContainer.scrollTop = messageContainer.scrollHeight; // Scroll to bottom
                 console.log(`[handleConversationClick] Displayed ${history.length} historical messages.`);
+            } else {
+                console.error("[handleConversationClick] messageContainer is null when trying to load history.");
             }
         } catch (e) {
             console.error("[handleConversationClick] Error loading message history:", e);
@@ -577,7 +625,7 @@ async function addMessageToChat(msg) {
         const timeEl = convoItemToUpdate.querySelector('.message-time');
         const unreadCountEl = convoItemToUpdate.querySelector('.unread-count'); 
 
-        let previewText = "Brak wiadomości"; 
+        let previewText = "Brak wiadomości"; // Default text if no messages
 
         if (previewEl && timeEl) {
             const senderId = String(msg.username);
@@ -1008,7 +1056,7 @@ function displayActiveUsers(activeUsersData) {
 function setupChatSettingsDropdown() {
     console.log("[setupChatSettingsDropdown] Setting up chat settings dropdown.");
     if (!chatSettingsButton || !chatSettingsDropdown) {
-        console.warn("[setupChatSettingsDropdown] Chat settings button or dropdown not found.");
+        console.warn("[setupChatSettingsDropdown] Chat settings button or dropdown not found. Skipping setup.");
         return;
     }
 
@@ -1098,6 +1146,8 @@ function setupChatSettingsDropdown() {
                     console.warn("[setupChatSettingsDropdown] Nickname input is empty.");
                 }
             });
+        } else {
+            console.warn("[setupChatSettingsDropdown] Nickname input or set nickname button not found.");
         }
 
         const messageSearchInput = document.getElementById('messageSearchInput');
@@ -1109,6 +1159,8 @@ function setupChatSettingsDropdown() {
                 console.log('Searching messages for:', searchTerm, '(functionality to be implemented)');
                 showCustomMessage(`Searching messages for '${searchTerm}' (functionality to be implemented).`, 'info');
             });
+        } else {
+            console.warn("[setupChatSettingsDropdown] Message search input or button not found.");
         }
     } catch (e) {
         console.error("Caught error in setupChatSettingsDropdown:", e);
@@ -1177,7 +1229,8 @@ async function initializeApp() {
         typingStatusHeader = document.getElementById('typingStatus'); console.log(`UI Element: typingStatusHeader found: ${!!typingStatusHeader}`);
         typingIndicatorMessages = document.getElementById('typingIndicator'); console.log(`UI Element: typingIndicatorMessages found: ${!!typingIndicatorMessages}`);
 
-        messageContainer = document.getElementById('messageContainer'); console.log(`UI Element: messageContainer found: ${!!messageContainer}`);
+        messageContainer = document.getElementById('chatMessages'); // Zmieniono z 'messageContainer' na 'chatMessages'
+        console.log(`UI Element: messageContainer (now chatMessages) found: ${!!messageContainer}`);
 
         chatFooter = document.querySelector('.chat-footer'); console.log(`UI Element: chatFooter found: ${!!chatFooter}`);
         attachButton = chatFooter ? chatFooter.querySelector('.attach-button') : null; console.log(`UI Element: attachButton found: ${!!attachButton}`);
@@ -1197,7 +1250,7 @@ async function initializeApp() {
             chatAreaWrapper, logoScreen, chatArea,
             chatHeader, backButton, chatUserName, userStatusSpan,
             chatHeaderActions, chatSettingsButton, chatSettingsDropdown,
-            typingStatusHeader, typingIndicatorMessages, messageContainer,
+            typingStatusHeader, typingIndicatorMessages, messageContainer, // Sprawdź nową nazwę
             chatFooter, attachButton, messageInput, emojiButton, sendButton,
             rightSidebarWrapper, rightSidebar, activeUsersListEl, noActiveUsersText
         };
@@ -1310,42 +1363,50 @@ async function initializeApp() {
             resetChatView(); 
 
             if (window.matchMedia('(max-width: 768px)').matches) {
-                console.log("[backButton] Mobile view logic triggered.");
+                console.log("[backButton] Mobile view logic triggered. Showing sidebar.");
                 if (sidebarWrapper) {
                     sidebarWrapper.classList.remove('hidden-on-mobile'); 
                     console.log("[backButton] Mobile: sidebarWrapper visible.");
-                }
+                } else { console.warn("[backButton] Mobile: sidebarWrapper not found."); }
+                
                 if (chatAreaWrapper) {
                     chatAreaWrapper.classList.remove('active-on-mobile'); 
-                    console.log("[backButton] Mobile: chatAreaWrapper deactivated.");
-                }
+                    chatAreaWrapper.style.display = 'none'; // Ensure it's hidden after backing out
+                    console.log("[backButton] Mobile: chatAreaWrapper deactivated and hidden.");
+                } else { console.warn("[backButton] Mobile: chatAreaWrapper not found."); }
+                
                 if (chatArea) {
                     chatArea.classList.remove('active'); 
                     console.log("[backButton] Mobile: chatArea deactivated.");
-                }
+                } else { console.warn("[backButton] Mobile: chatArea not found."); }
+                
                 if (logoScreen) {
                     logoScreen.classList.add('hidden'); // On mobile, logoScreen is generally hidden
                     console.log("[backButton] Mobile: logoScreen hidden.");
-                }
+                } else { console.warn("[backButton] Mobile: logoScreen not found."); }
+                
                 if (backButton) {
                     backButton.style.display = 'none'; 
                     console.log("[backButton] Mobile: backButton hidden.");
-                }
+                } else { console.warn("[backButton] Mobile: backButton not found."); }
+
             } else {
-                console.log("[backButton] Desktop view logic triggered.");
+                console.log("[backButton] Desktop view logic triggered. Showing logo screen.");
                 if (logoScreen) {
                     logoScreen.classList.remove('hidden'); 
                     console.log("[backButton] Desktop: logoScreen visible.");
-                }
+                } else { console.warn("[backButton] Desktop: logoScreen not found."); }
+                
                 if (chatArea) {
                     chatArea.classList.remove('active'); 
                     console.log("[backButton] Desktop: chatArea deactivated.");
-                }
+                } else { console.warn("[backButton] Desktop: chatArea not found."); }
+                
                 if (chatAreaWrapper) {
                     chatAreaWrapper.classList.remove('active-on-mobile'); 
                     chatAreaWrapper.style.display = 'flex'; 
                     console.log("[backButton] Desktop: chatAreaWrapper set to flex.");
-                }
+                } else { console.warn("[backButton] Desktop: chatAreaWrapper not found."); }
             }
         });
 
@@ -1356,11 +1417,13 @@ async function initializeApp() {
         });
 
         document.addEventListener('click', (event) => {
-            if (!chatSettingsDropdown.classList.contains('hidden') && !chatSettingsButton.contains(event.target)) {
+            if (!chatSettingsDropdown.classList.contains('hidden') && chatSettingsButton && !chatSettingsButton.contains(event.target)) {
                 chatSettingsDropdown.classList.add('hidden');
+                console.log("[initializeApp] Chat settings dropdown hidden due to outside click.");
             }
-            if (!dropdownMenu.classList.contains('hidden') && !menuButton.contains(event.target)) {
+            if (!dropdownMenu.classList.contains('hidden') && menuButton && !menuButton.contains(event.target)) {
                 dropdownMenu.classList.add('hidden');
+                console.log("[initializeApp] Main dropdown hidden due to outside click.");
             }
         });
 
@@ -1428,61 +1491,67 @@ async function initializeApp() {
             if (mq.matches) {
                 console.log("[handleMediaQueryChange] Mobile view activated. Adjusting initial visibility for mobile.");
                 if (sidebarWrapper) {
-                    // Na mobile, sidebar domyślnie widoczny. Ukrywamy go tylko, gdy wchodzimy w czat.
-                    // Początkowo usuwamy klasę ukrycia na wypadek, gdyby była.
                     sidebarWrapper.classList.remove('hidden-on-mobile'); 
                     console.log("[handleMediaQueryChange] Mobile: sidebarWrapper ensured visible (no hidden-on-mobile).");
-                }
+                } else { console.warn("[handleMediaQueryChange] Mobile: sidebarWrapper not found in mq change."); }
+
                 if (chatAreaWrapper) {
-                    chatAreaWrapper.classList.remove('active-on-mobile'); // Upewnij się, że nie jest aktywny na starcie
-                    chatAreaWrapper.style.display = 'none'; // Na mobile, ukrywamy chatAreaWrapper domyślnie
+                    chatAreaWrapper.classList.remove('active-on-mobile'); 
+                    chatAreaWrapper.style.display = 'none'; 
                     console.log("[handleMediaQueryChange] Mobile: chatAreaWrapper hidden.");
-                }
+                } else { console.warn("[handleMediaQueryChange] Mobile: chatAreaWrapper not found in mq change."); }
+
                 if (chatArea) {
-                    chatArea.classList.remove('active'); // Chat area hidden by default on mobile
+                    chatArea.classList.remove('active'); 
                     console.log("[handleMediaQueryChange] Mobile: chatArea deactivated.");
-                }
+                } else { console.warn("[handleMediaQueryChange] Mobile: chatArea not found in mq change."); }
+                
                 if (logoScreen) {
-                    logoScreen.classList.add('hidden'); // Logo screen też jest ukryty na mobile (pokazujemy go tylko, gdy nie ma aktywnego czatu i jest desktop)
+                    logoScreen.classList.add('hidden'); 
                     console.log("[handleMediaQueryChange] Mobile: logoScreen hidden.");
-                }
+                } else { console.warn("[handleMediaQueryChange] Mobile: logoScreen not found in mq change."); }
+                
                 if (backButton) {
-                    backButton.style.display = 'none'; // Back button not needed initially on mobile
+                    backButton.style.display = 'none'; 
                     console.log("[handleMediaQueryChange] Mobile: backButton hidden.");
-                }
-                // Upewnij się, że rightSidebar jest zawsze ukryty na mobile
+                } else { console.warn("[handleMediaQueryChange] Mobile: backButton not found in mq change."); }
+                
                 if (rightSidebarWrapper) {
                     rightSidebarWrapper.style.display = 'none';
                     console.log("[handleMediaQueryChange] Mobile: rightSidebarWrapper hidden.");
-                }
+                } else { console.warn("[handleMediaQueryChange] Mobile: rightSidebarWrapper not found in mq change."); }
             } else { // Widok desktopowy/tabletowy (min-width: 769px)
                 console.log("[handleMediaQueryChange] Desktop/Tablet view activated. Adjusting initial visibility for desktop.");
-                // Na desktopie, sidebar, logo screen i right sidebar są domyślnie widoczne. Chat area jest ukryty.
                 if (sidebarWrapper) {
-                    sidebarWrapper.classList.remove('hidden-on-mobile'); // Upewnij się, że jest widoczny
+                    sidebarWrapper.classList.remove('hidden-on-mobile'); 
                     console.log("[handleMediaQueryChange] Desktop: sidebarWrapper visible.");
-                }
+                } else { console.warn("[handleMediaQueryChange] Desktop: sidebarWrapper not found in mq change."); }
+                
                 if (chatAreaWrapper) {
-                    chatAreaWrapper.classList.remove('active-on-mobile'); // Usuń mobilną klasę
-                    chatAreaWrapper.style.display = 'flex'; // Upewnij się, że jest widoczny (zawiera logoScreen)
+                    chatAreaWrapper.classList.remove('active-on-mobile'); 
+                    chatAreaWrapper.style.display = 'flex'; 
                     console.log("[handleMediaQueryChange] Desktop: chatAreaWrapper set to flex.");
-                }
+                } else { console.warn("[handleMediaQueryChange] Desktop: chatAreaWrapper not found in mq change."); }
+                
                 if (logoScreen) {
-                    logoScreen.classList.remove('hidden'); // Pokaż logo screen
+                    logoScreen.classList.remove('hidden'); 
                     console.log("[handleMediaQueryChange] Desktop: logoScreen visible.");
-                }
+                } else { console.warn("[handleMediaQueryChange] Desktop: logoScreen not found in mq change."); }
+                
                 if (chatArea) {
-                    chatArea.classList.remove('active'); // Obszar czatu ukryty
+                    chatArea.classList.remove('active'); 
                     console.log("[handleMediaQueryChange] Desktop: chatArea deactivated.");
-                }
+                } else { console.warn("[handleMediaQueryChange] Desktop: chatArea not found in mq change."); }
+                
                 if (rightSidebarWrapper) {
-                    rightSidebarWrapper.style.display = 'flex'; // Pokaż prawy sidebar
+                    rightSidebarWrapper.style.display = 'flex'; 
                     console.log("[handleMediaQueryChange] Desktop: rightSidebarWrapper visible.");
-                }
+                } else { console.warn("[handleMediaQueryChange] Desktop: rightSidebarWrapper not found in mq change."); }
+                
                 if (backButton) {
-                    backButton.style.display = 'none'; // Przycisk wstecz niepotrzebny na desktopie
+                    backButton.style.display = 'none'; 
                     console.log("[handleMediaQueryChange] Desktop: backButton hidden.");
-                }
+                } else { console.warn("[handleMediaQueryChange] Desktop: backButton not found in mq change."); }
             }
         }
 
