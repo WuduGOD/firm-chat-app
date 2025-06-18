@@ -1054,42 +1054,6 @@ body {
     flex-shrink: 0;
 }
 
-/* Dark mode overrides */
-body.dark-mode {
-    --primary-color: #7f70ea;
-    --primary-color-dark: #6a5acd;
-    --secondary-color: #388e3c;
-    --secondary-color-dark: #2e7d32;
-
-    --text-color-dark: #f1f1f1;
-    --text-color-medium: #aaa;
-    --text-color-light: #f1f1f1;
-
-    --bg-color-light: #1a1a2e;
-    --bg-color-lighter: #1a1a2e;
-    --bg-color-sidebar-wrapper: #22223b;
-    --bg-color-sidebar: #2e2e4a;
-    --bg-color-chat-messages: #1a1a2e;
-    --bg-color-message-received: #3a3a5e;
-    --bg-color-search-input: #3a3a5e;
-    --bg-color-header: #2e2e4a;
-    --bg-color-chat-header: #2e2e4a;
-    --bg-color-chat-footer: #2e2e4a;
-    --bg-color-dropdown: #2e2e4a;
-
-    --border-color-light: #3e3e5a;
-    --border-color-medium: #555;
-    --shadow-light: 0 2px 5px rgba(0,0,0,0.1);
-    --shadow-medium: 0 0 20px rgba(0,0,0,0.2);
-
-    --bg-color-container: #2e2e4a;
-    --bg-color-input: #3a3a5e;
-
-    /* DODANE: zmienne dla dark mode dla ikon i hover states */
-    --icon-color-medium: var(--text-color-medium);
-    --bg-color-hover: #4e4e7e; /* Ciemniejszy hover dla trybu ciemnego */
-}
-
 .custom-message-box {
     position: fixed;
     top: 20px;
@@ -1113,6 +1077,42 @@ body.dark-mode {
 }
 .custom-message-box.info {
     background-color: #2196F3;
+}
+
+/* Dark mode overrides */
+body.dark-mode {
+    --primary-color: #2815ad;
+    --primary-color-dark: #140c4a;
+    --secondary-color: #388e3c;
+    --secondary-color-dark: #2e7d32;
+    --text-color-dark: #f1f1f1;
+    --text-color-medium: #aaa;
+    --text-color-light: #f1f1f1;
+
+    /* Zmienione kolory tła na ciemniejsze/czarne */
+    --bg-color-light: #000000; /* Główny kolor tła aplikacji - CZARNY */
+    --bg-color-lighter: #000000; /* Dla logo-screen - CZARNY */
+    --bg-color-sidebar-wrapper: #0a0a0a; /* Tło lewej i prawej kolumny - BARDZO CIEMNY SZARY */
+    --bg-color-sidebar: #121212; /* Tło listy kontaktów/aktywnych użytkowników w sidebarach - CIEMNY SZARY */
+    --bg-color-chat-messages: #000000; /* Tło obszaru wiadomości - CZARNY */
+    --bg-color-message-received: #1c1c1c; /* Tło wiadomości odebranych - CIEMNIEJSZY SZARY */
+    --bg-color-search-input: #1c1c1c; /* Tło pola wyszukiwania - CIEMNIEJSZY SZARY */
+    --bg-color-header: #121212; /* Tło nagłówka aplikacji - CIEMNY SZARY */
+    --bg-color-chat-header: #121212; /* Tło nagłówka czatu - CIEMNY SZARY */
+    --bg-color-chat-footer: #121212; /* Tło stopki czatu - CIEMNY SZARY */
+    --bg-color-dropdown: #121212; /* Tło dropdownów - CIEMNY SZARY */
+
+    --border-color-light: #2c2c2c; /* Jaśniejsze obramowania w ciemnym trybie */
+    --border-color-medium: #3a3a3a; /* Średnie obramowania w ciemnym trybie */
+    --shadow-light: 0 2px 5px rgba(0,0,0,0.1);
+    --shadow-medium: 0 0 20px rgba(0,0,0,0.3); /* Ciemniejszy cień dla lepszego kontrastu */
+
+    --bg-color-container: #121212; /* Tło kontenera logowania - CIEMNY SZARY */
+    --bg-color-input: #1c1c1c; /* Tło inputów logowania - CIEMNIEJSZY SZARY */
+
+    /* DODANE: zmienne dla dark mode dla ikon i hover states */
+    --icon-color-medium: var(--text-color-medium);
+    --bg-color-hover: #2a2a2a; /* Ciemniejszy hover dla trybu ciemnego */
 }
 
 /* Główne sekcje w dark mode */
