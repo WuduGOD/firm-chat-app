@@ -1653,7 +1653,7 @@ body.auth-body {
 /* Styl ikonki oka w polu hasła */
 .password-wrapper .eye {
     position: absolute;
-    right: 12px;
+    right: 0px;
     top: 50%;
     transform: translateY(-50%);
     cursor: pointer;
