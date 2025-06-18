@@ -1090,6 +1090,31 @@ body.dark-mode {
     --bg-color-hover: #4e4e7e; /* Ciemniejszy hover dla trybu ciemnego */
 }
 
+.custom-message-box {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #333;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    z-index: 1000;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    opacity: 1;
+    transition: opacity 0.5s ease-out;
+    font-family: 'Inter', sans-serif;
+}
+.custom-message-box.success {
+    background-color: #4CAF50;
+}
+.custom-message-box.error {
+    background-color: #f44336;
+}
+.custom-message-box.info {
+    background-color: #2196F3;
+}
+
 /* Główne sekcje w dark mode */
 .dark-mode .main-header,
 .dark-mode #sidebar.conversations-list,
