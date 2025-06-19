@@ -287,10 +287,11 @@ async function requestNotificationPermission() {
 
 
 /**
- * Resets the chat view to its initial state.
+ * Resets the chat view to its initial state (clears messages, disables input).
+ * Does NOT control visibility of logoScreen or chatArea. Those are handled by calling functions.
  */
 function resetChatView() {
-    console.log("[resetChatView] Resetting chat view...");
+    console.log("[resetChatView] Resetting chat view (clearing content, not visibility)...");
     if (messageContainer) {
         messageContainer.innerHTML = ""; // Clear messages
         // Remove all theme classes for messages container
@@ -323,6 +324,7 @@ function resetChatView() {
     }
     if (typingStatusHeader) { // Status w nagłówku
         typingStatusHeader.classList.add('hidden'); // Hide typing indicator
+        typingStatusHeader.textContent = ''; // Clear text
     } else {
         console.warn("[resetChatView] typingStatusHeader not found during reset.");
     }
@@ -335,44 +337,8 @@ function resetChatView() {
     currentChatUser = null; // Reset current chat user
     currentRoom = null; // Reset current room
     console.log("[resetChatView] currentChatUser and currentRoom reset to null.");
-
-    // logoScreen is completely hidden on mobile, so no need to show it back on mobile
-    if (window.matchMedia('(min-width: 769px)').matches) { // Only show logo screen on desktop
-        if (logoScreen) {
-            logoScreen.classList.remove('hidden'); // Show logo screen
-            console.log("[resetChatView] Desktop: logoScreen is visible.");
-        } else {
-            console.warn("[resetChatView] logoScreen not found during desktop reset.");
-        }
-    } else { // On mobile, ensure it stays hidden
-        if (logoScreen) {
-            logoScreen.classList.add('hidden');
-            console.log("[resetChatView] Mobile: logoScreen is hidden.");
-        } else {
-            console.warn("[resetChatView] logoScreen not found during mobile reset.");
-        }
-    }
-
-    if (chatArea) {
-        chatArea.classList.remove('active'); // Deactivate chat area
-        console.log("[resetChatView] chatArea is deactivated.");
-    } else {
-        console.warn("[resetChatView] chatArea not found during reset.");
-    }
-    if (chatAreaWrapper) { // Ensure chatAreaWrapper is also hidden on mobile reset
-        if (window.matchMedia('(max-width: 768px)').matches) {
-            chatAreaWrapper.classList.remove('active-on-mobile'); // Hide wrapper on mobile
-            chatAreaWrapper.style.display = 'none'; // Ensure it's truly hidden on mobile
-            console.log("[resetChatView] Mobile: chatAreaWrapper removed active-on-mobile and set to display none.");
-        } else {
-            chatAreaWrapper.style.display = 'flex'; // Ensure it's visible to contain logo screen
-            chatAreaWrapper.classList.remove('active-on-mobile'); // Remove mobile-specific class
-            console.log("[resetChatView] Desktop: chatAreaWrapper set to display flex.");
-        }
-    } else {
-        console.warn("[resetChatView] chatAreaWrapper not found during reset.");
-    }
-
+    
+    // Remove active state from conversation item if any
     if (currentActiveConvoItem) {
         currentActiveConvoItem.classList.remove('active'); // Deactivate active conversation item
         currentActiveConvoItem = null;
@@ -599,7 +565,42 @@ async function handleConversationClick(user, clickedConvoItemElement) {
             console.log(`[handleConversationClick] Sent LEAVE message for room: ${currentRoom}`);
         }
 
-        resetChatView(); // Reset the chat display before loading new conversation
+        // NEW: Immediately hide logo screen and show chat area to prevent flicker
+        if (logoScreen) {
+            logoScreen.classList.add('hidden');
+            console.log("[handleConversationClick] logoScreen immediately hidden.");
+        }
+        if (chatArea) {
+            chatArea.classList.add('active');
+            console.log("[handleConversationClick] chatArea immediately active.");
+        }
+        if (chatAreaWrapper) {
+            chatAreaWrapper.style.display = 'flex'; // Ensure it's visible to contain chat
+            if (window.matchMedia('(max-width: 768px)').matches) {
+                chatAreaWrapper.classList.add('active-on-mobile');
+                console.log("[handleConversationClick] Mobile: chatAreaWrapper set to active-on-mobile and display flex.");
+            } else {
+                chatAreaWrapper.classList.remove('active-on-mobile');
+                console.log("[handleConversationClick] Desktop: chatAreaWrapper set to display flex.");
+            }
+        }
+        if (backButton) { // Ensure back button is correctly set for mobile
+            if (window.matchMedia('(max-width: 768px)').matches) {
+                backButton.style.display = 'block';
+                console.log("[handleConversationClick] Mobile: backButton shown.");
+            } else {
+                backButton.style.display = 'none';
+                console.log("[handleConversationClick] Desktop: backButton hidden.");
+            }
+        }
+        // Ensure right sidebar is always hidden on mobile when chat is active
+        if (window.matchMedia('(max-width: 768px)').matches && rightSidebarWrapper) {
+            rightSidebarWrapper.style.display = 'none';
+            console.log("[handleConversationClick] Mobile: rightSidebarWrapper hidden.");
+        }
+
+
+        resetChatView(); // Reset the chat display (content clearing) before loading new conversation
 
         currentChatUser = {
             id: user.id,
@@ -633,73 +634,6 @@ async function handleConversationClick(user, clickedConvoItemElement) {
             messageInput.focus();
         } else {
             console.warn("[handleConversationClick] One or more chat UI elements (chatUserName, messageInput, sendButton, userStatusSpan) not found.");
-        }
-
-        // NEW LOGIC FOR MOBILE/DESKTOP VIEW SWITCHING
-        if (window.matchMedia('(max-width: 768px)').matches) {
-            console.log("[handleConversationClick] Mobile view activated for chat. Adjusting UI visibility.");
-            // Mobile view: Hide sidebar, show chat area (full screen)
-            if (sidebarWrapper) {
-                sidebarWrapper.classList.add('hidden-on-mobile'); // Ukryj sidebar
-                console.log("[handleConversationClick] Mobile: sidebarWrapper hidden.");
-            } else { console.warn("[handleConversationClick] Mobile: sidebarWrapper not found."); }
-            
-            if (chatAreaWrapper) {
-                chatAreaWrapper.classList.add('active-on-mobile'); // Pokaż wrapper czatu
-                chatAreaWrapper.style.display = 'flex'; // Ensure it's flex on mobile too
-                console.log("[handleConversationClick] Mobile: chatAreaWrapper active-on-mobile and set to display flex.");
-            } else { console.warn("[handleConversationClick] Mobile: chatAreaWrapper not found."); }
-            
-            if (chatArea) {
-                chatArea.classList.add('active'); // Aktywuj sam obszar czatu
-                console.log("[handleConversationClick] Mobile: chatArea active.");
-            } else { console.warn("[handleConversationClick] Mobile: chatArea not found."); }
-            
-            if (backButton) {
-                backButton.style.display = 'block'; // Pokaż przycisk Wstecz
-                console.log("[handleConversationClick] Mobile: backButton shown.");
-            } else { console.warn("[handleConversationClick] Mobile: backButton not found."); }
-            
-            if (logoScreen) {
-                logoScreen.classList.add('hidden'); // Ensure logo screen is hidden on mobile
-                console.log("[handleConversationClick] Mobile: logoScreen hidden.");
-            } else { console.warn("[handleConversationClick] Mobile: logoScreen not found."); }
-            
-            // Ensure right sidebar is always hidden on mobile when chat is active
-            if (rightSidebarWrapper) {
-                rightSidebarWrapper.style.display = 'none';
-                console.log("[handleConversationClick] Mobile: rightSidebarWrapper hidden.");
-            } else { console.warn("[handleConversationClick] Mobile: rightSidebarWrapper not found."); }
-
-
-        } else {
-            console.log("[handleConversationClick] Desktop view activated for chat. Adjusting UI visibility.");
-            // Desktop view: Sidebar remains visible, chat area shows normally
-            if (sidebarWrapper) {
-                sidebarWrapper.classList.remove('hidden-on-mobile'); // Upewnij się, że sidebar jest widoczny
-                console.log("[handleConversationClick] Desktop: sidebarWrapper visible.");
-            } else { console.warn("[handleConversationClick] Desktop: sidebarWrapper not found."); }
-            
-            if (chatAreaWrapper) {
-                chatAreaWrapper.classList.remove('active-on-mobile'); // Usuń klasę mobilną
-                chatAreaWrapper.style.display = 'flex'; // Upewnij się, że jest flex dla desktopu
-                console.log("[handleConversationClick] Desktop: chatAreaWrapper set to flex.");
-            } else { console.warn("[handleConversationClick] Desktop: chatAreaWrapper not found."); }
-            
-            if (chatArea) {
-                chatArea.classList.add('active'); // Aktywuj obszar czatu
-                console.log("[handleConversationClick] Desktop: chatArea active.");
-            } else { console.warn("[handleConversationClick] Desktop: chatArea not found."); }
-            
-            if (logoScreen) {
-                logoScreen.classList.add('hidden'); // Ukryj logo screen, bo czat jest aktywny
-                console.log("[handleConversationClick] Desktop: logoScreen hidden.");
-            } else { console.warn("[handleConversationClick] Desktop: logoScreen not found."); }
-            
-            if (backButton) {
-                backButton.style.display = 'none'; // Ukryj przycisk Wstecz
-                console.log("[handleConversationClick] Desktop: backButton hidden.");
-            } else { console.warn("[handleConversationClick] Desktop: backButton not found."); }
         }
 
         // Reset unread count for the selected conversation (UI only, Supabase handles global)
@@ -1363,7 +1297,7 @@ function displayActiveUsers(activeUsersData) {
             });
         }
         console.log("[Status Update Debug] onlineUsers map after displayActiveUsers:", onlineUsers);
-    } catch (e) {
+    } catches (e) {
         console.error("Caught error in displayActiveUsers:", e);
     }
 }
@@ -2028,14 +1962,27 @@ async function initializeApp() {
                     console.log("[handleMediaQueryChange] Desktop: chatAreaWrapper set to flex.");
                 } else { console.warn("[handleMediaQueryChange] Desktop: chatAreaWrapper not found in mq change."); }
                 
+                // On desktop, logoScreen should be visible by default, chatArea should be hidden unless a chat is active
                 if (logoScreen) {
-                    logoScreen.classList.remove('hidden'); 
-                    console.log("[handleMediaQueryChange] Desktop: logoScreen visible.");
+                    // Only show logoScreen if no chat is currently selected
+                    if (!currentChatUser) { // If no current chat user, show logo screen
+                        logoScreen.classList.remove('hidden'); 
+                        console.log("[handleMediaQueryChange] Desktop: logoScreen visible (no current chat user).");
+                    } else { // If a chat is active, ensure logo screen is hidden
+                        logoScreen.classList.add('hidden');
+                        console.log("[handleMediaQueryChange] Desktop: logoScreen hidden (chat active).");
+                    }
                 } else { console.warn("[handleMediaQueryChange] Desktop: logoScreen not found in mq change."); }
                 
                 if (chatArea) {
-                    chatArea.classList.remove('active'); 
-                    console.log("[handleMediaQueryChange] Desktop: chatArea deactivated.");
+                    // Only activate chatArea if a chat is currently selected
+                    if (currentChatUser) { // If current chat user, ensure chatArea is active
+                        chatArea.classList.add('active'); 
+                        console.log("[handleMediaQueryChange] Desktop: chatArea activated (current chat user).");
+                    } else { // If no chat active, ensure chatArea is not active
+                        chatArea.classList.remove('active'); 
+                        console.log("[handleMediaQueryChange] Desktop: chatArea deactivated (no current chat user).");
+                    }
                 } else { console.warn("[handleMediaQueryChange] Desktop: chatArea not found in mq change."); }
                 
                 if (rightSidebarWrapper) {
