@@ -1297,8 +1297,8 @@ function displayActiveUsers(activeUsersData) {
             });
         }
         console.log("[Status Update Debug] onlineUsers map after displayActiveUsers:", onlineUsers);
-    } finally (e) {
-        console.error("Caught error in displayActiveUsers:", e);
+    } finally {
+        console.log("Wykonano operacje czyszczące w bloku finally.");
     }
 }
 
