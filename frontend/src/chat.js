@@ -59,11 +59,15 @@ let currentActiveConvoItem = null;
 
 let onlineUsers = new Map(); // userID -> boolean
 
-// NOWA ZMIENNA: Stan uprawnień do powiadomień
+// Stan uprawnień do powiadomień
 let notificationPermissionGranted = false;
 
-// NOWA ZMIENNA: Przycisk do włączania dźwięków (obsługa Autoplay Policy)
+// Przycisk do włączania dźwięków (obsługa Autoplay Policy)
 let enableSoundButton;
+
+// NOWE ZMIENNE DLA DŹWIĘKU (Web Audio API)
+let audioContext = null;
+let audioContextInitiated = false; // Flaga do śledzenia, czy AudioContext został zainicjowany przez interakcję użytkownika
 
 
 // --- Funkcje pomocnicze ---
@@ -97,50 +101,136 @@ function showCustomMessage(message, type = 'info') {
     }, 3000);
 }
 
+/**
+ * Zapewnia, że AudioContext jest aktywny. Jeśli nie, tworzy go
+ * i wznawia (co wymaga gestu użytkownika).
+ */
+function ensureAudioContext() {
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        console.log("[AudioContext] New AudioContext created.");
+    }
+
+    // Sprawdź stan AudioContext. Jeśli jest zawieszony, spróbuj go wznowić.
+    // Wznowienie może wymagać gestu użytkownika.
+    if (audioContext.state === 'suspended') {
+        audioContext.resume().then(() => {
+            console.log('[AudioContext] AudioContext resumed successfully.');
+            audioContextInitiated = true;
+            localStorage.setItem('autoplayUnlocked', 'true'); // Zapisz, że autoplay jest odblokowany
+            if (enableSoundButton) {
+                enableSoundButton.classList.add('hidden'); // Ukryj przycisk
+            }
+        }).catch(e => {
+            console.error('[AudioContext] Failed to resume AudioContext:', e);
+            if (e.name === 'NotAllowedError' && enableSoundButton) {
+                enableSoundButton.classList.remove('hidden'); // Jeśli nadal blokowany, pokaż przycisk
+            }
+        });
+    } else if (audioContext.state === 'running') {
+        console.log('[AudioContext] AudioContext is already running.');
+        audioContextInitiated = true;
+        localStorage.setItem('autoplayUnlocked', 'true');
+        if (enableSoundButton) {
+            enableSoundButton.classList.add('hidden');
+        }
+    } else {
+        console.log(`[AudioContext] AudioContext state: ${audioContext.state}`);
+    }
+}
+
 
 /**
- * Odtwarza prosty, krótki dźwięk powiadomienia.
- * Dźwięk zakodowany w Base64, aby uniknąć zależności od plików.
+ * Odtwarza prosty, krótki dźwięk powiadomienia (beep).
+ * Korzysta z Web Audio API (AudioContext) do generowania dźwięku.
  */
 function playNotificationSound() {
+    console.log("[Notifications] Attempting to play notification sound...");
+    
     try {
-        // Bardzo krótki, cichy dźwięk "pik".
-        const audio = new Audio('data:audio/wav;base64,UklGRl9XWFYBQABXQVZFZm10IBAAAAABAAEARAMAAlhGFwAApmsYAQAgAAAAAEFCZGF0YUAA');
-        // Próbujemy odtworzyć dźwięk. Catchujemy błąd, jeśli przeglądarka zablokuje autoplay.
-        audio.play().catch(e => {
-            console.warn("[Notifications] Could not play notification sound (likely autoplay blocked):", e);
-            if (e.name === 'NotAllowedError' && enableSoundButton) {
-                // Jeśli błąd to blokada autoplay, pokaż przycisk do włączenia dźwięków
+        ensureAudioContext(); // Zawsze upewnij się, że AudioContext jest aktywny
+
+        if (!audioContext || audioContext.state !== 'running') {
+            console.warn("[Notifications] AudioContext is not running. Cannot play sound yet.");
+            if (enableSoundButton) {
                 enableSoundButton.classList.remove('hidden');
                 showCustomMessage("Przeglądarka zablokowała dźwięki. Kliknij 'Włącz dźwięki' u góry, aby je aktywować.", "info");
             }
-        });
+            return;
+        }
+
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.type = 'sine'; // Fale sinusoidalne są czyste i przyjemne
+        oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // A4 note
+
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime); // Volume for notification (0.3 is moderate)
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5); // Fade out quickly
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.5); // Play for 0.5 seconds
+
+        console.log("[Notifications] Notification sound started playing.");
+
     } catch (e) {
-        console.error("Error creating audio object for notification:", e);
+        console.error("Error playing notification sound:", e);
+        if (e.name === 'NotAllowedError' && enableSoundButton) {
+            enableSoundButton.classList.remove('hidden');
+            showCustomMessage("Przeglądarka zablokowała dźwięki. Kliknij 'Włącz dźwięki' u góry, aby je aktywować.", "info");
+        }
     }
 }
+
 
 /**
  * Próbuje odtworzyć cichy dźwięk, aby sprawdzić i ewentualnie odblokować politykę Autoplay.
  * Jeśli się nie powiedzie, pokaże przycisk `enableSoundButton`.
  */
 function checkAudioAutoplay() {
-    console.log("[Autoplay Check] Attempting to play silent audio to check autoplay policy...");
-    const silentAudio = new Audio('data:audio/wav;base64,UklGRl9XWFYBQABXQVZFZm10IBAAAAABAAEARAMAAlhGFwAApmsYAQAgAAAAAEFCZGF0YUAA'); // Bardzo krótki, cichy dźwięk
-    silentAudio.volume = 0.01; // Ustaw bardzo niską głośność
-    silentAudio.play()
-        .then(() => {
-            console.log("[Autoplay Check] Audio autoplay seems to be allowed.");
+    console.log("[Autoplay Check] Attempting to check autoplay policy...");
+
+    // Jeśli autoplay został już odblokowany w poprzedniej sesji, ukryj przycisk
+    if (localStorage.getItem('autoplayUnlocked') === 'true') {
+        console.log("[Autoplay Check] Autoplay already unlocked according to localStorage. Hiding button.");
+        if (enableSoundButton) {
+            enableSoundButton.classList.add('hidden');
+            audioContextInitiated = true; // Ustaw flagę na true, bo przeglądarka pamięta odblokowanie
+        }
+        ensureAudioContext(); // Spróbuj wznowić AudioContext prewencyjnie
+        return;
+    }
+
+    try {
+        ensureAudioContext(); // Upewnij się, że AudioContext istnieje i jest w stanie suspended/running
+
+        if (audioContext && audioContext.state === 'suspended') {
+            // Jeśli AudioContext jest zawieszony, oznacza to, że potrzebny jest gest użytkownika.
+            // Pokaż przycisk do włączenia dźwięków.
+            console.warn("[Autoplay Check] AudioContext is suspended. Showing 'Enable Sound' button.");
             if (enableSoundButton) {
-                enableSoundButton.classList.add('hidden'); // Ukryj przycisk, jeśli dźwięk działa
+                enableSoundButton.classList.remove('hidden');
+                showCustomMessage("Przeglądarka zablokowała dźwięki. Kliknij 'Włącz dźwięki' u góry, aby je aktywować.", "info");
             }
-        })
-        .catch(e => {
-            console.warn("[Autoplay Check] Audio autoplay blocked. Showing 'Enable Sound' button. Error:", e);
+        } else if (audioContext && audioContext.state === 'running') {
+            console.log("[Autoplay Check] AudioContext is already running. Autoplay is likely allowed.");
+            audioContextInitiated = true;
+            localStorage.setItem('autoplayUnlocked', 'true');
             if (enableSoundButton) {
-                enableSoundButton.classList.remove('hidden'); // Pokaż przycisk
+                enableSoundButton.classList.add('hidden');
             }
-        });
+        } else {
+            console.log(`[Autoplay Check] AudioContext state: ${audioContext ? audioContext.state : 'null'}. No immediate action.`);
+        }
+    } catch (e) {
+        console.error("Error during autoplay check:", e);
+        if (enableSoundButton) {
+            enableSoundButton.classList.remove('hidden');
+        }
+    }
 }
 
 
@@ -799,7 +889,7 @@ async function addMessageToChat(msg) {
                 console.warn(`[addMessageToChat] Could not find unreadCountEl for room ${msg.room}. Unread count not updated.`);
             }
             
-            // NEW: Logic for browser notifications and sound
+            // Logic for browser notifications and sound
             // Show notification if tab is hidden OR if user is in a different chat
             const shouldNotify = notificationPermissionGranted && (document.hidden || isDifferentRoom);
             if (shouldNotify) {
@@ -819,15 +909,6 @@ async function addMessageToChat(msg) {
                     // Możesz dodać logikę do automatycznego przełączenia na odpowiedni czat,
                     // np. wywołując handleConversationClick z odpowiednimi danymi użytkownika.
                     console.log("[Notifications] Notification clicked. Focusing window.");
-                    // Example: find user and simulate click to open chat
-                    // const userToOpenChat = (await loadAllProfiles()).find(p => String(p.id) === String(msg.username));
-                    // if (userToOpenChat) {
-                    //     const mockConvoItem = document.createElement('li'); // Create dummy element
-                    //     mockConvoItem.dataset.convoId = userToOpenChat.id;
-                    //     mockConvoItem.dataset.email = userToOpenChat.email;
-                    //     mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(userToOpenChat.id));
-                    //     handleConversationClick(userToOpenChat, mockConvoItem);
-                    // }
                 };
 
                 playNotificationSound(); // Odtwórz dźwięk osobno
@@ -1444,7 +1525,7 @@ async function initializeApp() {
         noActiveUsersText = document.getElementById('noActiveUsersText'); console.log(`UI Element: noActiveUsersText found: ${!!noActiveUsersText}`);
 
         const criticalElementsCheck = {
-            mainHeader, menuButton, dropdownMenu, themeToggle, logoutButton, enableSoundButton, // Dodany enableSoundButton
+            mainHeader, menuButton, dropdownMenu, themeToggle, logoutButton, enableSoundButton, 
             container, sidebarWrapper, mainNavIcons, onlineUsersMobile,
             sidebarEl, searchInput, contactsListEl,
             chatAreaWrapper, logoScreen, chatArea,
@@ -1691,7 +1772,9 @@ async function initializeApp() {
         if (enableSoundButton) {
             enableSoundButton.addEventListener('click', () => {
                 console.log("[Autoplay Check] 'Enable Sound' button clicked.");
-                playNotificationSound(); // Spróbuj odtworzyć dźwięk
+                ensureAudioContext(); // Wywołaj ensureAudioContext, aby wznowić kontekst
+                playNotificationSound(); // Odtwórz dźwięk natychmiast po kliknięciu
+                localStorage.setItem('autoplayUnlocked', 'true'); // Zapisz, że użytkownik odblokował autoplay
                 enableSoundButton.classList.add('hidden'); // Ukryj przycisk po kliknięciu
             });
         }
@@ -1787,38 +1870,3 @@ async function initializeApp() {
 
 // Run the application after the DOM is fully loaded
 document.addEventListener('DOMContentLoaded', initializeApp);
-
-// --- CSS dla niestandardowego komunikatu ---
-// WAŻNE: Ten blok CSS powinien znajdować się w pliku `style.css`
-// lub w sekcji `<style>` w `chat.html`, a NIE w pliku JavaScript.
-// Zostawiam go tutaj TYLKO jako przypomnienie/sugestię.
-/*
-.custom-message-box {
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: #333;
-    color: white;
-    padding: 10px 20px;
-    border-radius: 8px;
-    z-index: 1000;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    opacity: 1;
-    transition: opacity 0.5s ease-out;
-    font-family: 'Inter', sans-serif;
-}
-.custom-message-box.hidden {
-    opacity: 0;
-    pointer-events: none; // Zapobiega kliknięciom, gdy jest ukryty
-}
-.custom-message-box.success {
-    background-color: #4CAF50;
-}
-.custom-message-box.error {
-    background-color: #f44336;
-}
-.custom-message-box.info {
-    background-color: #2196F3;
-}
-*/
