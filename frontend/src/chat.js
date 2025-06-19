@@ -62,6 +62,9 @@ let onlineUsers = new Map(); // userID -> boolean
 // NOWA ZMIENNA: Stan uprawnień do powiadomień
 let notificationPermissionGranted = false;
 
+// NOWA ZMIENNA: Przycisk do włączania dźwięków (obsługa Autoplay Policy)
+let enableSoundButton;
+
 
 // --- Funkcje pomocnicze ---
 
@@ -103,10 +106,41 @@ function playNotificationSound() {
     try {
         // Bardzo krótki, cichy dźwięk "pik".
         const audio = new Audio('data:audio/wav;base64,UklGRl9XWFYBQABXQVZFZm10IBAAAAABAAEARAMAAlhGFwAApmsYAQAgAAAAAEFCZGF0YUAA');
-        audio.play().catch(e => console.warn("Could not play notification sound:", e));
+        // Próbujemy odtworzyć dźwięk. Catchujemy błąd, jeśli przeglądarka zablokuje autoplay.
+        audio.play().catch(e => {
+            console.warn("[Notifications] Could not play notification sound (likely autoplay blocked):", e);
+            if (e.name === 'NotAllowedError' && enableSoundButton) {
+                // Jeśli błąd to blokada autoplay, pokaż przycisk do włączenia dźwięków
+                enableSoundButton.classList.remove('hidden');
+                showCustomMessage("Przeglądarka zablokowała dźwięki. Kliknij 'Włącz dźwięki' u góry, aby je aktywować.", "info");
+            }
+        });
     } catch (e) {
         console.error("Error creating audio object for notification:", e);
     }
+}
+
+/**
+ * Próbuje odtworzyć cichy dźwięk, aby sprawdzić i ewentualnie odblokować politykę Autoplay.
+ * Jeśli się nie powiedzie, pokaże przycisk `enableSoundButton`.
+ */
+function checkAudioAutoplay() {
+    console.log("[Autoplay Check] Attempting to play silent audio to check autoplay policy...");
+    const silentAudio = new Audio('data:audio/wav;base64,UklGRl9XWFYBQABXQVZFZm10IBAAAAABAAEARAMAAlhGFwAApmsYAQAgAAAAAEFCZGF0YUAA'); // Bardzo krótki, cichy dźwięk
+    silentAudio.volume = 0.01; // Ustaw bardzo niską głośność
+    silentAudio.play()
+        .then(() => {
+            console.log("[Autoplay Check] Audio autoplay seems to be allowed.");
+            if (enableSoundButton) {
+                enableSoundButton.classList.add('hidden'); // Ukryj przycisk, jeśli dźwięk działa
+            }
+        })
+        .catch(e => {
+            console.warn("[Autoplay Check] Audio autoplay blocked. Showing 'Enable Sound' button. Error:", e);
+            if (enableSoundButton) {
+                enableSoundButton.classList.remove('hidden'); // Pokaż przycisk
+            }
+        });
 }
 
 
@@ -426,6 +460,7 @@ async function loadContacts() {
                 <div class="contact-meta">
                     <span class="message-time">${timeText}</span>
                     <span class="unread-count hidden">0</span>
+                    <span class="status-dot ${onlineUsers.get(String(user.id)) ? 'online' : ''}"></span> <!-- Added status dot -->
                 </div>
             `;
 
@@ -776,7 +811,7 @@ async function addMessageToChat(msg) {
                 const notification = new Notification(notificationTitle, {
                     body: notificationBody,
                     icon: 'https://placehold.co/48x48/000000/FFFFFF?text=💬', // Prosta ikona powiadomienia
-                    silent: true // Dźwięk obsługujemy osobną funkcją
+                    silent: true // Dźwięk obsługujemy osobną funkcją, aby ominąć blokady autoplay
                 });
 
                 notification.onclick = function() {
@@ -795,7 +830,7 @@ async function addMessageToChat(msg) {
                     // }
                 };
 
-                playNotificationSound();
+                playNotificationSound(); // Odtwórz dźwięk osobno
             }
         } else if (String(msg.username) === String(currentUser.id) || msg.room === currentRoom) {
             console.log(`[addMessageToChat] Message is from current user (${String(msg.username) === String(currentUser.id)}) OR for the active room (${msg.room === currentRoom}). Ensuring unread count is hidden.`);
@@ -1364,6 +1399,10 @@ async function initializeApp() {
         themeToggle = document.getElementById('themeToggle'); console.log(`UI Element: themeToggle found: ${!!themeToggle}`);
         logoutButton = document.getElementById('logoutButton'); console.log(`UI Element: logoutButton found: ${!!logoutButton}`);
 
+        // NOWY ELEMENT: Przycisk do włączania dźwięków
+        enableSoundButton = document.getElementById('enableSoundButton'); console.log(`UI Element: enableSoundButton found: ${!!enableSoundButton}`);
+
+
         container = document.querySelector('.container'); console.log(`UI Element: container found: ${!!container}`);
         sidebarWrapper = document.querySelector('.sidebar-wrapper'); console.log(`UI Element: sidebarWrapper found: ${!!sidebarWrapper}`);
         mainNavIcons = document.querySelector('.main-nav-icons'); console.log(`UI Element: mainNavIcons found: ${!!mainNavIcons}`);
@@ -1405,7 +1444,7 @@ async function initializeApp() {
         noActiveUsersText = document.getElementById('noActiveUsersText'); console.log(`UI Element: noActiveUsersText found: ${!!noActiveUsersText}`);
 
         const criticalElementsCheck = {
-            mainHeader, menuButton, dropdownMenu, themeToggle, logoutButton,
+            mainHeader, menuButton, dropdownMenu, themeToggle, logoutButton, enableSoundButton, // Dodany enableSoundButton
             container, sidebarWrapper, mainNavIcons, onlineUsersMobile,
             sidebarEl, searchInput, contactsListEl,
             chatAreaWrapper, logoScreen, chatArea,
@@ -1537,7 +1576,7 @@ async function initializeApp() {
                 } else { console.warn("[backButton] Mobile: chatArea not found."); }
                 
                 if (logoScreen) {
-                    logoScreen.classList.add('hidden'); // On mobile, logoScreen is generally hidden
+                    logoScreen.classList.add('hidden'); 
                     console.log("[backButton] Mobile: logoScreen hidden.");
                 } else { console.warn("[backButton] Mobile: logoScreen not found."); }
                 
@@ -1648,6 +1687,16 @@ async function initializeApp() {
 
         setupChatSettingsDropdown();
 
+        // Listener dla nowego przycisku włączającego dźwięki
+        if (enableSoundButton) {
+            enableSoundButton.addEventListener('click', () => {
+                console.log("[Autoplay Check] 'Enable Sound' button clicked.");
+                playNotificationSound(); // Spróbuj odtworzyć dźwięk
+                enableSoundButton.classList.add('hidden'); // Ukryj przycisk po kliknięciu
+            });
+        }
+
+
         function handleMediaQueryChange(mq) {
             console.log(`[handleMediaQueryChange] Media query listener triggered. mq.matches: ${mq.matches} (max-width: 768px)`);
             if (mq.matches) {
@@ -1724,6 +1773,10 @@ async function initializeApp() {
 
         // Now that the app is initialized, request notification permission
         await requestNotificationPermission();
+        
+        // Sprawdź politykę Autoplay po inicjalizacji
+        checkAudioAutoplay();
+
 
         console.log("[initializeApp] Komunikator application initialized successfully.");
     } catch (e) {

@@ -1079,6 +1079,35 @@ body {
     background-color: #2196F3;
 }
 
+.enable-sound-button {
+    background-color: var(--primary-color);
+    color: var(--button-text-color);
+    border: none;
+    padding: 8px 15px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    position: absolute; /* Możesz dostosować pozycję */
+    top: 15px;
+    right: 150px; /* Obok menu użytkownika */
+    z-index: 10; /* Aby był na wierzchu */
+}
+
+.enable-sound-button:hover {
+    background-color: var(--primary-color-dark);
+    transform: translateY(-1px);
+}
+
+.enable-sound-button.hidden {
+    display: none;
+}
+
 /* Dark mode overrides */
 body.dark-mode {
     --primary-color: #2815ad;
