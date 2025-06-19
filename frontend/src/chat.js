@@ -1297,7 +1297,7 @@ function displayActiveUsers(activeUsersData) {
             });
         }
         console.log("[Status Update Debug] onlineUsers map after displayActiveUsers:", onlineUsers);
-    } catches (e) {
+    } finally (e) {
         console.error("Caught error in displayActiveUsers:", e);
     }
 }
