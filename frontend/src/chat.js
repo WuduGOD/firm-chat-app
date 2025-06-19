@@ -57,10 +57,7 @@ let reconnectAttempts = 0;
 let typingTimeout;
 let currentActiveConvoItem = null;
 
-// Zmieniono strukturę onlineUsers: teraz przechowuje obiekt { isOnline: boolean, lastSeen: string (ISO timestamp) }
-// To jest mapa globalna, która będzie przechowywać najbardziej aktualne statusy wszystkich użytkowników.
-let userStatuses = new Map(); // userID -> { isOnline: boolean, lastSeen: string (ISO timestamp) }
-
+let onlineUsers = new Map(); // userID -> boolean
 
 // Stan uprawnień do powiadomień
 let notificationPermissionGranted = false;
@@ -514,12 +511,6 @@ async function loadContacts() {
                     timeText = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
                 }
             }
-            
-            // Pobieramy status z globalnej mapy userStatuses
-            const userStatusData = userStatuses.get(String(user.id));
-            const isOnline = userStatusData ? userStatusData.isOnline : false;
-            const statusDotClass = isOnline ? 'online' : ''; // Kropka tylko dla online, brak klasy dla offline (będzie szara domyślnie)
-
 
             convoItem.innerHTML = `
                 <img src="${avatarSrc}" alt="Avatar" class="avatar">
@@ -530,7 +521,7 @@ async function loadContacts() {
                 <div class="contact-meta">
                     <span class="message-time">${timeText}</span>
                     <span class="unread-count hidden">0</span>
-                    <span class="status-dot ${statusDotClass}"></span> <!-- Added status dot -->
+                    <span class="status-dot ${onlineUsers.get(String(user.id)) ? 'online' : ''}"></span> <!-- Added status dot -->
                 </div>
             `;
 
@@ -546,35 +537,6 @@ async function loadContacts() {
         console.error("Caught error in loadContacts:", e);
     }
 }
-
-/**
- * Formatuje timestamp na czytelny dla człowieka format "ostatnio online".
- * @param {string | Date} timestamp - Czas ostatniej aktywności (ISO string lub Date object).
- * @returns {string} Sformatowany tekst statusu.
- */
-function formatLastSeen(timestamp) {
-    if (!timestamp) return 'Nieznany';
-
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMinutes = Math.round(diffMs / (1000 * 60));
-    const diffHours = Math.round(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffMinutes < 1) {
-        return 'Online'; // Jeśli w ciągu ostatniej minuty, uznajemy za online
-    } else if (diffMinutes < 60) {
-        return `${diffMinutes} min temu`;
-    } else if (diffHours < 24) {
-        return `${diffHours} godz. temu`;
-    } else if (diffDays < 7) {
-        return `${diffDays} dni temu`;
-    } else {
-        return `${date.toLocaleDateString('pl-PL')} ${date.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}`;
-    }
-}
-
 
 /**
  * Handles a click event on a conversation item.
@@ -661,17 +623,11 @@ async function handleConversationClick(user, clickedConvoItemElement) {
         if (chatUserName && messageInput && sendButton && userStatusSpan) {
             chatUserName.textContent = currentChatUser.username;
             
-            // NOWA LOGIKA: POBIERZ STATUS I LAST_SEEN Z userStatuses i wyświetl w nagłówku czatu
-            const userStatusData = userStatuses.get(String(user.id));
-            if (userStatusData) {
-                userStatusSpan.textContent = userStatusData.isOnline ? 'Online' : formatLastSeen(userStatusData.lastSeen);
-                userStatusSpan.classList.toggle('online', userStatusData.isOnline);
-                userStatusSpan.classList.toggle('offline', !userStatusData.isOnline);
-            } else {
-                userStatusSpan.textContent = 'Ładowanie statusu...'; // Domyślny status
-                userStatusSpan.classList.remove('online', 'offline');
-            }
-            console.log(`[handleConversationClick] Initial status for active chat user ${currentChatUser.username}: ${userStatusSpan.textContent}`);
+            const isUserOnline = onlineUsers.get(String(user.id)) === true; 
+            userStatusSpan.textContent = isUserOnline ? 'Online' : 'Offline';
+            userStatusSpan.classList.toggle('online', isUserOnline); 
+            userStatusSpan.classList.toggle('offline', !isUserOnline); 
+            console.log(`[handleConversationClick] Initial status for active chat user ${currentChatUser.username} (from onlineUsers map): ${isUserOnline ? 'Online' : 'Offline'}`);
 
             messageInput.disabled = false;
             sendButton.disabled = false;
@@ -702,9 +658,7 @@ async function handleConversationClick(user, clickedConvoItemElement) {
             console.log(`[handleConversationClick] Sent JOIN message to WebSocket for room: ${currentRoom}`);
         } else {
             console.warn("[handleConversationClick] WebSocket not open. Attempting to re-initialize and join on open.");
-            // Przeniesiono inicjalizację WebSocket na sam początek initializeApp, więc tutaj tylko log.
-            // Jeśli socket jest zamknięty, to initializeApp powinien go ponownie uruchomić.
-            // Jeżeli ten warn się często pojawia, należy sprawdzić lifecycle socketu.
+            initWebSocket(); // Re-initialize WebSocket if not open, join on 'open' event
         }
 
         // KROK 3: Ładowanie historii wiadomości po ustawieniu pokoju
@@ -954,118 +908,150 @@ async function addMessageToChat(msg) {
 }
 
 /**
- * Aktualizuje wskaźnik statusu online/offline dla konkretnego użytkownika w UI.
- * Ta funkcja jest wywoływana przez WebSocket, aby utrzymać aktualność statusów.
- * @param {string} userId - ID użytkownika, którego status jest aktualizowany.
- * @param {boolean} isOnline - True, jeśli użytkownik jest online, w przeciwnym razie false.
- * @param {string} lastSeen - Ciąg znaków timestamp ISO ostatniej aktywności.
+ * Updates the online/offline status indicator for a specific user.
+ * @param {string} userId - The ID of the user whose status is being updated.
+ * @param {boolean} isOnline - True if the user is online, false otherwise.
  */
-function updateUserUIStatus(userId, isOnline, lastSeen) {
-    console.log(`[Status Update] Aktualizacja UI statusu dla userId: ${userId}, isOnline: ${isOnline}, lastSeen: ${lastSeen}`);
-    
-    // Aktualizuj globalną mapę statusów
-    userStatuses.set(String(userId), { isOnline, lastSeen });
+function updateUserStatusIndicator(userId, isOnline) {
+    console.log(`[Status Update Debug] Function called for userId: ${userId}, isOnline: ${isOnline}`);
+    try {
+        onlineUsers.set(String(userId), isOnline); // ZAWSZE AKTUALIZUJ MAPĘ onlineUsers
 
-    // 1. Aktualizacja w nagłówku czatu (tylko jeśli ten użytkownik jest aktualnie wybrany)
-    if (currentChatUser && String(currentChatUser.id) === String(userId) && userStatusSpan) {
-        const formattedStatus = isOnline ? 'Online' : formatLastSeen(lastSeen);
-        userStatusSpan.textContent = formattedStatus;
-        userStatusSpan.classList.toggle('online', isOnline);
-        userStatusSpan.classList.toggle('offline', !isOnline); // Dodaj klasę offline jeśli nie online
-        console.log(`[Status Update] Nagłówek czatu zaktualizowany dla ${getUserLabelById(userId)}: ${formattedStatus}`);
-    }
-
-    // 2. Aktualizacja kropek statusu w liście kontaktów (NIE TEKSTU)
-    const contactItem = contactsListEl.querySelector(`.contact[data-convo-id="${userId}"]`);
-    if (contactItem) {
-        const statusDot = contactItem.querySelector('.status-dot');
-        if (statusDot) {
-            statusDot.classList.toggle('online', isOnline);
-            // Usuwamy klasę offline z kropki, jeśli użytkownik jest online
-            statusDot.classList.toggle('offline', !isOnline); 
-        }
-    }
-
-    // 3. Aktualizacja listy aktywnych użytkowników (prawy sidebar i mobile)
-    // Aby zapewnić poprawność, usuwamy i dodajemy elementy ponownie, jeśli status się zmieni
-    const activeUserListItemDesktop = activeUsersListEl.querySelector(`li[data-user-id="${userId}"]`);
-    const activeUserListItemMobile = onlineUsersMobile.querySelector(`div[data-user-id="${userId}"]`);
-
-    if (isOnline) {
-        // Dodaj do listy aktywnych (desktop)
-        if (!activeUserListItemDesktop && String(userId) !== String(currentUser.id)) { // Upewnij się, że nie dodajesz samego siebie
-            const li = document.createElement('li');
-            li.classList.add('active-user-item');
-            li.dataset.userId = userId;
-            const avatarSrc = `https://i.pravatar.cc/150?img=${userId.charCodeAt(0) % 70 + 1}`;
-            li.innerHTML = `
-                <img src="${avatarSrc}" alt="Awatar" class="avatar">
-                <span class="username">${getUserLabelById(userId)}</span>
-                <span class="status-dot online"></span>
-            `;
-            activeUsersListEl.appendChild(li);
-            // Dodaj listener, aby można było kliknąć na użytkownika z listy aktywnych
-            li.addEventListener('click', async () => {
-                const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(userId));
-                if (userProfile) {
-                    const mockConvoItem = document.createElement('li'); // Użyj dummy elementu
-                    mockConvoItem.dataset.convoId = userProfile.id;
-                    mockConvoItem.dataset.email = userProfile.email;
-                    mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(userProfile.id));
-                    handleConversationClick(userProfile, mockConvoItem);
-                }
-            });
-            console.log(`[Status Update] Dodano ${getUserLabelById(userId)} do listy aktywnych na desktopie.`);
-        } else if (activeUserListItemDesktop) {
-             // Jeśli już jest na liście, upewnij się, że kropka statusu jest online
-            const statusDot = activeUserListItemDesktop.querySelector('.status-dot');
-            if(statusDot) statusDot.classList.add('online');
-        }
-
-        // Dodaj do listy aktywnych (mobile)
-        if (!activeUserListItemMobile && String(userId) !== String(currentUser.id)) {
-            const divMobile = document.createElement('div');
-            divMobile.classList.add('online-user-item-mobile');
-            divMobile.dataset.userId = userId;
-            const avatarSrc = `https://i.pravatar.cc/150?img=${userId.charCodeAt(0) % 70 + 1}`;
-            divMobile.innerHTML = `
-                <img src="${avatarSrc}" alt="Awatar" class="avatar">
-                <span class="username">${getUserLabelById(userId)}</span>
-            `;
-            onlineUsersMobile.appendChild(divMobile);
-             divMobile.addEventListener('click', async () => {
-                const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(userId));
-                if (userProfile) {
-                    const mockConvoItem = document.createElement('li'); // Użyj dummy elementu
-                    mockConvoItem.dataset.convoId = userProfile.id;
-                    mockConvoItem.dataset.email = userProfile.email;
-                    mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(userProfile.id));
-                    handleConversationClick(userProfile, mockConvoItem);
-                }
-            });
-            console.log(`[Status Update] Dodano ${getUserLabelById(userId)} do listy aktywnych na mobile.`);
-        }
-
-    } else { // Użytkownik jest offline
-        if (activeUserListItemDesktop) {
-            activeUserListItemDesktop.remove();
-            console.log(`[Status Update] Usunięto ${getUserLabelById(userId)} z listy aktywnych na desktopie (offline).`);
-        }
-        if (activeUserListItemMobile) {
-            activeUserListItemMobile.remove();
-            console.log(`[Status Update] Usunięto ${getUserLabelById(userId)} z listy aktywnych na mobile (offline).`);
-        }
-    }
-
-    // Zaktualizuj widoczność tekstu "Brak aktywnych użytkowników"
-    if (noActiveUsersText && activeUsersListEl) {
-        if (activeUsersListEl.children.length === 0) {
-            noActiveUsersText.style.display = 'block';
+        // Update status in the active chat header
+        if (currentChatUser && userStatusSpan) {
+            console.log(`[Status Update Debug] currentChatUser.id: ${currentChatUser.id}, userId from WS: ${userId}`);
+            if (String(currentChatUser.id) === String(userId)) {
+                userStatusSpan.textContent = isOnline ? 'Online' : 'Offline';
+                userStatusSpan.classList.toggle('online', isOnline);
+                userStatusSpan.classList.toggle('offline', !isOnline);
+                console.log(`[Status Update Debug] Chat header status updated for ${getUserLabelById(userId)} to: ${isOnline ? 'Online' : 'Offline'}`);
+            } else {
+                console.log("[Status Update Debug] userId " + userId + " does not match currentChatUser.id " + currentChatUser.id + ". Header not updated.");
+            }
         } else {
-            noActiveUsersText.style.display = 'none';
+            console.log("[Status Update Debug] currentChatUser or userStatusSpan is null/undefined. Cannot update header.");
         }
+
+        // Update status in the active users list (right sidebar - desktop)
+        if (activeUsersListEl && noActiveUsersText && String(userId) !== String(currentUser.id)) { // Exclude current user from active list
+            const userListItem = activeUsersListEl.querySelector(`li[data-user-id="${userId}"]`);
+
+            if (!isOnline) {
+                // If user goes offline, remove from list
+                if (userListItem) {
+                    userListItem.remove();
+                    console.log(`Removed offline user ${getUserLabelById(userId)} from desktop active list.`);
+                }
+            } else { // User is online
+                if (!userListItem) {
+                    // If user is online and not in list, add them
+                    const li = document.createElement('li');
+                    li.classList.add('active-user-item');
+                    li.dataset.userId = userId;
+
+                    const avatarSrc = `https://i.pravatar.cc/150?img=${userId.charCodeAt(0) % 70 + 1}`;
+
+                    li.innerHTML = `
+                        <img src="${avatarSrc}" alt="Avatar" class="avatar">
+                        <span class="username">${getUserLabelById(userId)}</span>
+                        <span class="status-dot online"></span>
+                    `;
+                    activeUsersListEl.appendChild(li);
+                    console.log(`Added new online user to desktop active list: ${getUserLabelById(userId)}`);
+
+                    li.addEventListener('click', async () => {
+                        const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(userId));
+                        if (userProfile) {
+                            const mockConvoItem = document.createElement('li');
+                            mockConvoItem.dataset.convoId = userProfile.id; 
+                            mockConvoItem.dataset.email = userProfile.email;
+                            mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(userProfile.id)); 
+                            handleConversationClick(userProfile, mockConvoItem);
+                        }
+                    });
+
+                } else {
+                    // If user is online and already in list, ensure status dot is correct
+                    const statusIndicator = userListItem.querySelector('.status-dot');
+                    if (statusIndicator) {
+                        statusIndicator.classList.add('online');
+                        statusIndicator.classList.remove('offline');
+                    }
+                }
+            }
+            // After any change, check if the list is empty and update noActiveUsersText
+            if (activeUsersListEl.children.length === 0) {
+                noActiveUsersText.style.display = 'block';
+                activeUsersListEl.style.display = 'none';
+            } else {
+                noActiveUsersText.style.display = 'none';
+                activeUsersListEl.style.display = 'block';
+            }
+        } else {
+             if (String(userId) !== String(currentUser.id)) { // Only warn if it's not the current user as current user is not in this list
+                 console.error("activeUsersListEl or noActiveUsersText not found during status update.");
+             }
+        }
+
+        // Update status in the mobile online users list
+        if (onlineUsersMobile && String(userId) !== String(currentUser.id)) { // Exclude current user
+            const mobileUserItem = onlineUsersMobile.querySelector(`div[data-user-id="${userId}"]`);
+
+            if (!isOnline) {
+                if (mobileUserItem) {
+                    mobileUserItem.remove();
+                    console.log(`Removed offline user ${getUserLabelById(userId)} from mobile active list.`);
+                }
+            } else { // User is online
+                if (!mobileUserItem) {
+                    const div = document.createElement('div');
+                    div.classList.add('online-user-item-mobile');
+                    div.dataset.userId = userId;
+
+                    const avatarSrc = `https://i.pravatar.cc/150?img=${userId.charCodeAt(0) % 70 + 1}`;
+
+                    div.innerHTML = `
+                        <img src="${avatarSrc}" alt="Avatar" class="avatar">
+                        <span class="username">${getUserLabelById(userId)}</span>
+                    `;
+                    
+                    // Add click listener for mobile item
+                    div.addEventListener('click', async () => {
+                        const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(userId));
+                        if (userProfile) {
+                            const mockConvoItem = document.createElement('li');
+                            mockConvoItem.dataset.convoId = userProfile.id; 
+                            mockConvoItem.dataset.email = userProfile.email;
+                            mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(userProfile.id)); 
+                            handleConversationClick(userProfile, mockConvoItem);
+                        }
+                    });
+                    onlineUsersMobile.appendChild(div);
+                    console.log(`Added new online user to mobile active list: ${getUserLabelById(userId)}`);
+                }
+            }
+        } else {
+             if (String(userId) !== String(currentUser.id)) { // Only warn if it's not the current user
+                console.error("onlineUsersMobile not found during status update.");
+            }
+        }
+        
+        // Update status dots in the main contacts list
+        const contactConvoItem = contactsListEl.querySelector(`.contact[data-convo-id="${userId}"]`);
+        if (contactConvoItem) {
+            const statusDot = contactConvoItem.querySelector('.status-dot');
+            if (statusDot) {
+                if (isOnline) {
+                    statusDot.classList.add('online');
+                } else {
+                    statusDot.classList.remove('online');
+                }
+            }
+        }
+
+    } catch (e) {
+        console.error("Caught error in updateUserStatusIndicator:", e);
     }
-    console.log(`[Status Update] Zakończono aktualizację UI dla użytkownika: ${userId}`);
 }
 
 
@@ -1115,65 +1101,59 @@ function showTypingIndicator(usernameId) {
  * Initializes the WebSocket connection for real-time communication.
  */
 function initWebSocket() {
-    // Użyj import.meta.env.VITE_CHAT_WS_URL, jeśli używasz Vite do zmiennych środowiskowych.
-    // W przeciwnym razie, użyj bezpośrednio adresu lub zmiennej globalnej.
-    const wsUrl = import.meta.env.VITE_CHAT_WS_URL || "ws://localhost:3000/websocket"; 
-    // Zmieniłem domyślny URL na localhost:3000/websocket, aby pasował do oczekiwanego formatu w server.js
-    // Pamiętaj, aby dostosować go do swojego wdrożenia (np. "wss://your-backend-domain.com/websocket").
-
+    const wsUrl = import.meta.env.VITE_CHAT_WS_URL || "wss://firm-chat-app-backend.onrender.com";
 
     if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
         console.log("[initWebSocket] WebSocket connection already open or connecting. Skipping new connection attempt.");
         return;
     }
-    
-    // Dodajemy userId do URL, aby serwer mógł zidentyfikować użytkownika
-    const fullWsUrl = `${wsUrl}/${currentUser.id}`;
-    
-    socket = new WebSocket(fullWsUrl);
-    console.log(`[initWebSocket] Attempting to connect to WebSocket at: ${fullWsUrl}`);
 
-    socket.onopen = async () => { // Zmieniono na async
+    socket = new WebSocket(wsUrl);
+    console.log(`[initWebSocket] Attempting to connect to WebSocket at: ${wsUrl}`);
+
+    socket.onopen = () => {
         console.log('[initWebSocket] WebSocket connected successfully.');
         reconnectAttempts = 0; 
         if (currentUser) { 
             // ZAWSZE dołączamy do "global" pokoju po otwarciu WS
-            // Serwer powinien automatycznie zarządzać globalnym pokojem dla statusów po połączeniu
-            // Nie wysyłamy już wiadomości 'join' dla 'global' z klienta, to jest teraz po stronie serwera.
-            
-            // Wysyłamy do serwera informację, że jesteśmy online
             socket.send(JSON.stringify({
-                type: 'USER_STATUS_UPDATE', // Używamy tego samego typu, co serwer wysyła
-                userId: currentUser.id,
-                isOnline: true,
-                lastSeen: new Date().toISOString() // Aktualny timestamp
+                type: 'join',
+                name: currentUser.id,
+                room: 'global', // Dołącz do globalnego pokoju dla statusów i ogólnego bycia "online"
             }));
-            console.log(`[initWebSocket] Sent 'USER_STATUS_UPDATE' (online) for user ${currentUser.id}`);
+            console.log(`[initWebSocket] Sent global JOIN message for user: ${currentUser.id}`);
+
+            // Wyślij status "online" po podłączeniu
+            socket.send(JSON.stringify({
+                type: 'status',
+                user: currentUser.id,
+                online: true
+            }));
+            console.log(`[initWebSocket] Sent 'online' status for user ${currentUser.id}`);
 
             // Jeśli użytkownik był w trakcie czatu i WebSocket się rozłączył/ponownie połączył, dołącz ponownie do ostatniego pokoju
             if (currentRoom && currentRoom !== 'global') {
                 socket.send(JSON.stringify({
-                    type: 'JOIN_ROOM', // Upewnij się, że ten typ jest poprawny w server.js
-                    roomId: currentRoom
+                    type: 'join',
+                    name: currentUser.id,
+                    room: currentRoom
                 }));
                 console.log(`[initWebSocket] Re-joining previous room (${currentRoom}) after reconnection.`);
             }
         } else {
-            console.warn("[initWebSocket] WebSocket opened but currentUser is not set. Cannot send initial status or join room.");
+            console.warn("[initWebSocket] WebSocket opened but currentUser is not set. Cannot join room yet.");
         }
-        // Po udanym połączeniu i wstępnym ustawieniu statusu, załaduj aktywnych użytkowników
-        loadActiveUsers(); 
-        // Także załaduj kontakty, aby odświeżyć ich kropki statusu
-        await loadContacts(); // Dodano await, aby upewnić się, że kontakty są załadowane z aktualnymi statusami.
+        // Request active users list after successful connection
+        loadActiveUsers();
     };
 
     socket.onmessage = (event) => {
         try {
             const data = JSON.parse(event.data);
-            console.log(`[WS MESSAGE] Incoming message: type=${data.type}. Current client room (currentRoom global var): ${currentRoom}`);
+            console.log(`[WS MESSAGE] Incoming message: type=${data.type}, room=${data.room}. Current client room (currentRoom global var): ${currentRoom}`);
 
             switch (data.type) {
-                case 'MESSAGE':
+                case 'message':
                     addMessageToChat({
                         username: data.username,
                         text: data.text,
@@ -1189,26 +1169,22 @@ function initWebSocket() {
                         }
                     }
                     break;
-                case 'USER_TYPING': // Nowy typ 'USER_TYPING'
-                    console.log(`[WS MESSAGE] Received typing from ${data.userId} in room ${data.room}.`);
-                    showTypingIndicator(data.userId);
+                case 'typing':
+                    console.log(`[WS MESSAGE] Received typing from ${data.username} in room ${data.room}.`);
+                    showTypingIndicator(data.username);
                     break;
-                case 'LOAD_MESSAGES': // Typ history zmieniony na LOAD_MESSAGES w server.js
-                    console.log(`[WS MESSAGE] Received message history for room: ${data.room}.`);
-                    displayMessages(data.messages); 
+                case 'history':
+                    console.log(`[WS MESSAGE] Received message history for room: ${data.room}. Global currentRoom: ${currentRoom}`);
+                    // Historia jest ładowana bezpośrednio przez handleConversationClick
+                    // Ta sekcja jest głównie do celów debugowania lub jeśli historia byłaby ładowana w inny sposób
                     break;
-                case 'USER_STATUS_UPDATE': // Nowy typ do aktualizacji statusu online/offline i lastSeen
-                    console.log(`[WS MESSAGE] Received status update for user ${data.userId}: online=${data.isOnline}, lastSeen: ${data.lastSeen}`);
-                    updateUserUIStatus(data.userId, data.isOnline, data.lastSeen);
+                case 'status':
+                    console.log(`[WS MESSAGE] Received status update for user ${data.user}: ${data.online ? 'online' : 'offline'}`);
+                    updateUserStatusIndicator(data.user, data.online);
                     break;
-                case 'ALL_USER_STATUSES': // Nowy typ do inicjalnego załadowania wszystkich statusów
-                    console.log('[WS MESSAGE] Received initial active users list:', data.statuses);
-                    data.statuses.forEach(status => {
-                        userStatuses.set(status.user_id, { isOnline: status.is_online, lastSeen: status.last_seen });
-                    });
-                    // Po załadowaniu wszystkich statusów, odśwież kontakty i aktywnych użytkowników
-                    loadContacts(); // Odśwież kontakty, aby pokazać kropki statusu
-                    displayActiveUsers(); // Odśwież aktywnych użytkowników (prawy panel)
+                case 'active_users':
+                    console.log('[WS MESSAGE] Received initial active users list:', data.users);
+                    displayActiveUsers(data.users); 
                     break;
                 default:
                     console.warn("[WS MESSAGE] Unknown WS message type:", data.type, data);
@@ -1235,40 +1211,54 @@ function initWebSocket() {
 }
 
 /**
- * Ładuje i wyświetla listę aktywnych użytkowników w prawym pasku bocznym (desktop) i sekcji użytkowników online na urządzeniach mobilnych.
- * Dane o statusach pobierane są z globalnej mapy `userStatuses`.
+ * Loads and displays the list of active users in the right sidebar.
  */
 async function loadActiveUsers() {
-    console.log("[loadActiveUsers] Ładowanie aktywnych użytkowników dla prawego paska bocznego i urządzeń mobilnych...");
+    console.log("[loadActiveUsers] Loading active users for right sidebar and mobile...");
     if (!activeUsersListEl || !noActiveUsersText || !onlineUsersMobile) {
-        console.error("[loadActiveUsers] Brak krytycznych elementów listy aktywnych użytkowników, nie można załadować aktywnych użytkowników.");
+        console.error("[loadActiveUsers] Critical active user list elements not found, cannot load active users.");
+        return;
+    }
+
+    try {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({ type: 'get_active_users' }));
+            console.log("[loadActiveUsers] Requested active users list from WebSocket server.");
+        } else {
+            console.warn("[loadActiveUsers] WebSocket not open, cannot request active users.");
+        }
+    } catch (e) {
+        console.error("Caught error in loadActiveUsers:", e);
+    }
+}
+
+/**
+ * Displays a list of active users in the right sidebar (desktop) and mobile online users section.
+ * @param {Array<Object>} activeUsersData - An array of active user objects.
+ */
+function displayActiveUsers(activeUsersData) {
+    if (!activeUsersListEl || !noActiveUsersText || !onlineUsersMobile) {
+        console.error("[displayActiveUsers] Missing UI elements for displaying active users.");
         return;
     }
 
     try {
         activeUsersListEl.innerHTML = ''; 
         onlineUsersMobile.innerHTML = ''; 
-        // userStatuses nie jest czyszczone tutaj, ponieważ jest aktualizowane przez wiadomości WS.
+        onlineUsers.clear(); 
 
-        const onlineUsersArray = Array.from(userStatuses.entries())
-            .filter(([userId, status]) => status.isOnline && String(userId) !== String(currentUser.id))
-            .map(([userId, status]) => ({ id: userId, online: status.isOnline, lastSeen: status.lastSeen }));
+        const filteredUsers = activeUsersData.filter(user => String(user.id) !== String(currentUser.id));
 
-
-        if (onlineUsersArray.length === 0) {
+        if (filteredUsers.length === 0) {
             activeUsersListEl.style.display = 'none';
             noActiveUsersText.style.display = 'block';
-            console.log("[loadActiveUsers] Brak aktywnych użytkowników, ukrywam listę desktopową, pokazuję tekst.");
+            console.log("[displayActiveUsers] No active users, hiding desktop list, showing text.");
         } else {
             activeUsersListEl.style.display = 'block';
             noActiveUsersText.style.display = 'none';
-            console.log("[loadActiveUsers] Znaleziono aktywnych użytkowników, pokazuję listę desktopową, ukrywam tekst.");
+            console.log("[displayActiveUsers] Active users found, showing desktop list, hiding text.");
 
-            for (const user of onlineUsersArray) {
-                const userLabel = await getUserLabelById(user.id);
-                if (!userLabel) continue;
-
-                // Dodaj do listy aktywnych (desktop)
+            filteredUsers.forEach(user => {
                 const li = document.createElement('li');
                 li.classList.add('active-user-item');
                 li.dataset.userId = user.id;
@@ -1276,49 +1266,39 @@ async function loadActiveUsers() {
                 let avatarSrc = `https://i.pravatar.cc/150?img=${user.id.charCodeAt(0) % 70 + 1}`;
 
                 li.innerHTML = `
-                        <img src="${avatarSrc}" alt="Awatar" class="avatar">
-                        <span class="username">${userLabel}</span>
+                        <img src="${avatarSrc}" alt="Avatar" class="avatar">
+                        <span class="username">${getUserLabelById(user.id) || user.username || user.email || 'Nieznany'}</span>
                         <span class="status-dot online"></span>
                     `;
                 activeUsersListEl.appendChild(li);
 
-                li.addEventListener('click', async () => {
-                    const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(user.id));
-                    if (userProfile) {
-                        const mockConvoItem = document.createElement('li'); // Użyj dummy elementu
-                        mockConvoItem.dataset.convoId = userProfile.id;
-                        mockConvoItem.dataset.email = userProfile.email;
-                        mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(userProfile.id));
-                        handleConversationClick(userProfile, mockConvoItem);
-                    }
-                });
-
-
-                // Element dla mobilnej listy aktywnych użytkowników
                 const divMobile = document.createElement('div');
                 divMobile.classList.add('online-user-item-mobile');
                 divMobile.dataset.userId = user.id;
 
                 divMobile.innerHTML = `
-                        <img src="${avatarSrc}" alt="Awatar" class="avatar">
-                        <span class="username">${userLabel}</span>
+                        <img src="${avatarSrc}" alt="Avatar" class="avatar">
+                        <span class="username">${getUserLabelById(user.id) || user.username || 'Nieznany'}</span>
                     `;
                 
                 divMobile.addEventListener('click', async () => {
                     const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(user.id));
                     if (userProfile) {
                         const mockConvoItem = document.createElement('li');
-                        mockConvoItem.dataset.convoId = userProfile.id;
+                        mockConvoItem.dataset.convoId = user.id;
                         mockConvoItem.dataset.email = userProfile.email;
-                        mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(userProfile.id));
+                        mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(user.id));
                         handleConversationClick(userProfile, mockConvoItem);
                     }
                 });
                 onlineUsersMobile.appendChild(divMobile);
-            }
+
+                onlineUsers.set(String(user.id), true); 
+            });
         }
-    } catch (e) {
-        console.error("Złapano błąd w loadActiveUsers:", e);
+        console.log("[Status Update Debug] onlineUsers map after displayActiveUsers:", onlineUsers);
+    } finally {
+        console.log("Wykonano operacje czyszczące w bloku finally.");
     }
 }
 
@@ -1728,17 +1708,13 @@ async function initializeApp() {
             if (socket && socket.readyState === WebSocket.OPEN && currentUser) {
                 console.log(`[beforeunload] Sending 'leave' signal for user ${currentUser.id}.`);
                 try {
-                    // Wysłanie statusu offline z aktualnym lastSeen
                     socket.send(JSON.stringify({
-                        type: 'USER_STATUS_UPDATE', 
-                        userId: currentUser.id,
-                        isOnline: false,
-                        lastSeen: new Date().toISOString() // Aktualny timestamp
+                        type: 'leave',
+                        name: currentUser.id,
+                        room: currentRoom || 'global'
                     }));
-                    console.log(`[beforeunload] Wysłano status 'offline' dla użytkownika ${currentUser.id}.`);
-
                 } catch (sendError) {
-                    console.warn(`[beforeunload] Failed to send offline status via WebSocket: ${sendError.message}`);
+                    console.warn(`[beforeunload] Failed to send leave message via WebSocket: ${sendError.message}`);
                 }
             }
         });
@@ -1747,13 +1723,12 @@ async function initializeApp() {
         // 4. Load profiles and contacts
         console.log("[initializeApp] Loading user profiles and contacts...");
         await loadAllProfiles();
-        // loadContacts() jest teraz wywoływane w initWebSocket po otrzymaniu ALL_USER_STATUSES
-        // aby upewnić się, że statusy są już dostępne.
-        console.log("[initializeApp] User profiles loaded.");
+        await loadContacts(); // This now calls loadUnreadMessagesFromSupabase internally
+        console.log("[initializeApp] User profiles and contacts loaded.");
 
         // 5. Initialize WebSocket connection
         console.log("[initializeApp] Initializing WebSocket connection...");
-        initWebSocket(); // Ta funkcja teraz wewnętrznie wywoła loadContacts() i displayActiveUsers()
+        initWebSocket();
 
         // 6. Set up message sending functionality
         console.log("[initializeApp] Setting up message sending functionality...");
@@ -1797,7 +1772,7 @@ async function initializeApp() {
             if (window.matchMedia('(max-width: 768px)').matches) {
                 console.log("[backButton] Mobile view logic triggered. Showing sidebar.");
                 if (sidebarWrapper) {
-                    sidebarWrapper.style.display = 'flex'; // Zmieniono na flex, aby był widoczny
+                    sidebarWrapper.classList.remove('hidden-on-mobile'); 
                     console.log("[backButton] Mobile: sidebarWrapper visible.");
                 } else { console.warn("[backButton] Mobile: sidebarWrapper not found."); }
                 
@@ -1824,7 +1799,7 @@ async function initializeApp() {
                 
                 if (rightSidebarWrapper) {
                     rightSidebarWrapper.style.display = 'none';
-                    console.log("[backButton] Mobile: rightSidebarWrapper ukryty.");
+                    console.log("[backButton] Mobile: rightSidebarWrapper hidden.");
                 } else { console.warn("[backButton] Mobile: rightSidebarWrapper not found."); }
 
 
@@ -1837,7 +1812,7 @@ async function initializeApp() {
                 
                 if (chatArea) {
                     chatArea.classList.remove('active'); 
-                    console.log("[backButton] Desktop: chatArea dezaktywowany.");
+                    console.log("[backButton] Desktop: chatArea deactivated.");
                 } else { console.warn("[backButton] Desktop: chatArea not found."); }
                 
                 if (chatAreaWrapper) {
@@ -1851,17 +1826,17 @@ async function initializeApp() {
         menuButton.addEventListener('click', (event) => {
             event.stopPropagation(); 
             dropdownMenu.classList.toggle('hidden'); 
-            console.log(`[initializeApp] Rozwijane menu przełączone. Ukryte: ${dropdownMenu.classList.contains('hidden')}`);
+            console.log(`[initializeApp] Menu dropdown toggled. Hidden: ${dropdownMenu.classList.contains('hidden')}`);
         });
 
         document.addEventListener('click', (event) => {
             if (!chatSettingsDropdown.classList.contains('hidden') && chatSettingsButton && !chatSettingsButton.contains(event.target)) {
                 chatSettingsDropdown.classList.add('hidden');
-                console.log("[initializeApp] Rozwijane menu ustawień czatu ukryte z powodu kliknięcia poza nim.");
+                console.log("[initializeApp] Chat settings dropdown hidden due to outside click.");
             }
             if (!dropdownMenu.classList.contains('hidden') && menuButton && !menuButton.contains(event.target)) {
                 dropdownMenu.classList.add('hidden');
-                console.log("[initializeApp] Główne rozwijane menu ukryte z powodu kliknięcia poza nim.");
+                console.log("[initializeApp] Main dropdown hidden due to outside click.");
             }
         });
 
@@ -1870,11 +1845,11 @@ async function initializeApp() {
             if (document.body.classList.contains('dark-mode')) {
                 localStorage.setItem('theme', 'dark');
                 themeToggle.innerHTML = '<i class="fas fa-sun"></i> Tryb jasny';
-                console.log("[initializeApp] Przełączono na tryb ciemny.");
+                console.log("[initializeApp] Switched to dark mode.");
             } else {
                 localStorage.setItem('theme', 'light');
                 themeToggle.innerHTML = '<i class="fas fa-moon"></i> Tryb ciemny';
-                console.log("[initializeApp] Przełączono na tryb jasny.");
+                console.log("[initializeApp] Switched to light mode.");
             }
         });
 
@@ -1891,24 +1866,27 @@ async function initializeApp() {
             // Send offline status before logging out
             if (socket && socket.readyState === WebSocket.OPEN && currentUser) {
                 try {
-                     socket.send(JSON.stringify({
-                        type: 'USER_STATUS_UPDATE', 
-                        userId: currentUser.id,
-                        isOnline: false,
-                        lastSeen: new Date().toISOString() // Aktualny timestamp
+                    socket.send(JSON.stringify({
+                        type: 'status',
+                        user: currentUser.id,
+                        online: false
                     }));
-                    console.log(`[logoutButton] Wysłano status 'offline' dla użytkownika ${currentUser.id} przed wylogowaniem.`);
+                    console.log(`[logoutButton] Sent 'offline' status for user ${currentUser.id} before logging out.`);
                 } catch (sendError) {
                     console.warn(`[logoutButton] Failed to send offline status: ${sendError.message}`);
                 }
             }
+
+            // No Firestore listener to detach here, as we are using Supabase for unread messages.
+            // unreadConversationsInfo.clear(); // Clear local unread info (handled by loadUnreadMessagesFromSupabase on next login)
+            // updateDocumentTitle(); // Reset title (handled by loadUnreadMessagesFromSupabase on next login)
 
             const { error } = await supabase.auth.signOut();
             if (error) {
                 console.error('Logout error:', error.message);
                 showCustomMessage(`Błąd wylogowania: ${error.message}`, 'error');
             } else {
-                console.log('Wylogowano pomyślnie. Przekierowanie do login.html');
+                console.log('Logged out successfully. Redirecting to login.html');
                 window.location.href = 'login.html';
             }
         });
@@ -1969,7 +1947,7 @@ async function initializeApp() {
                 
                 if (rightSidebarWrapper) {
                     rightSidebarWrapper.style.display = 'none';
-                    console.log("[handleMediaQueryChange] Mobile: rightSidebarWrapper ukryty.");
+                    console.log("[handleMediaQueryChange] Mobile: rightSidebarWrapper hidden.");
                 } else { console.warn("[handleMediaQueryChange] Mobile: rightSidebarWrapper not found in mq change."); }
             } else { // Widok desktopowy/tabletowy (min-width: 769px)
                 console.log("[handleMediaQueryChange] Desktop/Tablet view activated. Adjusting initial visibility for desktop.");
