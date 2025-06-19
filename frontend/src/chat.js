@@ -238,54 +238,6 @@ function checkAudioAutoplay() {
     }
 }
 
-
-/**
- * Prosi użytkownika o uprawnienia do wyświetlania powiadomień przeglądarkowych.
- * Aktualizuje zmienną globalną `notificationPermissionGranted`.
- */
-async function requestNotificationPermission() {
-    console.log("[Notifications] Checking Notification API support...");
-    if (!("Notification" in window)) {
-        console.warn("[Notifications] This browser does not support desktop notification.");
-        return;
-    }
-
-    // Sprawdź obecny status uprawnień
-    if (Notification.permission === "granted") {
-        notificationPermissionGranted = true;
-        console.log("[Notifications] Notification permission already granted.");
-        return;
-    } else if (Notification.permission === "denied") {
-        notificationPermissionGranted = false;
-        console.warn("[Notifications] Notification permission previously denied.");
-        showCustomMessage("Powiadomienia zostały zablokowane. Aby je włączyć, zmień ustawienia przeglądarki.", "info");
-        return;
-    }
-
-    console.log("[Notifications] Requesting permission from user...");
-    try {
-        const permission = await Notification.requestPermission();
-        if (permission === "granted") {
-            notificationPermissionGranted = true;
-            console.log("[Notifications] Notification permission granted by user.");
-            showCustomMessage("Powiadomienia włączone!", "success");
-        } else if (permission === "denied") {
-            notificationPermissionGranted = false;
-            console.warn("[Notifications] Notification permission denied by user.");
-            showCustomMessage("Powiadomienia zostały zablokowane. Nie będziesz otrzymywać alertów o nowych wiadomościach.", "error");
-        } else { // 'default'
-            notificationPermissionGranted = false;
-            console.info("[Notifications] Notification permission dismissed or default.");
-            showCustomMessage("Powiadomienia nie zostały włączone.", "info");
-        }
-    } catch (error) {
-        console.error("[Notifications] Error requesting notification permission:", error);
-        notificationPermissionGranted = false;
-        showCustomMessage("Wystąpił błąd podczas próby włączenia powiadomień.", "error");
-    }
-}
-
-
 /**
  * Resets the chat view to its initial state (clears messages, disables input).
  * Does NOT control visibility of logoScreen or chatArea. Those are handled by calling functions.
@@ -2001,9 +1953,6 @@ async function initializeApp() {
         const mq = window.matchMedia('(max-width: 768px)');
         mq.addListener(handleMediaQueryChange);
         handleMediaQueryChange(mq); // Initial call to set correct layout
-
-        // Now that the app is initialized, request notification permission
-        await requestNotificationPermission();
         
         // Sprawdź politykę Autoplay po inicjalizacji
         checkAudioAutoplay();
