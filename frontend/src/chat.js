@@ -69,6 +69,11 @@ let enableSoundButton;
 let audioContext = null;
 let audioContextInitiated = false; // Flaga do śledzenia, czy AudioContext został zainicjowany przez interakcję użytkownika
 
+// NOWE ZMIENNE DLA TYTUŁU ZAKŁADKI PRZEGLĄDARKI
+let baseDocumentTitle = "Komunikator";
+// Mapa przechowująca nieprzeczytane wiadomości dla każdej konwersacji
+// Klucz: roomId, Wartość: { unreadCount: number, lastSenderId: string }
+let unreadConversationsInfo = new Map(); 
 
 // --- Funkcje pomocnicze ---
 
@@ -687,12 +692,18 @@ async function handleConversationClick(user, clickedConvoItemElement) {
             } else { console.warn("[handleConversationClick] Desktop: backButton not found."); }
         }
 
-        // Reset unread count for the selected conversation
+        // Reset unread count for the selected conversation and update global state
         const unreadCount = clickedConvoItemElement.querySelector('.unread-count');
         if (unreadCount) {
             unreadCount.textContent = '0';
             unreadCount.classList.add('hidden');
             console.log(`[handleConversationClick] Unread count reset for room ${newRoom}.`);
+            // Clear this conversation from the global unread tracker
+            if (unreadConversationsInfo.has(newRoom)) {
+                unreadConversationsInfo.delete(newRoom);
+                console.log(`[handleConversationClick] Removed room ${newRoom} from unreadConversationsInfo.`);
+                updateDocumentTitle(); // Update title after clearing unread for this room
+            }
         } else {
             console.warn("[handleConversationClick] Unread count element not found for selected conversation.");
         }
@@ -889,6 +900,12 @@ async function addMessageToChat(msg) {
                 console.warn(`[addMessageToChat] Could not find unreadCountEl for room ${msg.room}. Unread count not updated.`);
             }
             
+            // Update global unreadConversationsInfo map
+            let convoInfo = unreadConversationsInfo.get(msg.room) || { unreadCount: 0, lastSenderId: null };
+            convoInfo.unreadCount++;
+            convoInfo.lastSenderId = msg.username; // Always update with the latest sender
+            unreadConversationsInfo.set(msg.room, convoInfo);
+
             // Logic for browser notifications and sound
             // Show notification if tab is hidden OR if user is in a different chat
             const shouldNotify = notificationPermissionGranted && (document.hidden || isDifferentRoom);
@@ -914,14 +931,22 @@ async function addMessageToChat(msg) {
                 playNotificationSound(); // Odtwórz dźwięk osobno
             }
         } else if (String(msg.username) === String(currentUser.id) || msg.room === currentRoom) {
+            // If message is from current user or for the active room, ensure unread count is zeroed and hidden
             console.log(`[addMessageToChat] Message is from current user (${String(msg.username) === String(currentUser.id)}) OR for the active room (${msg.room === currentRoom}). Ensuring unread count is hidden.`);
             if (unreadCountEl) {
                 unreadCountEl.textContent = '0';
                 unreadCountEl.classList.add('hidden');
             }
+            // Also, clear this conversation from the global unread tracker
+            if (unreadConversationsInfo.has(msg.room)) {
+                unreadConversationsInfo.delete(msg.room); // If it was previously unread, mark as read
+                console.log(`[addMessageToChat] Cleared unread status for active room ${msg.room} from unreadConversationsInfo.`);
+            }
         } else {
             console.log("[addMessageToChat] Unhandled unread count scenario. room:", msg.room, "currentRoom:", currentRoom, "msg.username:", msg.username, "currentUser.id:", currentUser.id);
         }
+        // After any message (sent or received, for active or inactive chat), update the title
+        updateDocumentTitle();
 
         // Display message in the active chat only if it belongs to the current room
         console.log(`[addMessageToChat Display Check] Comparing msg.room (${msg.room}) with currentRoom (${currentRoom}). Match: ${msg.room === currentRoom}`);
@@ -1463,6 +1488,41 @@ function setupChatSettingsDropdown() {
     }
 }
 
+/**
+ * Aktualizuje tytuł zakładki przeglądarki na podstawie statusu nieprzeczytanych wiadomości.
+ * - Jeśli brak nieprzeczytanych: "Komunikator"
+ * - Jeśli 1 nieprzeczytana konwersacja: "(1) [Nazwa_Nadawcy] - Komunikator"
+ * - Jeśli >1 nieprzeczytanych konwersacji: "([Liczba_Konwersacji]) Komunikator"
+ */
+function updateDocumentTitle() {
+    let totalUnreadConvos = 0;
+    let singleUnreadSenderId = null; 
+
+    // Iteruj po mapie, aby zliczyć nieprzeczytane konwersacje i znaleźć pojedynczego nadawcę
+    unreadConversationsInfo.forEach((info, roomId) => {
+        if (info.unreadCount > 0) {
+            totalUnreadConvos++;
+            if (totalUnreadConvos === 1) { // Pierwsza znaleziona nieprzeczytana konwersacja
+                singleUnreadSenderId = info.lastSenderId;
+            } else { // Znaleziono więcej niż jedną, więc nie ma pojedynczego nadawcy
+                singleUnreadSenderId = null; 
+            }
+        }
+    });
+
+    let newTitle = baseDocumentTitle;
+    if (totalUnreadConvos > 0) {
+        if (totalUnreadConvos === 1 && singleUnreadSenderId) {
+            const senderLabel = getUserLabelById(singleUnreadSenderId) || singleUnreadSenderId;
+            newTitle = `(${totalUnreadConvos}) ${senderLabel} - ${baseDocumentTitle}`;
+        } else {
+            newTitle = `(${totalUnreadConvos}) ${baseDocumentTitle}`;
+        }
+    }
+    document.title = newTitle;
+    console.log(`[Document Title] Updated to: "${newTitle}"`);
+}
+
 
 // --- Główna inicjalizacja aplikacji ---
 /**
@@ -1860,6 +1920,8 @@ async function initializeApp() {
         // Sprawdź politykę Autoplay po inicjalizacji
         checkAudioAutoplay();
 
+        // Ustaw początkowy tytuł zakładki
+        updateDocumentTitle();
 
         console.log("[initializeApp] Komunikator application initialized successfully.");
     } catch (e) {
