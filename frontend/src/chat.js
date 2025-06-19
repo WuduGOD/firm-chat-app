@@ -1,6 +1,6 @@
 // Importy zależności
 import { loadAllProfiles, getUserLabelById } from './profiles.js';
-import { supabase } from './supabaseClient.js';
+import { supabase } from './supabaseClient.js'; // Używamy istniejącego obiektu supabase
 
 // Globalne zmienne UI i czatu
 let mainHeader;
@@ -140,7 +140,7 @@ function ensureAudioContext() {
             enableSoundButton.classList.add('hidden');
         }
     } else {
-        console.log(`[AudioContext] AudioContext state: ${audioContext.state}`);
+        console.log(`[AudioContext] AudioContext state: ${audioContext ? audioContext.state : 'null'}`);
     }
 }
 
@@ -566,6 +566,7 @@ async function loadContacts() {
             contactsListEl.appendChild(convoItem);
         });
         console.log("[loadContacts] Contacts loaded and rendered.");
+        await loadUnreadMessagesFromSupabase(); // Load unread counts after contacts are rendered
     } catch (e) {
         console.error("Caught error in loadContacts:", e);
     }
@@ -608,6 +609,15 @@ async function handleConversationClick(user, clickedConvoItemElement) {
         const newRoom = getRoomName(String(currentUser.id), String(currentChatUser.id));
         currentRoom = newRoom; // Ustaw globalną zmienną currentRoom
         console.log(`[handleConversationClick] New chat session initiated. User: ${currentChatUser.username}, Setting currentRoom to: ${currentRoom}`);
+
+        // Clear unread count in Supabase for this conversation
+        if (supabase && currentUser && currentUser.id) {
+            await clearUnreadMessageCountInSupabase(newRoom);
+            console.log(`[Supabase] Requested unread count clear for room ${newRoom} in Supabase.`);
+        } else {
+            console.warn("[Supabase] Supabase client not ready or currentUser not set. Cannot clear unread count in Supabase.");
+        }
+
 
         if (chatUserName && messageInput && sendButton && userStatusSpan) {
             chatUserName.textContent = currentChatUser.username;
@@ -692,21 +702,17 @@ async function handleConversationClick(user, clickedConvoItemElement) {
             } else { console.warn("[handleConversationClick] Desktop: backButton not found."); }
         }
 
-        // Reset unread count for the selected conversation and update global state
+        // Reset unread count for the selected conversation (UI only, Supabase handles global)
         const unreadCount = clickedConvoItemElement.querySelector('.unread-count');
         if (unreadCount) {
             unreadCount.textContent = '0';
             unreadCount.classList.add('hidden');
-            console.log(`[handleConversationClick] Unread count reset for room ${newRoom}.`);
-            // Clear this conversation from the global unread tracker
-            if (unreadConversationsInfo.has(newRoom)) {
-                unreadConversationsInfo.delete(newRoom);
-                console.log(`[handleConversationClick] Removed room ${newRoom} from unreadConversationsInfo.`);
-                updateDocumentTitle(); // Update title after clearing unread for this room
-            }
+            console.log(`[handleConversationClick] Unread count reset for room ${newRoom} (UI only).`);
         } else {
             console.warn("[handleConversationClick] Unread count element not found for selected conversation.");
         }
+        // updateDocumentTitle will be called after Supabase update.
+
 
         // KROK 2: Dołącz do nowego pokoju na serwerze WebSocket
         if (socket && socket.readyState === WebSocket.OPEN) {
@@ -890,21 +896,13 @@ async function addMessageToChat(msg) {
         const isDifferentRoom = msg.room !== currentRoom;
 
         if (isMessageFromOtherUser && isDifferentRoom) {
-            if (unreadCountEl) {
-                let currentUnread = parseInt(unreadCountEl.textContent, 10);
-                if (isNaN(currentUnread)) currentUnread = 0;
-                unreadCountEl.textContent = currentUnread + 1;
-                unreadCountEl.classList.remove('hidden'); 
-                console.log(`[addMessageToChat] Unread count for room ${msg.room} incremented to: ${unreadCountEl.textContent}`);
+            // Update Supabase unread count
+            if (supabase && currentUser && currentUser.id) {
+                await updateUnreadMessageCountInSupabase(msg.room, msg.username);
+                console.log(`[Supabase] Requested unread count increment for room ${msg.room} in Supabase.`);
             } else {
-                console.warn(`[addMessageToChat] Could not find unreadCountEl for room ${msg.room}. Unread count not updated.`);
+                console.warn("[Supabase] Supabase client not ready or currentUser not set. Cannot update unread count in Supabase.");
             }
-            
-            // Update global unreadConversationsInfo map
-            let convoInfo = unreadConversationsInfo.get(msg.room) || { unreadCount: 0, lastSenderId: null };
-            convoInfo.unreadCount++;
-            convoInfo.lastSenderId = msg.username; // Always update with the latest sender
-            unreadConversationsInfo.set(msg.room, convoInfo);
 
             // Logic for browser notifications and sound
             // Show notification if tab is hidden OR if user is in a different chat
@@ -937,16 +935,15 @@ async function addMessageToChat(msg) {
                 unreadCountEl.textContent = '0';
                 unreadCountEl.classList.add('hidden');
             }
-            // Also, clear this conversation from the global unread tracker
-            if (unreadConversationsInfo.has(msg.room)) {
-                unreadConversationsInfo.delete(msg.room); // If it was previously unread, mark as read
-                console.log(`[addMessageToChat] Cleared unread status for active room ${msg.room} from unreadConversationsInfo.`);
+            // Clear this conversation from the global unread tracker in Supabase if it was previously unread
+            if (supabase && currentUser && currentUser.id && unreadConversationsInfo.has(msg.room)) {
+                await clearUnreadMessageCountInSupabase(msg.room);
+                console.log(`[Supabase] Requested unread count clear for active/sent room ${msg.room} in Supabase.`);
             }
         } else {
             console.log("[addMessageToChat] Unhandled unread count scenario. room:", msg.room, "currentRoom:", currentRoom, "msg.username:", msg.username, "currentUser.id:", currentUser.id);
         }
-        // After any message (sent or received, for active or inactive chat), update the title
-        updateDocumentTitle();
+        // updateDocumentTitle will be called after Supabase data is loaded or updated.
 
         // Display message in the active chat only if it belongs to the current room
         console.log(`[addMessageToChat Display Check] Comparing msg.room (${msg.room}) with currentRoom (${currentRoom}). Match: ${msg.room === currentRoom}`);
@@ -1523,6 +1520,147 @@ function updateDocumentTitle() {
     console.log(`[Document Title] Updated to: "${newTitle}"`);
 }
 
+/**
+ * Aktualizuje licznik nieprzeczytanych wiadomości dla danego pokoju w Supabase.
+ * Jeśli rekord nie istnieje, zostanie utworzony.
+ * @param {string} roomId - ID pokoju czatu.
+ * @param {string} senderId - ID użytkownika, który wysłał wiadomość.
+ */
+async function updateUnreadMessageCountInSupabase(roomId, senderId) {
+    if (!supabase || !currentUser || !currentUser.id) {
+        console.warn("[Supabase] Supabase client or currentUser not set. Cannot update unread message count.");
+        return;
+    }
+    try {
+        const { data, error } = await supabase
+            .from('unread_messages')
+            .upsert({
+                user_id: currentUser.id,
+                room_id: roomId,
+                count: 1, // Zawsze dodaj 1, a `onConflict` obsłuży inkrementację
+                last_sender_id: senderId,
+                updated_at: new Date().toISOString()
+            }, {
+                onConflict: 'user_id, room_id', // Jeśli konflikt, zaktualizuj
+                ignoreDuplicates: false // Ważne: to musi być false, aby konflikt był wykryty
+            });
+
+        if (error) {
+            // Jeśli wystąpił konflikt (rekord już istnieje), spróbuj go zaktualizować poprzez inkrementację
+            if (error.code === '23505' || error.message.includes('duplicate key')) { // PostgreSQL unique violation code
+                console.log(`[Supabase] Record for room ${roomId} already exists, attempting to increment.`);
+                const { data: updateData, error: updateError } = await supabase
+                    .from('unread_messages')
+                    .update({
+                        count: (unreadConversationsInfo.get(roomId)?.unreadCount || 0) + 1, // Pobierz obecny licznik z mapy i inkrementuj
+                        last_sender_id: senderId,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('user_id', currentUser.id)
+                    .eq('room_id', roomId);
+
+                if (updateError) {
+                    console.error("[Supabase] Error incrementing unread message count:", updateError);
+                } else {
+                    console.log(`[Supabase] Unread count for room ${roomId} incremented for user ${currentUser.id}.`);
+                }
+            } else {
+                console.error("[Supabase] Error inserting/upserting unread message count:", error);
+            }
+        } else {
+            console.log(`[Supabase] Unread count for room ${roomId} updated (upsert) for user ${currentUser.id}.`);
+        }
+        // Po udanej operacji w bazie, załaduj ponownie dane i zaktualizuj UI
+        await loadUnreadMessagesFromSupabase();
+
+    } catch (e) {
+        console.error("[Supabase] Caught error updating unread message count:", e);
+    }
+}
+
+
+/**
+ * Zeruje licznik nieprzeczytanych wiadomości dla danego pokoju w Supabase.
+ * @param {string} roomId - ID pokoju czatu do wyzerowania.
+ */
+async function clearUnreadMessageCountInSupabase(roomId) {
+    if (!supabase || !currentUser || !currentUser.id) {
+        console.warn("[Supabase] Supabase client or currentUser not set. Cannot clear unread message count.");
+        return;
+    }
+    try {
+        const { data, error } = await supabase
+            .from('unread_messages')
+            .update({
+                count: 0,
+                last_sender_id: null,
+                updated_at: new Date().toISOString()
+            })
+            .eq('user_id', currentUser.id)
+            .eq('room_id', roomId);
+
+        if (error) {
+            console.error("[Supabase] Error clearing unread message count:", error);
+        } else {
+            console.log(`[Supabase] Unread count for room ${roomId} cleared for user ${currentUser.id}.`);
+        }
+        // Po udanej operacji w bazie, załaduj ponownie dane i zaktualizuj UI
+        await loadUnreadMessagesFromSupabase();
+    } catch (e) {
+        console.error("[Supabase] Caught error clearing unread message count:", e);
+    }
+}
+
+/**
+ * Ładuje wszystkie nieprzeczytane wiadomości dla bieżącego użytkownika z Supabase
+ * i aktualizuje lokalną mapę `unreadConversationsInfo` oraz UI.
+ */
+async function loadUnreadMessagesFromSupabase() {
+    if (!supabase || !currentUser || !currentUser.id) {
+        console.warn("[Supabase Loader] Supabase client or currentUser not set. Cannot load unread messages.");
+        return;
+    }
+    try {
+        const { data, error } = await supabase
+            .from('unread_messages')
+            .select('room_id, count, last_sender_id')
+            .eq('user_id', currentUser.id);
+
+        if (error) {
+            console.error("[Supabase Loader] Error fetching unread messages:", error);
+            return;
+        }
+
+        unreadConversationsInfo.clear(); // Clear existing local data
+        data.forEach(record => {
+            if (record.count > 0) {
+                unreadConversationsInfo.set(record.room_id, {
+                    unreadCount: record.count,
+                    lastSenderId: record.last_sender_id
+                });
+            }
+            // Update UI for each conversation item
+            const convoItem = contactsListEl.querySelector(`.contact[data-room-id="${record.room_id}"]`);
+            if (convoItem) {
+                const unreadCountEl = convoItem.querySelector('.unread-count');
+                if (unreadCountEl) {
+                    if (record.count > 0) {
+                        unreadCountEl.textContent = record.count;
+                        unreadCountEl.classList.remove('hidden');
+                    } else {
+                        unreadCountEl.textContent = '0';
+                        unreadCountEl.classList.add('hidden');
+                    }
+                }
+            }
+        });
+        console.log("[Supabase Loader] unreadConversationsInfo updated from Supabase:", unreadConversationsInfo);
+        updateDocumentTitle(); // Update browser tab title based on new data
+    } catch (e) {
+        console.error("[Supabase Loader] Caught error loading unread messages from Supabase:", e);
+    }
+}
+
 
 // --- Główna inicjalizacja aplikacji ---
 /**
@@ -1613,7 +1751,6 @@ async function initializeApp() {
             console.log('[initializeApp] All critical UI elements found. Proceeding with app initialization.');
         }
 
-
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
@@ -1629,7 +1766,7 @@ async function initializeApp() {
             return;
         }
         
-        currentUser = session.user;
+        currentUser = session.user; // Ensure currentUser is set from Supabase
         console.log('[initializeApp] Current authenticated user ID:', currentUser.id, 'Email:', currentUser.email);
 
         // Handle offline status before page unload
@@ -1652,7 +1789,7 @@ async function initializeApp() {
         // 4. Load profiles and contacts
         console.log("[initializeApp] Loading user profiles and contacts...");
         await loadAllProfiles();
-        await loadContacts();
+        await loadContacts(); // This now calls loadUnreadMessagesFromSupabase internally
         console.log("[initializeApp] User profiles and contacts loaded.");
 
         // 5. Initialize WebSocket connection
@@ -1726,7 +1863,7 @@ async function initializeApp() {
                     console.log("[backButton] Mobile: backButton hidden.");
                 } else { console.warn("[backButton] Mobile: backButton not found."); }
                 
-                if (rightSidebarWrapper) { // Ensure right sidebar is hidden when back to sidebar
+                if (rightSidebarWrapper) {
                     rightSidebarWrapper.style.display = 'none';
                     console.log("[backButton] Mobile: rightSidebarWrapper hidden.");
                 } else { console.warn("[backButton] Mobile: rightSidebarWrapper not found."); }
@@ -1805,6 +1942,10 @@ async function initializeApp() {
                     console.warn(`[logoutButton] Failed to send offline status: ${sendError.message}`);
                 }
             }
+
+            // No Firestore listener to detach here, as we are using Supabase for unread messages.
+            // unreadConversationsInfo.clear(); // Clear local unread info (handled by loadUnreadMessagesFromSupabase on next login)
+            // updateDocumentTitle(); // Reset title (handled by loadUnreadMessagesFromSupabase on next login)
 
             const { error } = await supabase.auth.signOut();
             if (error) {
@@ -1920,8 +2061,8 @@ async function initializeApp() {
         // Sprawdź politykę Autoplay po inicjalizacji
         checkAudioAutoplay();
 
-        // Ustaw początkowy tytuł zakładki
-        updateDocumentTitle();
+        // Tytuł zakładki będzie aktualizowany po załadowaniu nieprzeczytanych wiadomości z Supabase
+        updateDocumentTitle(); // Ustawienie początkowego tytułu na "Komunikator"
 
         console.log("[initializeApp] Komunikator application initialized successfully.");
     } catch (e) {
