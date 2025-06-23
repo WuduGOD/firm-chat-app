@@ -34,26 +34,18 @@ let chatSettingsDropdown; // ID: chatSettingsDropdown, Klasa: dropdown chat-sett
 let typingStatusHeader; // ID: typingStatus, Klasa: typing-status (status w nagłówku czatu)
 let typingIndicatorMessages; // ID: typingIndicator (animowane kropki w obszarze wiadomości)
 
-let messageContainer;
-let messageListEl; // ID: messageList
-let messageInput; // ID: messageInput
-let sendMessageButton; // ID: sendMessageButton
-let emojiButton; // ID: emojiButton
-let fileAttachButton; // ID: fileAttachButton
+let messageContainer; 
 
-let rightSidebarWrapper; // Kontener dla chat-info i media-info
-let chatInfo; // ID: chatInfo
-let mediaInfo; // ID: mediaInfo
-
-let messageEditor; // ID: messageEditor
-let textMessageInput; // ID: textMessageInput
-
-// WAŻNE: Deklaracja chatFooter tutaj, aby była dostępna globalnie/w zasięgu pliku
 let chatFooter;
+let attachButton;
+let messageInput;
+let emojiButton;
+let sendButton;
 
-// Kontener na wiadomości customowe (np. błędy, powiadomienia)
-let customMessageContainer;
-let customMessageText;
+let rightSidebarWrapper;
+let rightSidebar;
+let activeUsersListEl;
+let noActiveUsersText;
 
 // Zmienne stanu czatu
 let allConversations = [];
@@ -67,25 +59,23 @@ let currentActiveConvoItem = null;
 
 let onlineUsers = new Map(); // userID -> boolean
 
+// Stan uprawnień do powiadomień
+let notificationPermissionGranted = false;
+
 // Przycisk do włączania dźwięków (obsługa Autoplay Policy)
 let enableSoundButton;
 
-// ZMIANA: NOWA ZMIENNA: Kontrola nad powiadomieniami dźwiękowymi
-let soundNotificationsEnabled = true; // Domyślnie włączone
-// NOWA ZMIENNA: Kontrola nad powiadomieniami wizualnymi
-let visualNotificationsEnabled = true; // Domyślnie włączone
-
-// Zmienne dla Web Audio API
+// NOWE ZMIENNE DLA DŹWIĘKU (Web Audio API)
 let audioContext = null;
 let audioContextInitiated = false; // Flaga do śledzenia, czy AudioContext został zainicjowany przez interakcję użytkownika
 
-// NOWE ZMIENNE DLA TYTUŁU ZAKŁADKI PRZEGLĄDARKOWEJ
+// NOWE ZMIENNE DLA TYTUŁU ZAKŁADKI PRZEGLĄDARKI
 let baseDocumentTitle = "Komunikator";
 // Mapa przechowująca nieprzeczytane wiadomości dla każdej konwersacji
 // Klucz: roomId, Wartość: { unreadCount: number, lastSenderId: string }
-let unreadConversationsInfo = new Map();
+let unreadConversationsInfo = new Map(); 
 
-// --- FUNKCJE DŹWIĘKOWE I POMOCNICZE DLA WIADOMOŚCI ---
+// --- Funkcje pomocnicze ---
 
 /**
  * Wyświetla niestandardowy komunikat w aplikacji.
@@ -114,24 +104,6 @@ function showCustomMessage(message, type = 'info') {
             messageBox.classList.add('hidden'); // Fully hide after fade
         }, 500); // Match CSS transition duration
     }, 3000);
-}
-
-/**
- * Pobiera ID aktualnie zalogowanego użytkownika z sesji Supabase.
- * @returns {Promise<string|null>} ID użytkownika lub null, jeśli nie jest zalogowany.
- */
-async function getCurrentUserId() {
-    try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) {
-            console.error("Błąd pobierania sesji Supabase:", error);
-            return null;
-        }
-        return session?.user?.id || null;
-    } catch (e) {
-            console.error("Wyjątek podczas pobierania ID użytkownika:", e);
-        return null;
-    }
 }
 
 /**
@@ -172,13 +144,14 @@ function ensureAudioContext() {
     }
 }
 
+
 /**
  * Odtwarza prosty, krótki dźwięk powiadomienia (beep).
  * Korzysta z Web Audio API (AudioContext) do generowania dźwięku.
  */
-function playNotificationSound() { // Zmieniona nazwa, aby uniknąć pomyłek z MP3
+function playNotificationSound() {
     console.log("[Notifications] Attempting to play notification sound...");
-
+    
     try {
         ensureAudioContext(); // Zawsze upewnij się, że AudioContext jest aktywny
 
@@ -248,14 +221,14 @@ function checkAudioAutoplay() {
                 showCustomMessage("Przeglądarka zablokowała dźwięki. Kliknij 'Włącz dźwięki' u góry, aby je aktywować.", "info");
             }
         } else if (audioContext && audioContext.state === 'running') {
-            console.log('[Autoplay Check] AudioContext is already running.');
+            console.log("[Autoplay Check] AudioContext is already running. Autoplay is likely allowed.");
             audioContextInitiated = true;
             localStorage.setItem('autoplayUnlocked', 'true');
             if (enableSoundButton) {
                 enableSoundButton.classList.add('hidden');
             }
         } else {
-            console.log(`[Autoplay Check] AudioContext state: ${audioContext ? audioContext.state : 'null'}`);
+            console.log(`[Autoplay Check] AudioContext state: ${audioContext ? audioContext.state : 'null'}. No immediate action.`);
         }
     } catch (e) {
         console.error("Error during autoplay check:", e);
@@ -265,8 +238,10 @@ function checkAudioAutoplay() {
     }
 }
 
+
 /**
  * Prosi użytkownika o uprawnienia do wyświetlania powiadomień przeglądarkowych.
+ * Aktualizuje zmienną globalną `notificationPermissionGranted`.
  */
 async function requestNotificationPermission() {
     console.log("[Notifications] Checking Notification API support...");
@@ -277,9 +252,11 @@ async function requestNotificationPermission() {
 
     // Sprawdź obecny status uprawnień
     if (Notification.permission === "granted") {
+        notificationPermissionGranted = true;
         console.log("[Notifications] Notification permission already granted.");
         return;
     } else if (Notification.permission === "denied") {
+        notificationPermissionGranted = false;
         console.warn("[Notifications] Notification permission previously denied.");
         showCustomMessage("Powiadomienia zostały zablokowane. Aby je włączyć, zmień ustawienia przeglądarki.", "info");
         return;
@@ -289,20 +266,25 @@ async function requestNotificationPermission() {
     try {
         const permission = await Notification.requestPermission();
         if (permission === "granted") {
+            notificationPermissionGranted = true;
             console.log("[Notifications] Notification permission granted by user.");
             showCustomMessage("Powiadomienia włączone!", "success");
         } else if (permission === "denied") {
+            notificationPermissionGranted = false;
             console.warn("[Notifications] Notification permission denied by user.");
             showCustomMessage("Powiadomienia zostały zablokowane. Nie będziesz otrzymywać alertów o nowych wiadomościach.", "error");
         } else { // 'default'
+            notificationPermissionGranted = false;
             console.info("[Notifications] Notification permission dismissed or default.");
             showCustomMessage("Powiadomienia nie zostały włączone.", "info");
         }
     } catch (error) {
         console.error("[Notifications] Error requesting notification permission:", error);
+        notificationPermissionGranted = false;
         showCustomMessage("Wystąpił błąd podczas próby włączenia powiadomień.", "error");
     }
 }
+
 
 /**
  * Resets the chat view to its initial state (clears messages, disables input).
@@ -355,7 +337,7 @@ function resetChatView() {
     currentChatUser = null; // Reset current chat user
     currentRoom = null; // Reset current room
     console.log("[resetChatView] currentChatUser and currentRoom reset to null.");
-
+    
     // Remove active state from conversation item if any
     if (currentActiveConvoItem) {
         currentActiveConvoItem.classList.remove('active'); // Deactivate active conversation item
@@ -401,7 +383,7 @@ async function getLastMessageForRoom(roomId) {
             console.error('Error fetching last message:', error);
             return null;
         }
-
+        
         if (data && data.length > 0) {
             const msg = data[0];
             return {
@@ -427,7 +409,7 @@ async function fetchMessageHistory(roomId) {
     console.log(`[fetchMessageHistory] Fetching history for room: ${roomId}`);
     try {
         // Assume a maximum limit for history to prevent excessive data transfer
-        const limit = 50;
+        const limit = 50; 
         const { data, error } = await supabase
             .from('messages')
             .select('content, sender_id, created_at, room_id')
@@ -515,7 +497,7 @@ async function loadContacts() {
             const avatarSrc = `https://i.pravatar.cc/150?img=${user.id.charCodeAt(0) % 70 + 1}`; // Random avatar based on user ID
 
             let previewText = "Brak wiadomości"; // Default text if no messages
-            let timeText = "";
+            let timeText = ""; 
 
             if (lastMessage) {
                 const senderName = String(lastMessage.username) === String(currentUser.id) ? "Ja" : (getUserLabelById(lastMessage.username) || lastMessage.username);
@@ -524,7 +506,7 @@ async function loadContacts() {
                 const lastMessageTime = new Date(lastMessage.inserted_at);
                 if (isNaN(lastMessageTime.getTime())) {
                     console.warn(`[loadContacts] Invalid Date for room ${roomId}. Raw inserted_at: ${lastMessage.inserted_at}`);
-                    timeText = "Invalid Date";
+                    timeText = "Invalid Date"; 
                 } else {
                     timeText = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
                 }
@@ -640,11 +622,11 @@ async function handleConversationClick(user, clickedConvoItemElement) {
 
         if (chatUserName && messageInput && sendButton && userStatusSpan) {
             chatUserName.textContent = currentChatUser.username;
-
-            const isUserOnline = onlineUsers.get(String(user.id)) === true;
+            
+            const isUserOnline = onlineUsers.get(String(user.id)) === true; 
             userStatusSpan.textContent = isUserOnline ? 'Online' : 'Offline';
-            userStatusSpan.classList.toggle('online', isUserOnline);
-            userStatusSpan.classList.toggle('offline', !isUserOnline);
+            userStatusSpan.classList.toggle('online', isUserOnline); 
+            userStatusSpan.classList.toggle('offline', !isUserOnline); 
             console.log(`[handleConversationClick] Initial status for active chat user ${currentChatUser.username} (from onlineUsers map): ${isUserOnline ? 'Online' : 'Offline'}`);
 
             messageInput.disabled = false;
@@ -742,14 +724,14 @@ function setupSendMessage() {
 
         // Send message on button click
         sendButton.onclick = () => {
-            console.log("[DEBUG: SEND BUTTON] Send button clicked or Enter pressed.");
-
+            console.log("[DEBUG: SEND BUTTON] Send button clicked or Enter pressed."); 
+            
             const text = messageInput.value.trim();
             console.log(`[DEBUG: SEND BUTTON] Message text length: ${text.length}`);
-
+            
             if (!text || !currentChatUser || !socket || socket.readyState !== WebSocket.OPEN) {
                 console.warn("Cannot send message: check conditions below.");
-
+                
                 // Dodatkowe logi do zdiagnozowania warunku
                 console.log(`Debug conditions: text=${!!text}, currentChatUser=${!!currentChatUser ? currentChatUser.id : 'null'}, socket=${!!socket}, socket.readyState=${socket ? socket.readyState : 'N/A'}`);
 
@@ -770,13 +752,13 @@ function setupSendMessage() {
                 type: 'message',
                 username: currentUser.id,
                 text,
-                room: currentRoom,
+                room: currentRoom, 
                 inserted_at: new Date().toISOString()
             };
 
             console.log("[setupSendMessage] Sending message via WS:", msgData);
-            socket.send(JSON.stringify(msgData));
-
+            socket.send(JSON.stringify(msgData)); 
+            
             // Przenieś konwersację na górę dla wysłanych wiadomości
             const convoItemToMove = contactsListEl.querySelector(`.contact[data-room-id="${currentRoom}"]`);
             if (convoItemToMove && contactsListEl.firstChild !== convoItemToMove) {
@@ -784,16 +766,16 @@ function setupSendMessage() {
                 console.log(`[Reorder] Moved conversation for room ${currentRoom} to top due to sent message.`);
             }
 
-            messageInput.value = '';
-            messageInput.focus();
+            messageInput.value = ''; 
+            messageInput.focus(); 
         };
 
         // Send message on Enter key press
         messageInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
-                e.preventDefault();
-                console.log("[DEBUG: SEND BUTTON] Enter key pressed.");
-                sendButton.click();
+                e.preventDefault(); 
+                console.log("[DEBUG: SEND BUTTON] Enter key pressed."); 
+                sendButton.click(); 
             }
         });
         console.log("[setupSendMessage] Message send event listeners attached.");
@@ -807,7 +789,7 @@ function setupSendMessage() {
  * Includes logic for displaying browser notifications.
  * @param {Object} msg - The message object.
  */
-async function addMessageToChat(msg) {
+async function addMessageToChat(msg) { 
     console.log(`[addMessageToChat] Processing message: sender=${msg.username}, room=${msg.room}. Global currentRoom (active chat): ${currentRoom}`);
 
     try {
@@ -816,29 +798,29 @@ async function addMessageToChat(msg) {
 
         if (!convoItemToUpdate) {
             console.warn(`[addMessageToChat] Conversation item for room ${msg.room} not found initially. Reloading contacts to sync list.`);
-            await loadContacts();
+            await loadContacts(); 
             convoItemToUpdate = contactsListEl.querySelector(`.contact[data-room-id="${msg.room}"]`);
-            if (!convoItemToUpdate) {
+            if (!convoItemToUpdate) { 
                 console.error(`[addMessageToChat] Conversation item for room ${msg.room} still NOT found after reloading contacts. Cannot update UI.`);
-                return;
+                return; 
             }
         }
 
         const previewEl = convoItemToUpdate.querySelector('.last-message');
         const timeEl = convoItemToUpdate.querySelector('.message-time');
-        const unreadCountEl = convoItemToUpdate.querySelector('.unread-count');
+        const unreadCountEl = convoItemToUpdate.querySelector('.unread-count'); 
 
         let previewText = "Brak wiadomości"; // Default text if no messages
 
         if (previewEl && timeEl) {
             const senderId = String(msg.username);
             const senderName = senderId === String(currentUser.id) ? "Ja" : (getUserLabelById(senderId) || senderId);
-            previewText = `${senderName}: ${msg.text}`;
+            previewText = `${senderName}: ${msg.text}`; 
             const lastMessageTime = new Date(msg.inserted_at || Date.now()); // Fallback to current time if inserted_at is missing
-            const timeString = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
-            timeEl.textContent = timeString;
-            console.log(`[addMessageToChat] Updated preview and time for room ${msg.room}. Preview: "${previewText}"`);
-            previewEl.textContent = previewText;
+            const timeString = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" }); 
+            timeEl.textContent = timeString; 
+            console.log(`[addMessageToChat] Updated preview and time for room ${msg.room}. Preview: "${previewText}"`); 
+            previewEl.textContent = previewText; 
         } else {
             console.warn(`[addMessageToChat] Could not find previewEl or timeEl for room ${msg.room}. Preview/time not updated.`);
         }
@@ -856,46 +838,29 @@ async function addMessageToChat(msg) {
                 console.warn("[Supabase] Supabase client not ready or currentUser not set. Cannot update unread count in Supabase.");
             }
 
-            // ZMIANA: Powiadomienie dźwiękowe ZAWSZE, jeśli wiadomość jest nowa i od innego użytkownika,
-            // ORAZ jeśli soundNotificationsEnabled jest true
-            if (soundNotificationsEnabled) { // Warunek na powiadomienia dźwiękowe
-                console.log("[addMessageToChat] Conditions met for playing sound. Playing notification sound.");
-                playNotificationSound();
-            } else {
-                console.log("[addMessageToChat] Sound notifications are disabled by user settings. Not playing sound.");
-            }
+            // Logic for browser notifications and sound
+            // Show notification if tab is hidden OR if user is in a different chat
+            const shouldNotify = notificationPermissionGranted && (document.hidden || isDifferentRoom);
+            if (shouldNotify) {
+                console.log("[addMessageToChat] Conditions met for showing browser notification and playing sound.");
+                const senderLabel = getUserLabelById(msg.username) || msg.username;
+                const notificationTitle = `Nowa wiadomość od ${senderLabel}`;
+                const notificationBody = msg.text;
+                
+                const notification = new Notification(notificationTitle, {
+                    body: notificationBody,
+                    icon: 'https://placehold.co/48x48/000000/FFFFFF?text=💬', // Prosta ikona powiadomienia
+                    silent: true // Dźwięk obsługujemy osobną funkcją, aby ominąć blokady autoplay
+                });
 
-            // Logika dla powiadomień przeglądarkowych (wizualnych)
-            if (visualNotificationsEnabled) { // Sprawdź flagę ustawień powiadomień wizualnych
-                // Poproś o uprawnienia tylko wtedy, gdy powiadomienie jest faktycznie potrzebne i jeszcze nie udzielono zgody
-                if (Notification.permission !== "granted" && Notification.permission !== "denied") {
-                     await requestNotificationPermission();
-                }
+                notification.onclick = function() {
+                    window.focus(); // Przełącz na okno przeglądarki
+                    // Możesz dodać logikę do automatycznego przełączenia na odpowiedni czat,
+                    // np. wywołując handleConversationClick z odpowiednimi danymi użytkownika.
+                    console.log("[Notifications] Notification clicked. Focusing window.");
+                };
 
-                const shouldShowBrowserNotification = Notification.permission === "granted" && (document.hidden || isDifferentRoom);
-                if (shouldShowBrowserNotification) {
-                    console.log("[addMessageToChat] Conditions met for showing browser notification.");
-                    const senderLabel = getUserLabelById(msg.username) || msg.username;
-                    const notificationTitle = `Nowa wiadomość od ${senderLabel}`;
-                    const notificationBody = msg.text;
-
-                    const notification = new Notification(notificationTitle, {
-                        body: notificationBody,
-                        icon: 'https://placehold.co/48x48/000000/FFFFFF?text=💬', // Prosta ikona powiadomienia
-                        silent: true // Dźwięk obsługujemy osobną funkcją, aby ominąć blokady autoplay
-                    });
-
-                    notification.onclick = function() {
-                        window.focus(); // Przełącz na okno przeglądarki
-                        // Możesz dodać logikę do automatycznego przełączenia na odpowiedni czat,
-                        // np. wywołując handleConversationClick z odpowiednimi danymi użytkownika.
-                        console.log("[Notifications] Notification clicked. Focusing window.");
-                    };
-                } else {
-                    console.log("[addMessageToChat] Browser notification not shown (either permission not granted, or visual notifications disabled by user, or tab is visible for same room).");
-                }
-            } else {
-                console.log("[addMessageToChat] Visual notifications are disabled by user settings. Not showing browser notification.");
+                playNotificationSound(); // Odtwórz dźwięk osobno
             }
         } else if (String(msg.username) === String(currentUser.id) || msg.room === currentRoom) {
             // If message is from current user or for the active room, ensure unread count is zeroed and hidden
@@ -916,7 +881,7 @@ async function addMessageToChat(msg) {
 
         // Display message in the active chat only if it belongs to the current room
         console.log(`[addMessageToChat Display Check] Comparing msg.room (${msg.room}) with currentRoom (${currentRoom}). Match: ${msg.room === currentRoom}`);
-        if (msg.room === currentRoom) {
+        if (msg.room === currentRoom) { 
             const div = document.createElement('div');
             div.classList.add('message', String(msg.username) === String(currentUser.id) ? 'sent' : 'received');
 
@@ -929,7 +894,7 @@ async function addMessageToChat(msg) {
             `;
             if (messageContainer) {
                 messageContainer.appendChild(div);
-                messageContainer.scrollTop = messageContainer.scrollHeight;
+                messageContainer.scrollTop = messageContainer.scrollHeight; 
                 console.log(`[addMessageToChat] Message displayed in active chat for room: ${msg.room}`);
             } else {
                 console.error("[addMessageToChat] messageContainer is null when trying to add message to active chat.");
@@ -998,9 +963,9 @@ function updateUserStatusIndicator(userId, isOnline) {
                         const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(userId));
                         if (userProfile) {
                             const mockConvoItem = document.createElement('li');
-                            mockConvoItem.dataset.convoId = userProfile.id;
+                            mockConvoItem.dataset.convoId = userProfile.id; 
                             mockConvoItem.dataset.email = userProfile.email;
-                            mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(userProfile.id));
+                            mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(userProfile.id)); 
                             handleConversationClick(userProfile, mockConvoItem);
                         }
                     });
@@ -1049,15 +1014,15 @@ function updateUserStatusIndicator(userId, isOnline) {
                         <img src="${avatarSrc}" alt="Avatar" class="avatar">
                         <span class="username">${getUserLabelById(userId)}</span>
                     `;
-
+                    
                     // Add click listener for mobile item
                     div.addEventListener('click', async () => {
                         const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(userId));
                         if (userProfile) {
                             const mockConvoItem = document.createElement('li');
-                            mockConvoItem.dataset.convoId = userProfile.id;
+                            mockConvoItem.dataset.convoId = userProfile.id; 
                             mockConvoItem.dataset.email = userProfile.email;
-                            mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(user.id));
+                            mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(userProfile.id)); 
                             handleConversationClick(userProfile, mockConvoItem);
                         }
                     });
@@ -1070,7 +1035,7 @@ function updateUserStatusIndicator(userId, isOnline) {
                 console.error("onlineUsersMobile not found during status update.");
             }
         }
-
+        
         // Update status dots in the main contacts list
         const contactConvoItem = contactsListEl.querySelector(`.contact[data-convo-id="${userId}"]`);
         if (contactConvoItem) {
@@ -1101,17 +1066,17 @@ function showTypingIndicator(usernameId) {
         if (currentChatUser && String(usernameId) === String(currentChatUser.id)) {
             // Pokaż wskaźnik pisania w nagłówku
             if (typingStatusHeader) {
-                typingStatusHeader.classList.remove('hidden');
+                typingStatusHeader.classList.remove('hidden'); 
                 typingStatusHeader.textContent = `${getUserLabelById(usernameId)} pisze...`; // Set text
                 console.log(`[showTypingIndicator] Typing status header shown for ${getUserLabelById(usernameId)}`);
             }
             // Pokaż animowane kropki w obszarze wiadomości
             if (typingIndicatorMessages) {
-                typingIndicatorMessages.classList.remove('hidden');
+                typingIndicatorMessages.classList.remove('hidden'); 
                 console.log(`[showTypingIndicator] Typing indicator messages shown for ${getUserLabelById(usernameId)}`);
             }
 
-            clearTimeout(typingTimeout);
+            clearTimeout(typingTimeout); 
             typingTimeout = setTimeout(() => {
                 if (typingStatusHeader) {
                     typingStatusHeader.classList.add('hidden');
@@ -1122,7 +1087,7 @@ function showTypingIndicator(usernameId) {
                     typingIndicatorMessages.classList.add('hidden');
                     console.log(`[showTypingIndicator] Typing indicator messages hidden for ${getUserLabelById(usernameId)}`);
                 }
-            }, 3000);
+            }, 3000); 
             console.log(`${getUserLabelById(usernameId)} is typing...`);
         } else {
             console.log(`[showTypingIndicator] Typing update for ${getUserLabelById(usernameId)}, but not current chat user. Ignoring.`);
@@ -1148,8 +1113,8 @@ function initWebSocket() {
 
     socket.onopen = () => {
         console.log('[initWebSocket] WebSocket connected successfully.');
-        reconnectAttempts = 0;
-        if (currentUser) {
+        reconnectAttempts = 0; 
+        if (currentUser) { 
             // ZAWSZE dołączamy do "global" pokoju po otwarciu WS
             socket.send(JSON.stringify({
                 type: 'join',
@@ -1193,7 +1158,7 @@ function initWebSocket() {
                         username: data.username,
                         text: data.text,
                         inserted_at: data.inserted_at,
-                        room: data.room,
+                        room: data.room, 
                     });
                     // Przenieś konwersację na górę tylko dla nowo otrzymanych wiadomości
                     if (String(data.username) !== String(currentUser.id)) { // Tylko jeśli wiadomość nie jest od nas samych
@@ -1219,7 +1184,7 @@ function initWebSocket() {
                     break;
                 case 'active_users':
                     console.log('[WS MESSAGE] Received initial active users list:', data.users);
-                    displayActiveUsers(data.users);
+                    displayActiveUsers(data.users); 
                     break;
                 default:
                     console.warn("[WS MESSAGE] Unknown WS message type:", data.type, data);
@@ -1231,16 +1196,16 @@ function initWebSocket() {
 
     socket.onclose = (event) => {
         console.log(`[initWebSocket] WebSocket disconnected. Code: ${event.code}, Reason: ${event.reason}`);
-        if (event.code !== 1000) {
+        if (event.code !== 1000) { 
             console.log('[initWebSocket] Attempting to reconnect...');
-            setTimeout(initWebSocket, Math.min(1000 * ++reconnectAttempts, 10000));
+            setTimeout(initWebSocket, Math.min(1000 * ++reconnectAttempts, 10000)); 
         }
     };
 
     socket.onerror = (error) => {
         console.error('[initWebSocket] WebSocket Error:', error);
         if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
-            socket.close();
+            socket.close(); 
         }
     };
 }
@@ -1278,9 +1243,9 @@ function displayActiveUsers(activeUsersData) {
     }
 
     try {
-        activeUsersListEl.innerHTML = '';
-        onlineUsersMobile.innerHTML = '';
-        onlineUsers.clear();
+        activeUsersListEl.innerHTML = ''; 
+        onlineUsersMobile.innerHTML = ''; 
+        onlineUsers.clear(); 
 
         const filteredUsers = activeUsersData.filter(user => String(user.id) !== String(currentUser.id));
 
@@ -1315,12 +1280,12 @@ function displayActiveUsers(activeUsersData) {
                         <img src="${avatarSrc}" alt="Avatar" class="avatar">
                         <span class="username">${getUserLabelById(user.id) || user.username || 'Nieznany'}</span>
                     `;
-
+                
                 divMobile.addEventListener('click', async () => {
-                    const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(userId));
+                    const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(user.id));
                     if (userProfile) {
                         const mockConvoItem = document.createElement('li');
-                        mockConvoItem.dataset.convoId = userProfile.id;
+                        mockConvoItem.dataset.convoId = user.id;
                         mockConvoItem.dataset.email = userProfile.email;
                         mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(user.id));
                         handleConversationClick(userProfile, mockConvoItem);
@@ -1328,7 +1293,7 @@ function displayActiveUsers(activeUsersData) {
                 });
                 onlineUsersMobile.appendChild(divMobile);
 
-                onlineUsers.set(String(user.id), true);
+                onlineUsers.set(String(user.id), true); 
             });
         }
         console.log("[Status Update Debug] onlineUsers map after displayActiveUsers:", onlineUsers);
@@ -1349,7 +1314,7 @@ function setupChatSettingsDropdown() {
 
     try {
         chatSettingsButton.addEventListener('click', (event) => {
-            event.stopPropagation();
+            event.stopPropagation(); 
             chatSettingsDropdown.classList.toggle('hidden');
             console.log(`[setupChatSettingsDropdown] Chat settings dropdown toggled. Hidden: ${chatSettingsDropdown.classList.contains('hidden')}`);
         });
@@ -1359,7 +1324,7 @@ function setupChatSettingsDropdown() {
                 chatSettingsDropdown.classList.add('hidden');
                 console.log("[setupChatSettingsDropdown] Chat settings dropdown hidden due to outside click.");
             }
-            if (!dropdownMenu.classList.contains('hidden') && menuButton && !menuButton.contains(event.target)) {
+            if (!dropdownMenu.classList.contains('hidden') && menuButton && !menuButton.contains(event.target)) { // Also close main dropdown
                 dropdownMenu.classList.add('hidden');
             }
         });
@@ -1367,24 +1332,24 @@ function setupChatSettingsDropdown() {
         const colorOptions = chatSettingsDropdown.querySelectorAll('.color-box');
         colorOptions.forEach(option => {
             option.addEventListener('click', () => {
-                colorOptions.forEach(box => box.classList.remove('active'));
-                option.classList.add('active');
+                colorOptions.forEach(box => box.classList.remove('active')); 
+                option.classList.add('active'); 
                 const colorTheme = option.dataset.color;
                 if (messageContainer) {
                     messageContainer.classList.remove('default-theme', 'blue-theme', 'green-theme', 'red-theme');
                     if (colorTheme !== 'default') {
-                        messageContainer.classList.add(`${colorTheme}-theme`);
+                        messageContainer.classList.add(`${colorTheme}-theme`); 
                     }
                 }
                 console.log('[setupChatSettingsDropdown] Message theme changed to:', colorTheme);
             });
         });
 
-        const backgroundOptions = chatSettingsDropdown.querySelectorAll('.bg-box');
+        const backgroundOptions = chatSettingsDropdown.querySelectorAll('.bg-box'); 
         backgroundOptions.forEach(option => {
             option.addEventListener('click', () => {
-                backgroundOptions.forEach(box => box.classList.remove('active'));
-                option.classList.add('active');
+                backgroundOptions.forEach(box => box.classList.remove('active')); 
+                option.classList.add('active'); 
                 const bgTheme = option.dataset.bg;
                 if (messageContainer) {
                     // Ensure correct classes are removed/added. Your HTML uses classes like 'dark-bg' and 'pattern-bg' directly.
@@ -1408,7 +1373,7 @@ function setupChatSettingsDropdown() {
                         const { data, error } = await supabase
                             .from('profiles')
                             .update({ username: newNickname })
-                            .eq('id', currentUser.id);
+                            .eq('id', currentUser.id); 
 
                         if (error) {
                             throw error;
@@ -1416,11 +1381,11 @@ function setupChatSettingsDropdown() {
 
                         console.log('New nickname set:', newNickname, 'for user:', currentUser.id);
                         showCustomMessage(`Nickname '${newNickname}' has been set successfully.`, 'success');
-                        await loadAllProfiles();
+                        await loadAllProfiles(); 
                         if (chatUserName && currentChatUser && String(currentUser.id) === String(currentChatUser.id)) {
                             chatUserName.textContent = newNickname;
                         }
-                        await loadContacts();
+                        await loadContacts(); 
 
                     } catch (error) {
                         console.error('Error updating nickname:', error.message);
@@ -1447,37 +1412,8 @@ function setupChatSettingsDropdown() {
                 showCustomMessage(`Searching messages for '${searchTerm}' (functionality to be implemented).`, 'info');
             });
         } else {
-                    console.warn("[setupChatSettingsDropdown] Message search input or button not found.");
+            console.warn("[setupChatSettingsDropdown] Message search input or button not found.");
         }
-
-        // Obsługa przełącznika powiadomień wizualnych
-        const toggleVisualNotificationsEl = document.getElementById('toggleVisualNotifications');
-        if (toggleVisualNotificationsEl) {
-            toggleVisualNotificationsEl.checked = visualNotificationsEnabled; // Ustaw stan początkowy
-            toggleVisualNotificationsEl.addEventListener('change', (event) => {
-                visualNotificationsEnabled = event.target.checked;
-                localStorage.setItem('visualNotificationsEnabled', JSON.stringify(visualNotificationsEnabled));
-                console.log(`[Notifications] Visual notifications ${visualNotificationsEnabled ? 'enabled' : 'disabled'}.`);
-            });
-            console.log(`UI Element: toggleVisualNotificationsEl found: ${!!toggleVisualNotificationsEl}`);
-        } else {
-            console.warn("UI Element: toggleVisualNotificationsEl not found. Visual notifications toggle functionality will not be available.");
-        }
-
-        // ZMIANA: Obsługa przełącznika powiadomień dźwiękowych
-        const toggleSoundNotificationsEl = document.getElementById('toggleSoundNotifications');
-        if (toggleSoundNotificationsEl) {
-            toggleSoundNotificationsEl.checked = soundNotificationsEnabled; // Ustaw stan początkowy
-            toggleSoundNotificationsEl.addEventListener('change', (event) => {
-                soundNotificationsEnabled = event.target.checked;
-                localStorage.setItem('soundNotificationsEnabled', JSON.stringify(soundNotificationsEnabled));
-                console.log(`[Notifications] Sound notifications ${soundNotificationsEnabled ? 'enabled' : 'disabled'}.`);
-            });
-            console.log(`UI Element: toggleSoundNotificationsEl found: ${!!toggleSoundNotificationsEl}`);
-        } else {
-            console.warn("UI Element: toggleSoundNotificationsEl not found. Sound notifications toggle functionality will not be available. Please ensure an element with id 'toggleSoundNotifications' exists in your HTML.");
-        }
-
     } catch (e) {
         console.error("Caught error in setupChatSettingsDropdown:", e);
     }
@@ -1491,7 +1427,7 @@ function setupChatSettingsDropdown() {
  */
 function updateDocumentTitle() {
     let totalUnreadConvos = 0;
-    let singleUnreadSenderId = null;
+    let singleUnreadSenderId = null; 
 
     // Iteruj po mapie, aby zliczyć nieprzeczytane konwersacje i znaleźć pojedynczego nadawcę
     unreadConversationsInfo.forEach((info, roomId) => {
@@ -1500,7 +1436,7 @@ function updateDocumentTitle() {
             if (totalUnreadConvos === 1) { // Pierwsza znaleziona nieprzeczytana konwersacja
                 singleUnreadSenderId = info.lastSenderId;
             } else { // Znaleziono więcej niż jedną, więc nie ma pojedynczego nadawcy
-                singleUnreadSenderId = null;
+                singleUnreadSenderId = null; 
             }
         }
     });
@@ -1705,14 +1641,11 @@ async function initializeApp() {
         typingStatusHeader = document.getElementById('typingStatus'); console.log(`UI Element: typingStatusHeader found: ${!!typingStatusHeader}`);
         typingIndicatorMessages = document.getElementById('typingIndicator'); console.log(`UI Element: typingIndicatorMessages found: ${!!typingIndicatorMessages}`);
 
-        messageContainer = document.getElementById('messageContainer');
+        // Aktualizacja tej linii
+        messageContainer = document.getElementById('messageContainer'); 
         console.log(`UI Element: messageContainer found: ${!!messageContainer}`); // Dostosowane logowanie
 
-        // WAŻNE: Najpierw pobieramy chatFooter, zanim użyjemy go do pobrania jego potomków.
-        chatFooter = document.querySelector('.chat-footer');
-        console.log(`UI Element: chatFooter found: ${!!chatFooter}`);
-
-        // Teraz możemy bezpiecznie pobierać elementy potomne chatFooter
+        chatFooter = document.querySelector('.chat-footer'); console.log(`UI Element: chatFooter found: ${!!chatFooter}`);
         attachButton = chatFooter ? chatFooter.querySelector('.attach-button') : null; console.log(`UI Element: attachButton found: ${!!attachButton}`);
         messageInput = document.getElementById('messageInput'); console.log(`UI Element: messageInput found: ${!!messageInput}`);
         emojiButton = chatFooter ? chatFooter.querySelector('.emoji-button') : null; console.log(`UI Element: emojiButton found: ${!!emojiButton}`);
@@ -1724,14 +1657,13 @@ async function initializeApp() {
         noActiveUsersText = document.getElementById('noActiveUsersText'); console.log(`UI Element: noActiveUsersText found: ${!!noActiveUsersText}`);
 
         const criticalElementsCheck = {
-            mainHeader, menuButton, dropdownMenu, themeToggle, logoutButton, enableSoundButton,
+            mainHeader, menuButton, dropdownMenu, themeToggle, logoutButton, enableSoundButton, 
             container, sidebarWrapper, mainNavIcons, onlineUsersMobile,
             sidebarEl, searchInput, contactsListEl,
             chatAreaWrapper, logoScreen, chatArea,
             chatHeader, backButton, chatUserName, userStatusSpan,
             chatHeaderActions, chatSettingsButton, chatSettingsDropdown,
-            typingStatusHeader, typingIndicatorMessages, messageContainer,
-            // Sprawdzamy też, czy chatFooter został znaleziony
+            typingStatusHeader, typingIndicatorMessages, messageContainer, 
             chatFooter, attachButton, messageInput, emojiButton, sendButton,
             rightSidebarWrapper, rightSidebar, activeUsersListEl, noActiveUsersText
         };
@@ -1744,17 +1676,17 @@ async function initializeApp() {
                 allElementsFound = false;
             }
         }
-
+        
         if (!allElementsFound) {
             console.error('[initializeApp] Initialization failed due to missing critical UI elements. Aborting.');
             showCustomMessage('Wystąpił krytyczny błąd inicjalizacji. Brakuje elementów interfejsu. Sprawdź konsolę przeglądarki.', 'error');
-            return;
+            return; 
         } else {
             console.log('[initializeApp] All critical UI elements found. Proceeding with app initialization.');
         }
 
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
+        
         if (sessionError) {
             console.error('[initializeApp] Error getting Supabase session:', sessionError.message);
             showCustomMessage(`Błąd uwierzytelniania: ${sessionError.message}. Przekierowuję do logowania.`, 'error');
@@ -1767,7 +1699,7 @@ async function initializeApp() {
             window.location.href = 'login.html';
             return;
         }
-
+        
         currentUser = session.user; // Ensure currentUser is set from Supabase
         console.log('[initializeApp] Current authenticated user ID:', currentUser.id, 'Email:', currentUser.email);
 
@@ -1816,7 +1748,7 @@ async function initializeApp() {
             if (logoScreen) logoScreen.classList.add('hidden'); // Ensure hidden on mobile init
             console.log("[initializeApp] Mobile initial state: chatArea inactive, logoScreen hidden.");
         }
-
+        
         if (messageInput) messageInput.disabled = true;
         if (sendButton) sendButton.disabled = true;
 
@@ -1824,47 +1756,47 @@ async function initializeApp() {
         console.log("[initializeApp] Attaching general UI event listeners...");
         backButton.addEventListener('click', () => {
             console.log('[backButton] Back button clicked (UI)');
-
+            
             // Wysyłamy wiadomość 'leave' do serwera, informując go, że opuszczamy obecny pokój czatu
             if (socket && socket.readyState === WebSocket.OPEN && currentRoom && currentRoom !== 'global') {
                 socket.send(JSON.stringify({
                     type: 'leave',
                     name: currentUser.id,
-                    room: currentRoom
+                    room: currentRoom 
                 }));
                 console.log(`[backButton] Sent leave message to WebSocket for room: ${currentRoom}`);
             }
-
-            resetChatView();
+            
+            resetChatView(); 
 
             if (window.matchMedia('(max-width: 768px)').matches) {
                 console.log("[backButton] Mobile view logic triggered. Showing sidebar.");
                 if (sidebarWrapper) {
-                    sidebarWrapper.classList.remove('hidden-on-mobile');
+                    sidebarWrapper.classList.remove('hidden-on-mobile'); 
                     console.log("[backButton] Mobile: sidebarWrapper visible.");
                 } else { console.warn("[backButton] Mobile: sidebarWrapper not found."); }
-
+                
                 if (chatAreaWrapper) {
-                    chatAreaWrapper.classList.remove('active-on-mobile');
+                    chatAreaWrapper.classList.remove('active-on-mobile'); 
                     chatAreaWrapper.style.display = 'none'; // Ensure it's hidden after backing out
                     console.log("[backButton] Mobile: chatAreaWrapper deactivated and hidden.");
                 } else { console.warn("[backButton] Mobile: chatAreaWrapper not found."); }
-
+                
                 if (chatArea) {
-                    chatArea.classList.remove('active');
+                    chatArea.classList.remove('active'); 
                     console.log("[backButton] Mobile: chatArea deactivated.");
                 } else { console.warn("[backButton] Mobile: chatArea not found."); }
-
+                
                 if (logoScreen) {
-                    logoScreen.classList.add('hidden');
+                    logoScreen.classList.add('hidden'); 
                     console.log("[backButton] Mobile: logoScreen hidden.");
                 } else { console.warn("[backButton] Mobile: logoScreen not found."); }
-
+                
                 if (backButton) {
-                    backButton.style.display = 'none';
+                    backButton.style.display = 'none'; 
                     console.log("[backButton] Mobile: backButton hidden.");
                 } else { console.warn("[backButton] Mobile: backButton not found."); }
-
+                
                 if (rightSidebarWrapper) {
                     rightSidebarWrapper.style.display = 'none';
                     console.log("[backButton] Mobile: rightSidebarWrapper hidden.");
@@ -1874,26 +1806,26 @@ async function initializeApp() {
             } else {
                 console.log("[backButton] Desktop view logic triggered. Showing logo screen.");
                 if (logoScreen) {
-                    logoScreen.classList.remove('hidden');
+                    logoScreen.classList.remove('hidden'); 
                     console.log("[backButton] Desktop: logoScreen visible.");
                 } else { console.warn("[backButton] Desktop: logoScreen not found."); }
-
+                
                 if (chatArea) {
-                    chatArea.classList.remove('active');
+                    chatArea.classList.remove('active'); 
                     console.log("[backButton] Desktop: chatArea deactivated.");
                 } else { console.warn("[backButton] Desktop: chatArea not found."); }
-
+                
                 if (chatAreaWrapper) {
-                    chatAreaWrapper.classList.remove('active-on-mobile');
-                    chatAreaWrapper.style.display = 'flex';
+                    chatAreaWrapper.classList.remove('active-on-mobile'); 
+                    chatAreaWrapper.style.display = 'flex'; 
                     console.log("[backButton] Desktop: chatAreaWrapper set to flex.");
                 } else { console.warn("[backButton] Desktop: chatAreaWrapper not found."); }
             }
         });
 
         menuButton.addEventListener('click', (event) => {
-            event.stopPropagation();
-            dropdownMenu.classList.toggle('hidden');
+            event.stopPropagation(); 
+            dropdownMenu.classList.toggle('hidden'); 
             console.log(`[initializeApp] Menu dropdown toggled. Hidden: ${dropdownMenu.classList.contains('hidden')}`);
         });
 
@@ -1904,6 +1836,7 @@ async function initializeApp() {
             }
             if (!dropdownMenu.classList.contains('hidden') && menuButton && !menuButton.contains(event.target)) {
                 dropdownMenu.classList.add('hidden');
+                console.log("[initializeApp] Main dropdown hidden due to outside click.");
             }
         });
 
@@ -1944,6 +1877,10 @@ async function initializeApp() {
                 }
             }
 
+            // No Firestore listener to detach here, as we are using Supabase for unread messages.
+            // unreadConversationsInfo.clear(); // Clear local unread info (handled by loadUnreadMessagesFromSupabase on next login)
+            // updateDocumentTitle(); // Reset title (handled by loadUnreadMessagesFromSupabase on next login)
+
             const { error } = await supabase.auth.signOut();
             if (error) {
                 console.error('Logout error:', error.message);
@@ -1983,31 +1920,31 @@ async function initializeApp() {
             if (mq.matches) {
                 console.log("[handleMediaQueryChange] Mobile view activated. Adjusting initial visibility for mobile.");
                 if (sidebarWrapper) {
-                    sidebarWrapper.classList.remove('hidden-on-mobile');
+                    sidebarWrapper.classList.remove('hidden-on-mobile'); 
                     console.log("[handleMediaQueryChange] Mobile: sidebarWrapper ensured visible (no hidden-on-mobile).");
                 } else { console.warn("[handleMediaQueryChange] Mobile: sidebarWrapper not found in mq change."); }
 
                 if (chatAreaWrapper) {
-                    chatAreaWrapper.classList.remove('active-on-mobile');
-                    chatAreaWrapper.style.display = 'none';
+                    chatAreaWrapper.classList.remove('active-on-mobile'); 
+                    chatAreaWrapper.style.display = 'none'; 
                     console.log("[handleMediaQueryChange] Mobile: chatAreaWrapper hidden.");
                 } else { console.warn("[handleMediaQueryChange] Mobile: chatAreaWrapper not found in mq change."); }
 
                 if (chatArea) {
-                    chatArea.classList.remove('active');
+                    chatArea.classList.remove('active'); 
                     console.log("[handleMediaQueryChange] Mobile: chatArea deactivated.");
                 } else { console.warn("[handleMediaQueryChange] Mobile: chatArea not found in mq change."); }
-
+                
                 if (logoScreen) {
-                    logoScreen.classList.add('hidden');
+                    logoScreen.classList.add('hidden'); 
                     console.log("[handleMediaQueryChange] Mobile: logoScreen hidden.");
                 } else { console.warn("[handleMediaQueryChange] Mobile: logoScreen not found in mq change."); }
-
+                
                 if (backButton) {
-                    backButton.style.display = 'none';
+                    backButton.style.display = 'none'; 
                     console.log("[handleMediaQueryChange] Mobile: backButton hidden.");
                 } else { console.warn("[handleMediaQueryChange] Mobile: backButton not found in mq change."); }
-
+                
                 if (rightSidebarWrapper) {
                     rightSidebarWrapper.style.display = 'none';
                     console.log("[handleMediaQueryChange] Mobile: rightSidebarWrapper hidden.");
@@ -2015,46 +1952,46 @@ async function initializeApp() {
             } else { // Widok desktopowy/tabletowy (min-width: 769px)
                 console.log("[handleMediaQueryChange] Desktop/Tablet view activated. Adjusting initial visibility for desktop.");
                 if (sidebarWrapper) {
-                    sidebarWrapper.classList.remove('hidden-on-mobile');
+                    sidebarWrapper.classList.remove('hidden-on-mobile'); 
                     console.log("[handleMediaQueryChange] Desktop: sidebarWrapper visible.");
                 } else { console.warn("[handleMediaQueryChange] Desktop: sidebarWrapper not found in mq change."); }
-
+                
                 if (chatAreaWrapper) {
-                    chatAreaWrapper.classList.remove('active-on-mobile');
-                    chatAreaWrapper.style.display = 'flex';
+                    chatAreaWrapper.classList.remove('active-on-mobile'); 
+                    chatAreaWrapper.style.display = 'flex'; 
                     console.log("[handleMediaQueryChange] Desktop: chatAreaWrapper set to flex.");
                 } else { console.warn("[handleMediaQueryChange] Desktop: chatAreaWrapper not found in mq change."); }
-
+                
                 // On desktop, logoScreen should be visible by default, chatArea should be hidden unless a chat is active
                 if (logoScreen) {
                     // Only show logoScreen if no chat is currently selected
                     if (!currentChatUser) { // If no current chat user, show logo screen
-                        logoScreen.classList.remove('hidden');
+                        logoScreen.classList.remove('hidden'); 
                         console.log("[handleMediaQueryChange] Desktop: logoScreen visible (no current chat user).");
                     } else { // If a chat is active, ensure logo screen is hidden
                         logoScreen.classList.add('hidden');
                         console.log("[handleMediaQueryChange] Desktop: logoScreen hidden (chat active).");
                     }
                 } else { console.warn("[handleMediaQueryChange] Desktop: logoScreen not found in mq change."); }
-
+                
                 if (chatArea) {
                     // Only activate chatArea if a chat is currently selected
                     if (currentChatUser) { // If current chat user, ensure chatArea is active
-                        chatArea.classList.add('active');
+                        chatArea.classList.add('active'); 
                         console.log("[handleMediaQueryChange] Desktop: chatArea activated (current chat user).");
                     } else { // If no chat active, ensure chatArea is not active
-                        chatArea.classList.remove('active');
+                        chatArea.classList.remove('active'); 
                         console.log("[handleMediaQueryChange] Desktop: chatArea deactivated (no current chat user).");
                     }
                 } else { console.warn("[handleMediaQueryChange] Desktop: chatArea not found in mq change."); }
-
+                
                 if (rightSidebarWrapper) {
-                    rightSidebarWrapper.style.display = 'flex';
+                    rightSidebarWrapper.style.display = 'flex'; 
                     console.log("[handleMediaQueryChange] Desktop: rightSidebarWrapper visible.");
                 } else { console.warn("[handleMediaQueryChange] Desktop: rightSidebarWrapper not found in mq change."); }
-
+                
                 if (backButton) {
-                    backButton.style.display = 'none';
+                    backButton.style.display = 'none'; 
                     console.log("[handleMediaQueryChange] Desktop: backButton hidden.");
                 } else { console.warn("[handleMediaQueryChange] Desktop: backButton not found in mq change."); }
             }
@@ -2065,24 +2002,14 @@ async function initializeApp() {
         mq.addListener(handleMediaQueryChange);
         handleMediaQueryChange(mq); // Initial call to set correct layout
 
+        // Now that the app is initialized, request notification permission
+        await requestNotificationPermission();
+        
         // Sprawdź politykę Autoplay po inicjalizacji
         checkAudioAutoplay();
 
         // Tytuł zakładki będzie aktualizowany po załadowaniu nieprzeczytanych wiadomości z Supabase
         updateDocumentTitle(); // Ustawienie początkowego tytułu na "Komunikator"
-
-        // Wczytaj stan powiadomień wizualnych z localStorage
-        const savedVisualNotificationsState = localStorage.getItem('visualNotificationsEnabled');
-        if (savedVisualNotificationsState !== null) {
-            visualNotificationsEnabled = JSON.parse(savedVisualNotificationsState);
-        }
-        // ZMIANA: Wczytaj stan powiadomień dźwiękowych z localStorage
-        const savedSoundNotificationsState = localStorage.getItem('soundNotificationsEnabled');
-        if (savedSoundNotificationsState !== null) {
-            soundNotificationsEnabled = JSON.parse(savedSoundNotificationsState);
-        }
-
-        // Ustaw checkboxa, jeśli istnieje, w setupChatSettingsDropdown() - to jest wywoływane później
 
         console.log("[initializeApp] Komunikator application initialized successfully.");
     } catch (e) {
