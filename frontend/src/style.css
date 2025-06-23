@@ -407,6 +407,12 @@ body {
     text-align: center;
     font-weight: bold;
     display: block;
+    /* DODANA REGUŁA */
+    /* Upewnij się, że element jest niewidoczny, jeśli ma klasę hidden */
+    /* To nadpisze wszelkie style, które mogą powodować, że ramka/tło jest widoczne */
+    &.hidden {
+        display: none !important;
+    }
 }
 
 /* Status online/offline - w nagłówku czatu */
