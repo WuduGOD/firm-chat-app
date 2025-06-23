@@ -57,7 +57,8 @@ let reconnectAttempts = 0;
 let typingTimeout;
 let currentActiveConvoItem = null;
 
-let onlineUsers = new Map(); // userID -> boolean
+// ZMIANA: onlineUsers będzie teraz przechowywać obiekt z isOnline i lastSeen
+let onlineUsers = new Map(); // userID -> { isOnline: boolean, lastSeen: string | null }
 
 // Stan uprawnień do powiadomień
 let notificationPermissionGranted = false;
@@ -76,6 +77,34 @@ let baseDocumentTitle = "Komunikator";
 let unreadConversationsInfo = new Map(); 
 
 // --- Funkcje pomocnicze ---
+
+/**
+ * Formats a given date into a "time ago" string (e.g., "5 minut temu", "wczoraj o 10:30").
+ * @param {Date} date - The date object to format.
+ * @returns {string} The formatted time ago string.
+ */
+function formatTimeAgo(date) {
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (seconds < 60) {
+        return `teraz`;
+    } else if (minutes < 60) {
+        return `${minutes} ${minutes === 1 ? 'minutę' : 'minut'} temu`;
+    } else if (hours < 24) {
+        return `${hours} ${hours === 1 ? 'godzinę' : 'godzin'} temu`;
+    } else if (days === 1) {
+        return `wczoraj o ${date.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })}`;
+    } else if (days < 7) {
+        return `${days} ${days === 1 ? 'dzień' : 'dni'} temu`;
+    } else {
+        return `${date.toLocaleDateString("pl-PL")} o ${date.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })}`;
+    }
+}
+
 
 /**
  * Wyświetla niestandardowy komunikat w aplikacji.
@@ -520,7 +549,7 @@ async function loadContacts() {
                 <div class="contact-meta">
                     <span class="message-time">${timeText}</span>
                     <span class="unread-count hidden"></span> <!-- ZMIANA: Usunięto domyślne '0' -->
-                    <span class="status-dot ${onlineUsers.get(String(user.id)) ? 'online' : ''}"></span> <!-- Added status dot -->
+                    <span class="status-dot ${onlineUsers.get(String(user.id))?.isOnline ? 'online' : ''}"></span> <!-- Added status dot -->
                 </div>
             `;
 
@@ -622,11 +651,25 @@ async function handleConversationClick(user, clickedConvoItemElement) {
         if (chatUserName && messageInput && sendButton && userStatusSpan) {
             chatUserName.textContent = currentChatUser.username;
             
-            const isUserOnline = onlineUsers.get(String(user.id)) === true; 
-            userStatusSpan.textContent = isUserOnline ? 'Online' : 'Offline';
+            // ZMIANA: Pobierz status z mapy onlineUsers, która teraz przechowuje obiekty
+            const userStatus = onlineUsers.get(String(user.id));
+            const isUserOnline = userStatus ? userStatus.isOnline : false;
             userStatusSpan.classList.toggle('online', isUserOnline); 
             userStatusSpan.classList.toggle('offline', !isUserOnline); 
-            console.log(`[handleConversationClick] Initial status for active chat user ${currentChatUser.username} (from onlineUsers map): ${isUserOnline ? 'Online' : 'Offline'}`);
+
+            if (isUserOnline) {
+                userStatusSpan.textContent = 'Online';
+            } else {
+                let lastSeenText = 'Offline';
+                if (userStatus && userStatus.lastSeen) {
+                    const date = new Date(userStatus.lastSeen);
+                    if (!isNaN(date.getTime())) {
+                         lastSeenText = `Offline (ostatnio widziany ${formatTimeAgo(date)})`;
+                    }
+                }
+                userStatusSpan.textContent = lastSeenText;
+            }
+            console.log(`[handleConversationClick] Initial status for active chat user ${currentChatUser.username} (from onlineUsers map): ${userStatusSpan.textContent}`);
 
             messageInput.disabled = false;
             sendButton.disabled = false;
@@ -910,20 +953,42 @@ async function addMessageToChat(msg) {
  * Updates the online/offline status indicator for a specific user.
  * @param {string} userId - The ID of the user whose status is being updated.
  * @param {boolean} isOnline - True if the user is online, false otherwise.
+ * @param {string | null} lastSeenTimestamp - Optional: The timestamp when the user was last seen.
  */
-function updateUserStatusIndicator(userId, isOnline) {
-    console.log(`[Status Update Debug] Function called for userId: ${userId}, isOnline: ${isOnline}`);
+function updateUserStatusIndicator(userId, isOnline, lastSeenTimestamp = null) {
+    console.log(`[Status Update Debug] Function called for userId: ${userId}, isOnline: ${isOnline}, lastSeenTimestamp: ${lastSeenTimestamp}`);
     try {
-        onlineUsers.set(String(userId), isOnline); // ZAWSZE AKTUALIZUJ MAPĘ onlineUsers
+        // ZMIANA: Aktualizuj mapę onlineUsers o obiekt z isOnline i lastSeen
+        if (isOnline) {
+            onlineUsers.set(String(userId), { isOnline: true, lastSeen: null });
+        } else {
+            // Użyj dostarczonego timestampu lub bieżącego czasu, jeśli przechodzi w tryb offline
+            onlineUsers.set(String(userId), { isOnline: false, lastSeen: lastSeenTimestamp || new Date().toISOString() });
+        }
 
         // Update status in the active chat header
         if (currentChatUser && userStatusSpan) {
             console.log(`[Status Update Debug] currentChatUser.id: ${currentChatUser.id}, userId from WS: ${userId}`);
             if (String(currentChatUser.id) === String(userId)) {
-                userStatusSpan.textContent = isOnline ? 'Online' : 'Offline';
                 userStatusSpan.classList.toggle('online', isOnline); 
                 userStatusSpan.classList.toggle('offline', !isOnline); 
-                console.log(`[Status Update Debug] Chat header status updated for ${getUserLabelById(userId)} to: ${isOnline ? 'Online' : 'Offline'}`);
+
+                if (isOnline) {
+                    userStatusSpan.textContent = 'Online';
+                } else {
+                    const lastSeenInfo = onlineUsers.get(String(userId));
+                    let lastSeenText = 'Offline';
+                    if (lastSeenInfo && lastSeenInfo.lastSeen) {
+                        const date = new Date(lastSeenInfo.lastSeen);
+                        if (!isNaN(date.getTime())) {
+                            lastSeenText = `Offline (ostatnio widziany ${formatTimeAgo(date)})`;
+                        } else {
+                            lastSeenText = `Offline`; // Fallback if date is invalid
+                        }
+                    }
+                    userStatusSpan.textContent = lastSeenText;
+                }
+                console.log(`[Status Update Debug] Chat header status updated for ${getUserLabelById(userId)} to: ${userStatusSpan.textContent}`);
             } else {
                 console.log("[Status Update Debug] userId " + userId + " does not match currentChatUser.id " + currentChatUser.id + ". Header not updated.");
             }
@@ -1035,7 +1100,7 @@ function updateUserStatusIndicator(userId, isOnline) {
             }
         }
         
-        // Update status dots in the main contacts list
+        // Update status dots in the main contacts list (unchanged - only dot, no timestamp)
         const contactConvoItem = contactsListEl.querySelector(`.contact[data-convo-id="${userId}"]`);
         if (contactConvoItem) {
             const statusDot = contactConvoItem.querySelector('.status-dot');
@@ -1126,7 +1191,8 @@ function initWebSocket() {
             socket.send(JSON.stringify({
                 type: 'status',
                 user: currentUser.id,
-                online: true
+                online: true,
+                last_seen: null // Online, więc last_seen jest null
             }));
             console.log(`[initWebSocket] Sent 'online' status for user ${currentUser.id}`);
 
@@ -1178,8 +1244,9 @@ function initWebSocket() {
                     // Ta sekcja jest głównie do celów debugowania lub jeśli historia byłaby ładowana w inny sposób
                     break;
                 case 'status':
-                    console.log(`[WS MESSAGE] Received status update for user ${data.user}: ${data.online ? 'online' : 'offline'}`);
-                    updateUserStatusIndicator(data.user, data.online);
+                    console.log(`[WS MESSAGE] Received status update for user ${data.user}: ${data.online ? 'online' : 'offline'}. Last seen: ${data.last_seen || 'N/A'}`);
+                    // ZMIANA: Przekaż last_seen timestamp do funkcji
+                    updateUserStatusIndicator(data.user, data.online, data.last_seen || null);
                     break;
                 case 'active_users':
                     console.log('[WS MESSAGE] Received initial active users list:', data.users);
@@ -1244,7 +1311,7 @@ function displayActiveUsers(activeUsersData) {
     try {
         activeUsersListEl.innerHTML = ''; 
         onlineUsersMobile.innerHTML = ''; 
-        onlineUsers.clear(); 
+        onlineUsers.clear(); // Clear existing local data
 
         const filteredUsers = activeUsersData.filter(user => String(user.id) !== String(currentUser.id));
 
@@ -1292,7 +1359,7 @@ function displayActiveUsers(activeUsersData) {
                 });
                 onlineUsersMobile.appendChild(divMobile);
 
-                onlineUsers.set(String(user.id), true); 
+                onlineUsers.set(String(user.id), { isOnline: true, lastSeen: null }); // ZMIANA: Ustaw isOnline true, lastSeen null
             });
         }
         console.log("[Status Update Debug] onlineUsers map after displayActiveUsers:", onlineUsers);
@@ -1713,6 +1780,13 @@ async function initializeApp() {
                         name: currentUser.id,
                         room: currentRoom || 'global'
                     }));
+                    // ZMIANA: Wyślij status "offline" z timestampem przy zamykaniu strony
+                    socket.send(JSON.stringify({
+                        type: 'status',
+                        user: currentUser.id,
+                        online: false,
+                        last_seen: new Date().toISOString()
+                    }));
                 } catch (sendError) {
                     console.warn(`[beforeunload] Failed to send leave message via WebSocket: ${sendError.message}`);
                 }
@@ -1869,7 +1943,8 @@ async function initializeApp() {
                     socket.send(JSON.stringify({
                         type: 'status',
                         user: currentUser.id,
-                        online: false
+                        online: false,
+                        last_seen: new Date().toISOString() // ZMIANA: Wyslij timestamp last_seen przy wylogowaniu
                     }));
                     console.log(`[logoutButton] Sent 'offline' status for user ${currentUser.id} before logging out.`);
                 } catch (sendError) {
