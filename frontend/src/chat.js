@@ -48,6 +48,9 @@ let mediaInfo; // ID: mediaInfo
 let messageEditor; // ID: messageEditor
 let textMessageInput; // ID: textMessageInput
 
+// WAŻNE: Deklaracja chatFooter tutaj, aby była dostępna globalnie/w zasięgu pliku
+let chatFooter;
+
 // Kontener na wiadomości customowe (np. błędy, powiadomienia)
 let customMessageContainer;
 let customMessageText;
@@ -1349,7 +1352,7 @@ function setupChatSettingsDropdown() {
                 chatSettingsDropdown.classList.add('hidden');
                 console.log("[setupChatSettingsDropdown] Chat settings dropdown hidden due to outside click.");
             }
-            if (!dropdownMenu.classList.contains('hidden') && menuButton && !menuButton.contains(event.target)) { // Also close main dropdown
+            if (!dropdownMenu.classList.contains('hidden') && menuButton && !menuButton.contains(event.target)) {
                 dropdownMenu.classList.add('hidden');
             }
         });
@@ -1681,7 +1684,6 @@ async function initializeApp() {
         typingStatusHeader = document.getElementById('typingStatus'); console.log(`UI Element: typingStatusHeader found: ${!!typingStatusHeader}`);
         typingIndicatorMessages = document.getElementById('typingIndicator'); console.log(`UI Element: typingIndicatorMessages found: ${!!typingIndicatorMessages}`);
 
-        // Aktualizacja tej linii
         messageContainer = document.getElementById('messageContainer');
         console.log(`UI Element: messageContainer found: ${!!messageContainer}`); // Dostosowane logowanie
 
@@ -1689,6 +1691,7 @@ async function initializeApp() {
         chatFooter = document.querySelector('.chat-footer');
         console.log(`UI Element: chatFooter found: ${!!chatFooter}`);
 
+        // Teraz możemy bezpiecznie pobierać elementy potomne chatFooter
         attachButton = chatFooter ? chatFooter.querySelector('.attach-button') : null; console.log(`UI Element: attachButton found: ${!!attachButton}`);
         messageInput = document.getElementById('messageInput'); console.log(`UI Element: messageInput found: ${!!messageInput}`);
         emojiButton = chatFooter ? chatFooter.querySelector('.emoji-button') : null; console.log(`UI Element: emojiButton found: ${!!emojiButton}`);
@@ -1707,6 +1710,7 @@ async function initializeApp() {
             chatHeader, backButton, chatUserName, userStatusSpan,
             chatHeaderActions, chatSettingsButton, chatSettingsDropdown,
             typingStatusHeader, typingIndicatorMessages, messageContainer,
+            // Sprawdzamy też, czy chatFooter został znaleziony
             chatFooter, attachButton, messageInput, emojiButton, sendButton,
             rightSidebarWrapper, rightSidebar, activeUsersListEl, noActiveUsersText
         };
@@ -1879,7 +1883,6 @@ async function initializeApp() {
             }
             if (!dropdownMenu.classList.contains('hidden') && menuButton && !menuButton.contains(event.target)) {
                 dropdownMenu.classList.add('hidden');
-                console.log("[initializeApp] Main dropdown hidden due to outside click.");
             }
         });
 
