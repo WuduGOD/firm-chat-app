@@ -66,7 +66,7 @@ let notificationPermissionGranted = false;
 // Przycisk do włączania dźwięków (obsługa Autoplay Policy)
 let enableSoundButton;
 
-// NOWE ZMIENNE DLA DŹWIWKU (Web Audio API)
+// NOWE ZMIENNE DLA DŹWWIĘKU (Web Audio API)
 let audioContext = null;
 let audioContextInitiated = false; // Flaga do śledzenia, czy AudioContext został zainicjowany przez interakcję użytkownika
 
@@ -93,9 +93,9 @@ function formatTimeAgo(date) {
     if (seconds < 60) {
         return `teraz`;
     } else if (minutes < 60) {
-        return `${minutes} ${minutes === 1 ? 'minutę' : 'minut'} temu`;
+        return `${minutes} ${minutes === 1 ? 'minutę' : (minutes >= 2 && minutes <= 4 ? 'minuty' : 'minut')} temu`;
     } else if (hours < 24) {
-        return `${hours} ${hours === 1 ? 'godzinę' : 'godzin'} temu`;
+        return `${hours} ${hours === 1 ? 'godzinę' : (hours >= 2 && hours <= 4 ? 'godziny' : 'godzin')} temu`;
     } else if (days === 1) {
         return `wczoraj o ${date.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })}`;
     } else if (days < 7) {
@@ -1313,9 +1313,12 @@ function displayActiveUsers(activeUsersData) {
         onlineUsersMobile.innerHTML = ''; 
         onlineUsers.clear(); // Clear existing local data
 
-        const filteredUsers = activeUsersData.filter(user => String(user.id) !== String(currentUser.id));
+        // ZMIANA: Usunięto filtrowanie, aby przetwarzać wszystkich użytkowników i ich statusy z DB
+        // const filteredUsers = activeUsersData.filter(user => String(user.id) !== String(currentUser.id)); // Usunięto tę linię
 
-        if (filteredUsers.length === 0) {
+        const onlineUsersForDisplay = activeUsersData.filter(user => String(user.id) !== String(currentUser.id) && user.online);
+
+        if (onlineUsersForDisplay.length === 0) {
             activeUsersListEl.style.display = 'none';
             noActiveUsersText.style.display = 'block';
             console.log("[displayActiveUsers] No active users, hiding desktop list, showing text.");
@@ -1324,7 +1327,7 @@ function displayActiveUsers(activeUsersData) {
             noActiveUsersText.style.display = 'none';
             console.log("[displayActiveUsers] Active users found, showing desktop list, hiding text.");
 
-            filteredUsers.forEach(user => {
+            onlineUsersForDisplay.forEach(user => { // Iterujemy tylko po użytkownikach online do wyświetlenia w sidebarze
                 const li = document.createElement('li');
                 li.classList.add('active-user-item');
                 li.dataset.userId = user.id;
@@ -1338,6 +1341,7 @@ function displayActiveUsers(activeUsersData) {
                     `;
                 activeUsersListEl.appendChild(li);
 
+                // ZMIANA: Tworzenie mobilnej listy online - tylko dla faktycznie online
                 const divMobile = document.createElement('div');
                 divMobile.classList.add('online-user-item-mobile');
                 divMobile.dataset.userId = user.id;
@@ -1358,10 +1362,14 @@ function displayActiveUsers(activeUsersData) {
                     }
                 });
                 onlineUsersMobile.appendChild(divMobile);
-
-                onlineUsers.set(String(user.id), { isOnline: true, lastSeen: null }); // ZMIANA: Ustaw isOnline true, lastSeen null
             });
         }
+        
+        // ZMIANA: Prawidłowe wypełnienie mapy onlineUsers dla WSZYSTKICH użytkowników otrzymanych z serwera
+        activeUsersData.forEach(user => {
+            onlineUsers.set(String(user.id), { isOnline: user.online, lastSeen: user.last_seen });
+        });
+
         console.log("[Status Update Debug] onlineUsers map after displayActiveUsers:", onlineUsers);
     } finally {
         console.log("Wykonano operacje czyszczące w bloku finally.");
@@ -1476,7 +1484,7 @@ function setupChatSettingsDropdown() {
                 console.log("[setupChatSettingsDropdown] Search messages button clicked.");
                 const searchTerm = messageSearchInput.value.trim();
                 console.log('Searching messages for:', searchTerm, '(functionality to be implemented)');
-                showCustomMessage(`Searching messages for '${searchTerm}' (functionality to be implemented).`, 'info');
+                showCustomMessage(`Searching messages for '${searchTerm}' (functionality to be implemented).`, "info");
             });
         } else {
             console.warn("[setupChatSettingsDropdown] Message search input or button not found.");
