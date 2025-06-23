@@ -65,7 +65,7 @@ let notificationPermissionGranted = false;
 // Przycisk do włączania dźwięków (obsługa Autoplay Policy)
 let enableSoundButton;
 
-// NOWE ZMIENNE DLA DŹWIĘKU (Web Audio API)
+// NOWE ZMIENNE DLA DŹWIWKU (Web Audio API)
 let audioContext = null;
 let audioContextInitiated = false; // Flaga do śledzenia, czy AudioContext został zainicjowany przez interakcję użytkownika
 
@@ -275,7 +275,6 @@ async function requestNotificationPermission() {
             showCustomMessage("Powiadomienia zostały zablokowane. Nie będziesz otrzymywać alertów o nowych wiadomościach.", "error");
         } else { // 'default'
             notificationPermissionGranted = false;
-            console.info("[Notifications] Notification permission dismissed or default.");
             showCustomMessage("Powiadomienia nie zostały włączone.", "info");
         }
     } catch (error) {
@@ -520,7 +519,7 @@ async function loadContacts() {
                 </div>
                 <div class="contact-meta">
                     <span class="message-time">${timeText}</span>
-                    <span class="unread-count hidden">0</span>
+                    <span class="unread-count hidden"></span> <!-- ZMIANA: Usunięto domyślne '0' -->
                     <span class="status-dot ${onlineUsers.get(String(user.id)) ? 'online' : ''}"></span> <!-- Added status dot -->
                 </div>
             `;
@@ -639,7 +638,7 @@ async function handleConversationClick(user, clickedConvoItemElement) {
         // Reset unread count for the selected conversation (UI only, Supabase handles global)
         const unreadCount = clickedConvoItemElement.querySelector('.unread-count');
         if (unreadCount) {
-            unreadCount.textContent = '0';
+            unreadCount.textContent = ''; // Upewnij się, że tekst jest wyczyszczony
             unreadCount.classList.add('hidden');
             console.log(`[handleConversationClick] Unread count reset for room ${newRoom} (UI only).`);
         } else {
@@ -866,7 +865,7 @@ async function addMessageToChat(msg) {
             // If message is from current user or for the active room, ensure unread count is zeroed and hidden
             console.log(`[addMessageToChat] Message is from current user (${String(msg.username) === String(currentUser.id)}) OR for the active room (${msg.room === currentRoom}). Ensuring unread count is hidden.`);
             if (unreadCountEl) {
-                unreadCountEl.textContent = '0';
+                unreadCountEl.textContent = ''; // ZMIANA: Wyczyszczono tekst
                 unreadCountEl.classList.add('hidden');
             }
             // Clear this conversation from the global unread tracker in Supabase if it was previously unread
@@ -922,8 +921,8 @@ function updateUserStatusIndicator(userId, isOnline) {
             console.log(`[Status Update Debug] currentChatUser.id: ${currentChatUser.id}, userId from WS: ${userId}`);
             if (String(currentChatUser.id) === String(userId)) {
                 userStatusSpan.textContent = isOnline ? 'Online' : 'Offline';
-                userStatusSpan.classList.toggle('online', isOnline);
-                userStatusSpan.classList.toggle('offline', !isOnline);
+                userStatusSpan.classList.toggle('online', isOnline); 
+                userStatusSpan.classList.toggle('offline', !isOnline); 
                 console.log(`[Status Update Debug] Chat header status updated for ${getUserLabelById(userId)} to: ${isOnline ? 'Online' : 'Offline'}`);
             } else {
                 console.log("[Status Update Debug] userId " + userId + " does not match currentChatUser.id " + currentChatUser.id + ". Header not updated.");
@@ -1017,12 +1016,12 @@ function updateUserStatusIndicator(userId, isOnline) {
                     
                     // Add click listener for mobile item
                     div.addEventListener('click', async () => {
-                        const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(userId));
+                        const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(user.id));
                         if (userProfile) {
                             const mockConvoItem = document.createElement('li');
-                            mockConvoItem.dataset.convoId = userProfile.id; 
+                            mockConvoItem.dataset.convoId = user.id;
                             mockConvoItem.dataset.email = userProfile.email;
-                            mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(userProfile.id)); 
+                            mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(user.id));
                             handleConversationClick(userProfile, mockConvoItem);
                         }
                     });
@@ -1322,10 +1321,11 @@ function setupChatSettingsDropdown() {
         document.addEventListener('click', (event) => {
             if (!chatSettingsDropdown.classList.contains('hidden') && chatSettingsButton && !chatSettingsButton.contains(event.target)) {
                 chatSettingsDropdown.classList.add('hidden');
-                console.log("[setupChatSettingsDropdown] Chat settings dropdown hidden due to outside click.");
+                console.log("[initializeApp] Chat settings dropdown hidden due to outside click.");
             }
-            if (!dropdownMenu.classList.contains('hidden') && menuButton && !menuButton.contains(event.target)) { // Also close main dropdown
+            if (!dropdownMenu.classList.contains('hidden') && menuButton && !menuButton.contains(event.target)) {
                 dropdownMenu.classList.add('hidden');
+                console.log("[initializeApp] Main dropdown hidden due to outside click.");
             }
         });
 
@@ -1582,7 +1582,7 @@ async function loadUnreadMessagesFromSupabase() {
                         unreadCountEl.textContent = record.count;
                         unreadCountEl.classList.remove('hidden');
                     } else {
-                        unreadCountEl.textContent = '0';
+                        unreadCountEl.textContent = ''; // ZMIANA: Wyczyszczono tekst
                         unreadCountEl.classList.add('hidden');
                     }
                 }
@@ -1778,7 +1778,7 @@ async function initializeApp() {
                 
                 if (chatAreaWrapper) {
                     chatAreaWrapper.classList.remove('active-on-mobile'); 
-                    chatAreaWrapper.style.display = 'none'; // Ensure it's hidden after backing out
+                    chatAreaWrapper.style.display = 'none'; 
                     console.log("[backButton] Mobile: chatAreaWrapper deactivated and hidden.");
                 } else { console.warn("[backButton] Mobile: chatAreaWrapper not found."); }
                 
