@@ -160,6 +160,7 @@ wss.on('connection', (ws) => {
             else if (data.type === 'status') { // Ten typ wiadomości służy do aktualizacji globalnego statusu
                 const userId = data.user;
                 const isOnline = data.online;
+                const lastSeenTimestamp = data.last_seen; // Odbierz last_seen z klienta
 
                 // Upewniamy się, że userData jest zawsze aktualne dla tego połączenia
                 if (!userData.userId) { // Jeśli userId nie było ustawione, ustaw je
@@ -176,7 +177,8 @@ wss.on('connection', (ws) => {
                 await updateProfileStatus(userId, isOnline);
                 console.log(`User ${userId} status updated to ${isOnline}. (from 'status' message)`);
 
-                broadcastUserStatus(userId, isOnline); // Status zawsze rozsyłany globalnie
+                // ZMIANA: Przekaż lastSeenTimestamp do broadcastUserStatus
+                broadcastUserStatus(userId, isOnline, lastSeenTimestamp); // Status zawsze rozsyłany globalnie
             }
             else {
                 console.warn('Unhandled message type or missing userData.userId:', data);
@@ -204,9 +206,20 @@ wss.on('connection', (ws) => {
             
             // Tylko jeśli użytkownik nie ma innych aktywnych połączeń, ustawiamy go na offline
             if (!userIdToSockets.has(userData.userId) || userIdToSockets.get(userData.userId).size === 0) {
-                await updateProfileStatus(userData.userId, false);
+                await updateProfileStatus(userData.userId, false); // Zaktualizuj bazę danych na offline
                 console.log(`User ${userData.userId} disconnected. Database status updated to offline.`);
-                broadcastUserStatus(userData.userId, false); // Rozgłaszamy status offline
+                // Pobierz last_seen_at z bazy danych dla użytkownika, który właśnie stał się offline
+                const client = await pool.connect();
+                try {
+                    const res = await client.query('SELECT last_seen_at FROM public.profiles WHERE id = $1', [userData.userId]);
+                    const lastSeen = res.rows.length > 0 ? res.rows[0].last_seen_at : null;
+                    broadcastUserStatus(userData.userId, false, lastSeen); // Rozgłaszamy status offline z last_seen
+                } catch (err) {
+                    console.error('DB Error on close: Failed to get last_seen_at for broadcast:', err);
+                    broadcastUserStatus(userData.userId, false, new Date().toISOString()); // Fallback
+                } finally {
+                    client.release();
+                }
             } else {
                 console.log(`User ${userData.userId} disconnected one session, but still has ${userIdToSockets.get(userData.userId).size} active connections.`);
             }
@@ -246,7 +259,7 @@ async function getOnlineStatusesFromDb() {
     const client = await pool.connect();
     try {
         const query = `
-            SELECT id, is_online, username, email
+            SELECT id, is_online, username, email, last_seen_at
             FROM public.profiles
             WHERE is_online = TRUE;
         `;
@@ -288,12 +301,14 @@ function broadcastToRoom(roomId, msg, excludeWs = null) {
  * Statusy użytkowników są globalne i wszyscy powinni je otrzymać.
  * @param {string} userId - The ID of the user whose status is changing.
  * @param {boolean} isOnline - True if the user is online, false if offline.
+ * @param {string | null} lastSeen - The 'last_seen_at' timestamp if the user is going offline.
  */
-function broadcastUserStatus(userId, isOnline) {
+function broadcastUserStatus(userId, isOnline, lastSeen = null) {
     const msg = JSON.stringify({
         type: 'status',
         user: userId, 
         online: isOnline,
+        last_seen: lastSeen // DODANO: Dodajemy last_seen do wysyłanego statusu
     });
 
     for (const client of clients.keys()) {
@@ -302,7 +317,7 @@ function broadcastUserStatus(userId, isOnline) {
             client.send(msg);
         }
     }
-    console.log(`Broadcasted user ${userId} status: ${isOnline ? 'online' : 'offline'}.`);
+    console.log(`Broadcasted user ${userId} status: ${isOnline ? 'online' : 'offline'}. Last seen: ${lastSeen || 'N/A'}.`);
 }
 
 /**
