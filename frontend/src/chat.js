@@ -243,14 +243,14 @@ function checkAudioAutoplay() {
                 showCustomMessage("Przeglądarka zablokowała dźwięki. Kliknij 'Włącz dźwięki' u góry, aby je aktywować.", "info");
             }
         } else if (audioContext && audioContext.state === 'running') {
-            console.log("[Autoplay Check] AudioContext is already running. Autoplay is likely allowed.");
+            console.log('[Autoplay Check] AudioContext is already running.');
             audioContextInitiated = true;
             localStorage.setItem('autoplayUnlocked', 'true');
             if (enableSoundButton) {
                 enableSoundButton.classList.add('hidden');
             }
         } else {
-            console.log(`[Autoplay Check] AudioContext state: ${audioContext ? audioContext.state : 'null'}. No immediate action.`);
+            console.log(`[Autoplay Check] AudioContext state: ${audioContext ? audioContext.state : 'null'}`);
         }
     } catch (e) {
         console.error("Error during autoplay check:", e);
@@ -1307,10 +1307,10 @@ function displayActiveUsers(activeUsersData) {
                     `;
 
                 divMobile.addEventListener('click', async () => {
-                    const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(user.id));
+                    const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(userId));
                     if (userProfile) {
                         const mockConvoItem = document.createElement('li');
-                        mockConvoItem.dataset.convoId = user.id;
+                        mockConvoItem.dataset.convoId = userProfile.id;
                         mockConvoItem.dataset.email = userProfile.email;
                         mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(user.id));
                         handleConversationClick(userProfile, mockConvoItem);
@@ -1685,7 +1685,10 @@ async function initializeApp() {
         messageContainer = document.getElementById('messageContainer');
         console.log(`UI Element: messageContainer found: ${!!messageContainer}`); // Dostosowane logowanie
 
-        chatFooter = document.querySelector('.chat-footer'); console.log(`UI Element: chatFooter found: ${!!chatFooter}`);
+        // WAŻNE: Najpierw pobieramy chatFooter, zanim użyjemy go do pobrania jego potomków.
+        chatFooter = document.querySelector('.chat-footer');
+        console.log(`UI Element: chatFooter found: ${!!chatFooter}`);
+
         attachButton = chatFooter ? chatFooter.querySelector('.attach-button') : null; console.log(`UI Element: attachButton found: ${!!attachButton}`);
         messageInput = document.getElementById('messageInput'); console.log(`UI Element: messageInput found: ${!!messageInput}`);
         emojiButton = chatFooter ? chatFooter.querySelector('.emoji-button') : null; console.log(`UI Element: emojiButton found: ${!!emojiButton}`);
