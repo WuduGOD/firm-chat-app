@@ -70,6 +70,8 @@ let onlineUsers = new Map(); // userID -> boolean
 // Przycisk do włączania dźwięków (obsługa Autoplay Policy)
 let enableSoundButton;
 
+// ZMIANA: NOWA ZMIENNA: Kontrola nad powiadomieniami dźwiękowymi
+let soundNotificationsEnabled = true; // Domyślnie włączone
 // NOWA ZMIENNA: Kontrola nad powiadomieniami wizualnymi
 let visualNotificationsEnabled = true; // Domyślnie włączone
 
@@ -854,12 +856,17 @@ async function addMessageToChat(msg) {
                 console.warn("[Supabase] Supabase client not ready or currentUser not set. Cannot update unread count in Supabase.");
             }
 
-            // Dźwięk powiadomienia ZAWSZE, jeśli wiadomość jest nowa i od innego użytkownika
-            console.log("[addMessageToChat] Conditions met for playing sound. Playing notification sound.");
-            playNotificationSound();
+            // ZMIANA: Powiadomienie dźwiękowe ZAWSZE, jeśli wiadomość jest nowa i od innego użytkownika,
+            // ORAZ jeśli soundNotificationsEnabled jest true
+            if (soundNotificationsEnabled) { // Warunek na powiadomienia dźwiękowe
+                console.log("[addMessageToChat] Conditions met for playing sound. Playing notification sound.");
+                playNotificationSound();
+            } else {
+                console.log("[addMessageToChat] Sound notifications are disabled by user settings. Not playing sound.");
+            }
 
             // Logika dla powiadomień przeglądarkowych (wizualnych)
-            if (visualNotificationsEnabled) { // Sprawdź nową flagę ustawień powiadomień wizualnych
+            if (visualNotificationsEnabled) { // Sprawdź flagę ustawień powiadomień wizualnych
                 // Poproś o uprawnienia tylko wtedy, gdy powiadomienie jest faktycznie potrzebne i jeszcze nie udzielono zgody
                 if (Notification.permission !== "granted" && Notification.permission !== "denied") {
                      await requestNotificationPermission();
@@ -1443,7 +1450,7 @@ function setupChatSettingsDropdown() {
                     console.warn("[setupChatSettingsDropdown] Message search input or button not found.");
         }
 
-        // NOWE: Obsługa przełącznika powiadomień wizualnych
+        // Obsługa przełącznika powiadomień wizualnych
         const toggleVisualNotificationsEl = document.getElementById('toggleVisualNotifications');
         if (toggleVisualNotificationsEl) {
             toggleVisualNotificationsEl.checked = visualNotificationsEnabled; // Ustaw stan początkowy
@@ -1455,6 +1462,20 @@ function setupChatSettingsDropdown() {
             console.log(`UI Element: toggleVisualNotificationsEl found: ${!!toggleVisualNotificationsEl}`);
         } else {
             console.warn("UI Element: toggleVisualNotificationsEl not found. Visual notifications toggle functionality will not be available.");
+        }
+
+        // ZMIANA: Obsługa przełącznika powiadomień dźwiękowych
+        const toggleSoundNotificationsEl = document.getElementById('toggleSoundNotifications');
+        if (toggleSoundNotificationsEl) {
+            toggleSoundNotificationsEl.checked = soundNotificationsEnabled; // Ustaw stan początkowy
+            toggleSoundNotificationsEl.addEventListener('change', (event) => {
+                soundNotificationsEnabled = event.target.checked;
+                localStorage.setItem('soundNotificationsEnabled', JSON.stringify(soundNotificationsEnabled));
+                console.log(`[Notifications] Sound notifications ${soundNotificationsEnabled ? 'enabled' : 'disabled'}.`);
+            });
+            console.log(`UI Element: toggleSoundNotificationsEl found: ${!!toggleSoundNotificationsEl}`);
+        } else {
+            console.warn("UI Element: toggleSoundNotificationsEl not found. Sound notifications toggle functionality will not be available. Please ensure an element with id 'toggleSoundNotifications' exists in your HTML.");
         }
 
     } catch (e) {
@@ -2055,7 +2076,13 @@ async function initializeApp() {
         if (savedVisualNotificationsState !== null) {
             visualNotificationsEnabled = JSON.parse(savedVisualNotificationsState);
         }
-        // Ustaw checkboxa, jeśli istnieje, w setupChatSettingsDropdown()
+        // ZMIANA: Wczytaj stan powiadomień dźwiękowych z localStorage
+        const savedSoundNotificationsState = localStorage.getItem('soundNotificationsEnabled');
+        if (savedSoundNotificationsState !== null) {
+            soundNotificationsEnabled = JSON.parse(savedSoundNotificationsState);
+        }
+
+        // Ustaw checkboxa, jeśli istnieje, w setupChatSettingsDropdown() - to jest wywoływane później
 
         console.log("[initializeApp] Komunikator application initialized successfully.");
     } catch (e) {
@@ -2064,5 +2091,5 @@ async function initializeApp() {
     }
 }
 
-// Uruchom aplikację po załadowaniu DOM
+// Run the application after the DOM is fully loaded
 document.addEventListener('DOMContentLoaded', initializeApp);
