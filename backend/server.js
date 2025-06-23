@@ -145,17 +145,19 @@ wss.on('connection', (ws) => {
             }
             else if (data.type === 'get_active_users' && userData.userId) {
                 console.log(`Received request for active users from ${userData.userId}.`);
-                const activeUsersFromDb = await getOnlineStatusesFromDb(); 
-                const formattedUsers = activeUsersFromDb.map(user => ({
+                // ZMIANA: Zmieniono wywołanie getOnlineStatusesFromDb()
+                const allUsersStatuses = await getOnlineStatusesFromDb(); 
+                const formattedUsers = allUsersStatuses.map(user => ({
                     id: user.id,
                     username: user.username, 
-                    online: user.is_online
+                    online: user.is_online,
+                    last_seen: user.last_seen_at // DODANO: Dodajemy last_seen_at do danych wysyłanych do klienta
                 }));
                 ws.send(JSON.stringify({
                     type: 'active_users',
                     users: formattedUsers
                 }));
-                console.log(`Sent active users list to ${userData.userId}. List size: ${formattedUsers.length}`);
+                console.log(`Sent all user statuses to ${userData.userId}. List size: ${formattedUsers.length}`);
             }
             else if (data.type === 'status') { // Ten typ wiadomości służy do aktualizacji globalnego statusu
                 const userId = data.user;
@@ -255,16 +257,16 @@ async function updateProfileStatus(userId, isOnline) {
     }
 }
 
+// ZMIANA: Teraz pobiera last_seen_at dla WSZYSTKICH profili
 async function getOnlineStatusesFromDb() {
     const client = await pool.connect();
     try {
         const query = `
             SELECT id, is_online, username, email, last_seen_at
-            FROM public.profiles
-            WHERE is_online = TRUE;
+            FROM public.profiles; 
         `;
         const res = await client.query(query);
-        console.log(`DB: Fetched ${res.rows.length} online users.`);
+        console.log(`DB: Fetched ${res.rows.length} profiles with status info.`);
         return res.rows;
     } catch (err) {
         console.error('DB Error: Failed to get online statuses:', err);
@@ -276,7 +278,7 @@ async function getOnlineStatusesFromDb() {
 
 /**
  * Broadcasts a message to all clients who are currently in the specified room.
- * Używane GŁÓWNIE dla wiadomości typu 'typing' lub innych, które muszą być widoczne tylko w aktywnie otwartym czacie.
+ * Używane GŁÓWIE dla wiadomości typu 'typing' lub innych, które muszą być widoczne tylko w aktywnie otwartym czacie.
  * @param {string} roomId - The ID of the room to broadcast to.
  * @param {string} msg - The JSON string message to send.
  * @param {WebSocket} [excludeWs=null] - Opcjonalne połączenie WebSocket do wykluczenia (np. nadawca).
