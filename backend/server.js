@@ -19,11 +19,13 @@ const pool = new Pool({
     keepAlive: true
 });
 
-// Testuj połączenie z bazą danych na starcie
+// Testuj połączenie z bazą danych na starcie i zresetuj statusy
 pool.connect()
-    .then(client => {
+    .then(async client => { // ZMIANA: Dodano 'async'
         console.log("Successfully connected to PostgreSQL!");
         client.release();
+        // ZMIANA: Wywołanie funkcji resetującej statusy na offline
+        await resetAllUserStatusesToOfflineOnStartup(); 
     })
     .catch(err => {
         console.error("Failed to connect to PostgreSQL on startup:", err.message);
@@ -239,6 +241,25 @@ wss.on('connection', (ws) => {
 });
 
 // ---------------------- Helper functions --------------------------
+
+// ZMIANA: Funkcja resetująca statusy wszystkich użytkowników na offline przy starcie serwera
+async function resetAllUserStatusesToOfflineOnStartup() {
+    const client = await pool.connect();
+    try {
+        const query = `
+            UPDATE public.profiles
+            SET is_online = FALSE, last_seen_at = NOW()
+            WHERE is_online = TRUE;
+        `;
+        await client.query(query);
+        console.log(`DB: All previously online users reset to offline on server startup.`);
+    } catch (err) {
+        console.error('DB Error: Failed to reset all user statuses to offline on startup:', err);
+    } finally {
+        client.release();
+    }
+}
+
 
 async function updateProfileStatus(userId, isOnline) {
     const client = await pool.connect();
