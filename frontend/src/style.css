@@ -56,6 +56,14 @@ html, body { /* Dodano wysokość dla html i body */
     --bg-color-hover: var(--bg-color-search-input);
     --color-online: #4caf50;
     --color-offline: #888;
+
+    /* NOWE: Kolory dla modala i powiadomień */
+    --bg-color-modal-overlay: rgba(0, 0, 0, 0.6);
+    --bg-color-modal-content: #fff;
+    --color-success: #4CAF50;
+    --color-error: #f44336;
+    --color-info: #2196F3;
+    --color-notification-badge: #ff4d4d;
 }
 
 body {
@@ -560,10 +568,10 @@ body {
 }
 
 /* ZMODYFIKOWANE: chat-header-actions */
-.chat-header-actions.right-aligned {
+.chat-header-actions { /* Usunięto .right-aligned, aby było bardziej elastyczne */
     display: flex;
     gap: 0.8rem;
-    margin-left: auto;
+    margin-left: auto; /* Przesuwa akcje na prawo */
     flex-shrink: 0;
     align-items: center;
 }
@@ -580,12 +588,37 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
+    position: relative; /* Dla licznika powiadomień */
 }
 
 .chat-header-actions button:hover {
     color: var(--primary-color);
     background-color: var(--bg-color-hover);
 }
+
+/* Licznik powiadomień */
+.notification-count {
+    position: absolute;
+    top: 0px; /* Dostosuj pozycję */
+    right: 0px; /* Dostosuj pozycję */
+    background-color: var(--color-notification-badge);
+    color: white;
+    font-size: 0.7rem;
+    font-weight: bold;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transform: translate(50%, -50%); /* Centrowanie na krawędzi */
+    z-index: 1; /* Nad ikoną */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.notification-count.hidden {
+    display: none;
+}
+
 
 /* Dropdown ustawień czatu */
 .chat-settings-dropdown {
@@ -679,10 +712,10 @@ body {
 }
 
 /* Konkretne motywy kolorów wiadomości */
-.color-box.default-theme { background-color: #6a5acd; }
-.color-box.blue-theme { background-color: #3b82f6; }
-.color-box.green-theme { background-color: #10b981; }
-.color-box.red-theme { background-color: #ef4444; }
+.color-box.default-color { background-color: #6a5acd; }
+.color-box.blue-color { background-color: #3b82f6; }
+.color-box.green-color { background-color: #10b981; }
+.color-box.red-color { background-color: #ef4444; }
 
 /* Konkretne tła czatu */
 .bg-box.default-bg { background-color: #f9fafb; border: 1px solid var(--border-color-medium); }
@@ -1114,6 +1147,196 @@ body {
     display: none;
 }
 
+/* Modale */
+.modal {
+    position: fixed;
+    z-index: 10000; /* Bardzo wysoki z-index, aby był zawsze na wierzchu */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--bg-color-modal-overlay);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+}
+
+.modal.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none; /* Upewnij się, że nie blokuje kliknięć, gdy jest ukryty */
+}
+
+.modal.visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.modal-content {
+    background-color: var(--bg-color-modal-content);
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    transform: translateY(-20px); /* Początkowe przesunięcie dla animacji */
+    transition: transform 0.3s ease-in-out;
+}
+
+.modal.visible .modal-content {
+    transform: translateY(0); /* Animacja wjeżdżania */
+}
+
+.modal-content h2 {
+    font-size: 1.6rem;
+    color: var(--primary-color);
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.close-button {
+    color: var(--text-color-medium);
+    font-size: 28px;
+    font-weight: bold;
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.close-button:hover,
+.close-button:focus {
+    color: var(--text-color-dark);
+    text-decoration: none;
+}
+
+.modal-section {
+    border-top: 1px solid var(--border-color-light);
+    padding-top: 20px;
+}
+.modal-section:first-child {
+    border-top: none;
+    padding-top: 0;
+}
+
+.modal-section h3 {
+    font-size: 1.2rem;
+    color: var(--text-color-dark);
+    margin-bottom: 10px;
+}
+
+.modal-section input[type="email"],
+.modal-section input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid var(--border-color-medium);
+    border-radius: 8px;
+    font-size: 1rem;
+    background-color: var(--bg-color-search-input);
+    color: var(--text-color-dark);
+}
+
+.modal-section button {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.2s;
+}
+
+.modal-section #sendFriendRequestButton {
+    background-color: var(--primary-color);
+    color: var(--text-color-light);
+}
+.modal-section #sendFriendRequestButton:hover {
+    background-color: var(--primary-color-dark);
+}
+
+.status-message {
+    margin-top: 10px;
+    font-size: 0.9rem;
+    text-align: center;
+    color: var(--text-color-medium);
+}
+.status-message.success {
+    color: var(--color-success);
+}
+.status-message.error {
+    color: var(--color-error);
+}
+
+.friend-requests-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 200px; /* Ogranicz wysokość listy */
+    overflow-y: auto; /* Dodaj przewijanie, jeśli lista jest długa */
+}
+
+.friend-request-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-color-light);
+}
+.friend-request-item:last-child {
+    border-bottom: none;
+}
+
+.friend-request-item .request-info {
+    flex-grow: 1;
+    color: var(--text-color-dark);
+}
+.friend-request-item .request-info .sender-name {
+    font-weight: bold;
+}
+.friend-request-item .request-info .request-time {
+    font-size: 0.8rem;
+    color: var(--text-color-medium);
+    margin-left: 10px;
+}
+
+.friend-request-item .request-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.friend-request-item .accept-button,
+.friend-request-item .reject-button {
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+
+.friend-request-item .accept-button {
+    background-color: var(--color-success);
+    color: white;
+}
+.friend-request-item .accept-button:hover {
+    background-color: var(--secondary-color-dark);
+}
+
+.friend-request-item .reject-button {
+    background-color: var(--color-error);
+    color: white;
+}
+.friend-request-item .reject-button:hover {
+    background-color: #d32f2f;
+}
+
 /* Dark mode overrides */
 body.dark-mode {
     --primary-color: #2815ad;
@@ -1148,6 +1371,10 @@ body.dark-mode {
     /* DODANE: zmienne dla dark mode dla ikon i hover states */
     --icon-color-medium: var(--text-color-medium);
     --bg-color-hover: #2a2a2a; /* Ciemniejszy hover dla trybu ciemnego */
+
+    /* NOWE: Kolory dla modala w trybie ciemnym */
+    --bg-color-modal-overlay: rgba(0, 0, 0, 0.8);
+    --bg-color-modal-content: #1a1a1a;
 }
 
 /* Główne sekcje w dark mode */
@@ -1375,6 +1602,73 @@ body.dark-mode .nav-icon::after {
     background: var(--bg-color-search-input);
     color: var(--text-color-dark);
 }
+
+/* NOWE: Modale w trybie ciemnym */
+.dark-mode .modal-content {
+    background-color: var(--bg-color-modal-content);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+}
+
+.dark-mode .modal-content h2,
+.dark-mode .modal-section h3 {
+    color: var(--text-color-dark);
+}
+
+.dark-mode .close-button {
+    color: var(--text-color-medium);
+}
+.dark-mode .close-button:hover,
+.dark-mode .close-button:focus {
+    color: var(--text-color-light);
+}
+
+.dark-mode .modal-section input {
+    background-color: var(--bg-color-search-input);
+    border-color: var(--border-color-medium);
+    color: var(--text-color-dark);
+}
+.dark-mode .modal-section input::placeholder {
+    color: var(--text-color-medium);
+}
+
+.dark-mode .modal-section #sendFriendRequestButton {
+    background-color: var(--primary-color);
+    color: var(--text-color-light);
+}
+.dark-mode .modal-section #sendFriendRequestButton:hover {
+    background-color: var(--primary-color-dark);
+}
+
+.dark-mode .status-message {
+    color: var(--text-color-medium);
+}
+
+.dark-mode .friend-request-item {
+    border-color: var(--border-color-medium);
+}
+.dark-mode .friend-request-item .request-info {
+    color: var(--text-color-dark);
+}
+.dark-mode .friend-request-item .request-info .request-time {
+    color: var(--text-color-medium);
+}
+
+.dark-mode .friend-request-item .accept-button {
+    background-color: var(--color-success);
+    color: white;
+}
+.dark-mode .friend-request-item .accept-button:hover {
+    background-color: var(--secondary-color-dark);
+}
+
+.dark-mode .friend-request-item .reject-button {
+    background-color: var(--color-error);
+    color: white;
+}
+.dark-mode .friend-request-item .reject-button:hover {
+    background-color: #d32f2f;
+}
+
 
 /* Media Queries dla responsywności */
 @media (max-width: 1024px) {
