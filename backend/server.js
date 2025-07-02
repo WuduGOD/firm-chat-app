@@ -21,10 +21,10 @@ const pool = new Pool({
 
 // Testuj połączenie z bazą danych na starcie i zresetuj statusy
 pool.connect()
-    .then(async client => { // ZMIANA: Dodano 'async'
+    .then(async client => {
         console.log("Successfully connected to PostgreSQL!");
         client.release();
-        // ZMIANA: Wywołanie funkcji resetującej statusy na offline
+        // Wywołanie funkcji resetującej statusy na offline
         await resetAllUserStatusesToOfflineOnStartup(); 
     })
     .catch(err => {
@@ -147,19 +147,28 @@ wss.on('connection', (ws) => {
             }
             else if (data.type === 'get_active_users' && userData.userId) {
                 console.log(`Received request for active users from ${userData.userId}.`);
-                // ZMIANA: Zmieniono wywołanie getOnlineStatusesFromDb()
                 const allUsersStatuses = await getOnlineStatusesFromDb(); 
                 const formattedUsers = allUsersStatuses.map(user => ({
                     id: user.id,
                     username: user.username, 
                     online: user.is_online,
-                    last_seen: user.last_seen_at // DODANO: Dodajemy last_seen_at do danych wysyłanych do klienta
+                    last_seen: user.last_seen_at 
                 }));
                 ws.send(JSON.stringify({
                     type: 'active_users',
                     users: formattedUsers
                 }));
                 console.log(`Sent all user statuses to ${userData.userId}. List size: ${formattedUsers.length}`);
+            }
+            // NOWY TYP WIADOMOŚCI: Żądanie ostatnich wiadomości dla pokoi użytkownika
+            else if (data.type === 'get_last_messages_for_user_rooms' && userData.userId) {
+                console.log(`Received request for last messages for user rooms from ${userData.userId}.`);
+                const lastMessages = await getLastMessagesForUserRooms(userData.userId);
+                ws.send(JSON.stringify({
+                    type: 'last_messages_for_user_rooms',
+                    messages: lastMessages
+                }));
+                console.log(`Sent last messages for user ${userData.userId} rooms. Count: ${Object.keys(lastMessages).length}`);
             }
             else if (data.type === 'status') { // Ten typ wiadomości służy do aktualizacji globalnego statusu
                 const userId = data.user;
@@ -242,7 +251,7 @@ wss.on('connection', (ws) => {
 
 // ---------------------- Helper functions --------------------------
 
-// ZMIANA: Funkcja resetująca statusy wszystkich użytkowników na offline przy starcie serwera
+// Funkcja resetująca statusy wszystkich użytkowników na offline przy starcie serwera
 async function resetAllUserStatusesToOfflineOnStartup() {
     const client = await pool.connect();
     try {
@@ -278,7 +287,7 @@ async function updateProfileStatus(userId, isOnline) {
     }
 }
 
-// ZMIANA: Teraz pobiera last_seen_at dla WSZYSTKICH profili
+// Pobiera last_seen_at dla WSZYSTKICH profili
 async function getOnlineStatusesFromDb() {
     const client = await pool.connect();
     try {
@@ -296,6 +305,62 @@ async function getOnlineStatusesFromDb() {
         client.release();
     }
 }
+
+/**
+ * NOWA FUNKCJA: Pobiera ostatnią wiadomość dla każdego pokoju, w którym uczestniczy dany użytkownik.
+ * Rozwiązuje problem N+1 dla ładowania ostatnich wiadomości w liście konwersacji.
+ * @param {string} userId - ID użytkownika, dla którego pobierane są wiadomości.
+ * @returns {Promise<Object>} Obiekt, gdzie kluczem jest room_id, a wartością jest obiekt ostatniej wiadomości.
+ */
+async function getLastMessagesForUserRooms(userId) {
+    const client = await pool.connect();
+    try {
+        // Używamy CTE (Common Table Expression) z ROW_NUMBER() do znalezienia najnowszej wiadomości dla każdego pokoju.
+        // Zakładamy, że room_id zawiera userId (np. 'user1_user2').
+        const query = `
+            WITH RankedMessages AS (
+                SELECT
+                    m.room_id,
+                    m.sender_id,
+                    m.content,
+                    m.created_at,
+                    ROW_NUMBER() OVER (PARTITION BY m.room_id ORDER BY m.created_at DESC) as rn
+                FROM
+                    messages m
+                WHERE
+                    m.room_id LIKE '%' || $1 || '%' -- Filtrujemy pokoje, które zawierają ID użytkownika
+            )
+            SELECT
+                room_id,
+                sender_id,
+                content,
+                created_at
+            FROM
+                RankedMessages
+            WHERE
+                rn = 1;
+        `;
+        const res = await client.query(query, [userId]);
+        console.log(`DB: Fetched ${res.rows.length} last messages for user ${userId}'s rooms.`);
+
+        const lastMessagesMap = {};
+        res.rows.forEach(row => {
+            lastMessagesMap[row.room_id] = {
+                text: row.content,
+                username: row.sender_id,
+                inserted_at: row.created_at,
+                room: row.room_id
+            };
+        });
+        return lastMessagesMap;
+    } catch (err) {
+        console.error(`DB Error: Failed to get last messages for user rooms for ${userId}:`, err);
+        return {};
+    } finally {
+        client.release();
+    }
+}
+
 
 /**
  * Broadcasts a message to all clients who are currently in the specified room.
@@ -331,7 +396,7 @@ function broadcastUserStatus(userId, isOnline, lastSeen = null) {
         type: 'status',
         user: userId, 
         online: isOnline,
-        last_seen: lastSeen // DODANO: Dodajemy last_seen do wysyłanego statusu
+        last_seen: lastSeen 
     });
 
     for (const client of clients.keys()) {

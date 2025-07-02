@@ -66,7 +66,7 @@ let notificationPermissionGranted = false;
 // Przycisk do włączania dźwięków (obsługa Autoplay Policy)
 let enableSoundButton;
 
-// NOWE ZMIENNE DLA DŹWWIĘKU (Web Audio API)
+// NOWE ZMIENNE DLA DŹWIWKU (Web Audio API)
 let audioContext = null;
 let audioContextInitiated = false; // Flaga do śledzenia, czy AudioContext został zainicjowany przez interakcję użytkownika
 
@@ -250,7 +250,7 @@ function checkAudioAutoplay() {
                 showCustomMessage("Przeglądarka zablokowała dźwięki. Kliknij 'Włącz dźwięki' u góry, aby je aktywować.", "info");
             }
         } else if (audioContext && audioContext.state === 'running') {
-            console.log("[Autoplay Check] AudioContext is already running. Autoplay is likely allowed.");
+            console.log('[Autoplay Check] AudioContext is already running. Autoplay is likely allowed.');
             audioContextInitiated = true;
             localStorage.setItem('autoplayUnlocked', 'true');
             if (enableSoundButton) {
@@ -398,6 +398,8 @@ function getRoomName(user1Id, user2Id) {
  * @param {string} roomId - ID of the chat room.
  * @returns {Promise<Object|null>} The last message object (mapped) or null if no messages.
  */
+// USUNIĘTO: Ta funkcja nie jest już używana bezpośrednio w loadContacts()
+/*
 async function getLastMessageForRoom(roomId) {
     try {
         const { data, error } = await supabase
@@ -427,6 +429,7 @@ async function getLastMessageForRoom(roomId) {
         return null;
     }
 }
+*/
 
 /**
  * Fetches the entire message history for a given room.
@@ -484,10 +487,11 @@ function sortConversations(conversations) {
 /**
  * Loads and renders the list of contacts.
  * Fetches other users from Supabase, retrieves their last message, and displays them.
+ * ZMIANA: Teraz pobiera ostatnie wiadomości dla wszystkich pokoi w jednym zapytaniu przez WebSocket.
  */
 async function loadContacts() {
     console.log("[loadContacts] Loading contacts...");
-    if (!currentUser || !currentUser.email) {
+    if (!currentUser || !currentUser.id || !currentUser.email) {
         console.error("[loadContacts] Current user is not defined, cannot load contacts.");
         return;
     }
@@ -506,12 +510,42 @@ async function loadContacts() {
             return;
         }
 
-        // Fetch last message for each contact to sort them
-        const contactsWithLastMessage = await Promise.all(users.map(async user => {
+        // KROK 1: Wyślij żądanie do serwera WebSocket o ostatnie wiadomości dla wszystkich pokoi użytkownika
+        let lastMessagesMap = {};
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({
+                type: 'get_last_messages_for_user_rooms',
+                userId: currentUser.id
+            }));
+            console.log(`[loadContacts] Sent 'get_last_messages_for_user_rooms' request for user ${currentUser.id}.`);
+
+            // Czekaj na odpowiedź z serwera (obsługiwana w socket.onmessage)
+            // Możemy użyć Promise, aby poczekać na odpowiedź, ale dla prostoty na razie polegamy na tym,
+            // że dane zostaną zaktualizowane asynchronicznie i loadContacts zostanie wywołane ponownie
+            // lub UI zostanie odświeżone przez handler WS.
+            // Dla tej optymalizacji, musimy poczekać na odpowiedź, zanim posortujemy kontakty.
+            lastMessagesMap = await new Promise(resolve => {
+                const tempHandler = (event) => {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'last_messages_for_user_rooms') {
+                        console.log("[loadContacts] Received 'last_messages_for_user_rooms' response.");
+                        socket.removeEventListener('message', tempHandler); // Usuń tymczasowy handler
+                        resolve(data.messages);
+                    }
+                };
+                socket.addEventListener('message', tempHandler);
+            });
+        } else {
+            console.warn("[loadContacts] WebSocket not open, cannot request last messages for user rooms. Falling back to no last messages.");
+        }
+
+
+        // KROK 2: Połącz dane o użytkownikach z ich ostatnimi wiadomościami
+        const contactsWithLastMessage = users.map(user => {
             const roomId = getRoomName(String(currentUser.id), String(user.id));
-            const lastMessage = await getLastMessageForRoom(roomId);
+            const lastMessage = lastMessagesMap[roomId] || null; // Pobierz z mapy
             return { user, lastMessage, roomId };
-        }));
+        });
 
         const sortedContacts = sortConversations(contactsWithLastMessage);
 
@@ -1252,6 +1286,13 @@ function initWebSocket() {
                     console.log('[WS MESSAGE] Received initial active users list:', data.users);
                     displayActiveUsers(data.users); 
                     break;
+                // NOWY CASE: Obsługa ostatnich wiadomości dla pokoi użytkownika
+                case 'last_messages_for_user_rooms':
+                    console.log('[WS MESSAGE] Received last messages for user rooms:', data.messages);
+                    // Ta wiadomość jest obsługiwana w loadContacts() poprzez Promise,
+                    // więc nie potrzebujemy tu dodatkowej logiki, chyba że chcemy odświeżyć UI
+                    // w inny sposób po otrzymaniu tych danych.
+                    break;
                 default:
                     console.warn("[WS MESSAGE] Unknown WS message type:", data.type, data);
             }
@@ -1796,7 +1837,7 @@ async function initializeApp() {
                         last_seen: new Date().toISOString()
                     }));
                 } catch (sendError) {
-                    console.warn(`[beforeunload] Failed to send leave message via WebSocket: ${sendError.message}`);
+                    console.warn(`[beforeunload] Failed to send offline status: ${sendError.message}`);
                 }
             }
         });
