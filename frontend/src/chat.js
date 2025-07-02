@@ -66,7 +66,7 @@ let notificationPermissionGranted = false;
 // Przycisk do włączania dźwięków (obsługa Autoplay Policy)
 let enableSoundButton;
 
-// NOWE ZMIENNE DLA DŹWIWKU (Web Audio API)
+// NOWE ZMIENNE DLA DŹWIEKU (Web Audio API)
 let audioContext = null;
 let audioContextInitiated = false; // Flaga do śledzenia, czy AudioContext został zainicjowany przez interakcję użytkownika
 
@@ -1209,7 +1209,7 @@ function initWebSocket() {
     socket = new WebSocket(wsUrl);
     console.log(`[initWebSocket] Attempting to connect to WebSocket at: ${wsUrl}`);
 
-    socket.onopen = () => {
+    socket.onopen = async () => { // Make onopen async
         console.log('[initWebSocket] WebSocket connected successfully.');
         reconnectAttempts = 0; 
         if (currentUser) { 
@@ -1239,11 +1239,19 @@ function initWebSocket() {
                 }));
                 console.log(`[initWebSocket] Re-joining previous room (${currentRoom}) after reconnection.`);
             }
+            
+            // NOWE MIEJSCE DLA loadContacts() i loadActiveUsers()
+            // Te funkcje wymagają otwartego połączenia WebSocket
+            console.log("[initWebSocket] Loading user profiles and contacts (after WS open)...");
+            await loadAllProfiles(); // Ensure profiles are loaded before contacts
+            await loadContacts(); 
+            console.log("[initWebSocket] User profiles and contacts loaded.");
+
+            // Request active users list after successful connection
+            loadActiveUsers(); // This is already here, keep it.
         } else {
             console.warn("[initWebSocket] WebSocket opened but currentUser is not set. Cannot join room yet.");
         }
-        // Request active users list after successful connection
-        loadActiveUsers();
     };
 
     socket.onmessage = (event) => {
@@ -1843,13 +1851,12 @@ async function initializeApp() {
         });
         console.log("[initializeApp] 'beforeunload' listener attached for WebSocket leave signal.");
 
-        // 4. Load profiles and contacts
-        console.log("[initializeApp] Loading user profiles and contacts...");
-        await loadAllProfiles();
-        await loadContacts(); // This now calls loadUnreadMessagesFromSupabase internally
-        console.log("[initializeApp] User profiles and contacts loaded.");
+        // 4. Load profiles (loadContacts will be called after WS connection)
+        console.log("[initializeApp] Loading user profiles (before WS init)...");
+        await loadAllProfiles(); // Keep this here as it's a prerequisite for getUserLabelById etc.
+        console.log("[initializeApp] User profiles loaded.");
 
-        // 5. Initialize WebSocket connection
+        // 5. Initialize WebSocket connection (this will now trigger loadContacts on open)
         console.log("[initializeApp] Initializing WebSocket connection...");
         initWebSocket();
 
