@@ -11,12 +11,18 @@
 
   <header class="main-header" id="mainHeader"> <h1 class="app-title">🐒 Komunikator</h1>
   
-      <!-- NOWY PRZYCISK DO WLACZANIA DZIEKOW -->
-    <button id="enableSoundButton" class="hidden enable-sound-button">
-        <i class="fas fa-volume-up"></i> Włącz dźwięki
-    </button>
+      <!-- PRZYCISK DO WLACZANIA DZIEKOW - USUNIĘTY -->
 	
     <div class="user-menu">
+      <!-- NOWY PRZYCISK: Dodaj znajomego -->
+      <button id="addFriendButton" class="icon-button" title="Dodaj znajomego">
+          <i class="fas fa-user-plus"></i>
+      </button>
+      <!-- NOWY PRZYCISK: Powiadomienia o zaproszeniach -->
+      <button id="notificationButton" class="icon-button" title="Powiadomienia">
+          <i class="fas fa-bell"></i>
+          <span id="notificationCount" class="notification-count hidden">0</span>
+      </button>
       <button id="menuButton" aria-haspopup="true" aria-expanded="false">
         <i class="fas fa-bars"></i>
       </button>
@@ -29,7 +35,8 @@
     </div>
   </header>
 
-  <div class="container" id="container"> <div class="sidebar-wrapper">
+  <div class="container">
+    <aside class="sidebar-wrapper">
       <div class="main-nav-icons">
         <button class="nav-icon active" data-tooltip="Rozmowy" title="Rozmowy"><i class="fas fa-comments"></i></button>
         <button class="nav-icon" data-tooltip="Grupy" title="Grupy"><i class="fas fa-users"></i></button>
@@ -38,64 +45,65 @@
       </div>
 
       <div class="online-users-mobile" id="onlineUsersMobile">
-        </div>
+        <!-- Aktywni użytkownicy będą ładowani tutaj dynamicznie na mobile -->
+      </div>
       
-      <div id="sidebar" class="conversations-list"> <h2>Konwersacje</h2>
+      <div id="sidebar" class="conversations-list">
+        <h2>Konwersacje</h2>
         <div class="search-bar">
             <input type="text" id="sidebarSearchInput" placeholder="Szukaj..." />
-            <i class="fas fa-search search-icon"></i> </div>
+            <i class="fas fa-search search-icon"></i>
+        </div>
 
-        <ul id="contactsList"> </ul>
+        <ul id="contactsList">
+          <!-- Konwersacje będą ładowane tutaj dynamicznie -->
+        </ul>
       </div>
-    </div>
+    </aside>
 
-    <div class="chat-area-wrapper" id="chatAreaWrapper"> <section id="logoScreen" class="logo-screen">
-        <h2>Witaj w Komunikatorze</h2>
-        <p>Wybierz kontakt z listy po lewej, aby rozpocząć rozmowę.</p>
+    <div class="chat-area-wrapper">
+      <section class="logo-screen" id="logoScreen">
+        <h2>Witaj w Komunikatorze!</h2>
+        <p>Wybierz konwersację z listy po lewej, aby rozpocząć czat.</p>
       </section>
 
-      <section id="chatArea" class="chat-area">
+      <section class="chat-area" id="chatArea">
         <header class="chat-header">
-          <button id="backButton" class="back-button" title="Wróć do listy kontaktów"><i class="fas fa-arrow-left"></i></button>
-
-          <div class="user-info-wrapper">
-            <div id="chatUserAvatar" class="user-avatar"></div> <div class="user-info">
-              <span id="chatUserName" class="user-name"></span> <span id="userStatus" class="user-status"></span> </div>
+          <button id="backButton" class="back-button"><i class="fas fa-arrow-left"></i></button>
+          <div class="chat-user-info">
+            <h3 id="chatUserName"></h3>
+            <span id="userStatus" class="status"></span>
           </div>
-          
           <div class="chat-header-actions right-aligned">
-            <button><i class="fas fa-video"></i></button>
-            <button><i class="fas fa-phone"></i></button>
-            <button id="chatSettingsButton" title="Ustawienia czatu"><i class="fas fa-ellipsis-v"></i></button>
-          </div>
-
-          <div id="chatSettingsDropdown" class="dropdown hidden chat-settings-dropdown">
-            <h3>Ustawienia czatu</h3>
-            <div class="setting-group">
-                <h4>Motyw wiadomości:</h4>
+            <button id="chatSettingsButton" class="icon-button" title="Ustawienia czatu">
+              <i class="fas fa-cog"></i>
+            </button>
+            <div id="chatSettingsDropdown" class="dropdown chat-settings-dropdown hidden">
+              <div class="dropdown-section">
+                <span>Kolor czatu:</span>
                 <div class="color-options">
-                    <span class="color-box default-theme active" data-color="default"></span>
-                    <span class="color-box blue-theme" data-color="blue"></span>
-                    <span class="color-box green-theme" data-color="green"></span>
-                    <span class="color-box red-theme" data-color="red"></span>
+                  <span class="color-box default-color active" data-color="default" title="Domyślny"></span>
+                  <span class="color-box blue-color" data-color="blue" title="Niebieski"></span>
+                  <span class="color-box green-color" data-color="green" title="Zielony"></span>
+                  <span class="color-box red-color" data-color="red" title="Czerwony"></span>
                 </div>
-            </div>
-            <div class="setting-group">
-                <h4>Tło czatu:</h4>
-                <div class="background-options">
-                    <span class="bg-box default-bg active" data-bg="default"></span>
-                    <span class="bg-box dark-bg" data-bg="dark"></span>
-                    <span class="bg-box pattern-bg" data-bg="pattern"></span>
+              </div>
+              <div class="dropdown-section">
+                <span>Tło czatu:</span>
+                <div class="bg-options">
+                  <span class="bg-box default-bg active" data-bg="default" title="Domyślne"></span>
+                  <span class="bg-box dark-bg" data-bg="dark-bg" title="Ciemne"></span>
+                  <span class="bg-box pattern-bg" data-bg="pattern-bg" title="Wzór"></span>
                 </div>
-            </div>
-            <div class="setting-group">
-                <h4>Własny nick:</h4>
-                <input type="text" id="nicknameInput" placeholder="Nadaj nick..." />
+              </div>
+              <div class="dropdown-section">
+                <label for="nicknameInput">Twój pseudonim:</label>
+                <input type="text" id="nicknameInput" placeholder="Wpisz pseudonim" />
                 <button id="setNicknameButton">Ustaw</button>
-            </div>
-            <div class="setting-group">
-                <h4>Wyszukaj wiadomości:</h4>
-                <input type="text" id="messageSearchInput" placeholder="Wyszukaj w czacie..." />
+              </div>
+              <div class="dropdown-section">
+                <label for="messageSearchInput">Szukaj w wiadomościach:</label>
+                <input type="text" id="messageSearchInput" placeholder="Wpisz szukaną frazę" />
                 <button id="searchMessagesButton">Szukaj</button>
             </div>
           </div>
@@ -129,9 +137,32 @@
     </aside>
   </div>
 
-  <div id="tempMessageBox"></div>
+  <!-- Niestandardowy komunikat (zastępuje alert) -->
+  <div id="customMessageBox" class="custom-message-box hidden"></div>
 
+  <!-- NOWY MODAL: Dodaj znajomego / Przyjmij zaproszenie -->
+  <div id="friendRequestModal" class="modal hidden">
+    <div class="modal-content">
+      <span class="close-button" id="closeFriendRequestModal">&times;</span>
+      <h2>Zaproszenia do znajomych</h2>
+      <div class="modal-section" id="sendFriendRequestSection">
+        <h3>Wyślij zaproszenie</h3>
+        <input type="email" id="friendEmailInput" placeholder="Adres e-mail znajomego" />
+        <button id="sendFriendRequestButton">Wyślij zaproszenie</button>
+        <p id="sendRequestStatus" class="status-message"></p>
+      </div>
+      <div class="modal-section" id="pendingRequestsSection">
+        <h3>Oczekujące zaproszenia</h3>
+        <ul id="pendingFriendRequestsList" class="friend-requests-list">
+          <!-- Zaproszenia będą ładowane tutaj dynamicznie -->
+        </ul>
+        <p id="noPendingRequestsText" class="status-message hidden">Brak oczekujących zaproszeń.</p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./src/supabaseClient.js"></script>
+  <script type="module" src="./src/profiles.js"></script>
   <script type="module" src="./src/chat.js"></script>
-
 </body>
 </html>
