@@ -1107,6 +1107,7 @@ body {
     opacity: 1;
     transition: opacity 0.5s ease-out;
     font-family: 'Inter', sans-serif;
+    display: none !important;
 }
 .custom-message-box.success {
     background-color: #4CAF50;
