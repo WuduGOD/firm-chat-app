@@ -427,7 +427,7 @@ async function fetchMessageHistory(roomId) {
             .limit(limit);
 
         if (error) {
-            console.error('[fetchMessageHistory] Error fetching message history:', error);
+            console.error('[fetchMessageHistory] Error fetching message history:', error.message, error.details, error.hint);
             return [];
         }
 
@@ -477,13 +477,15 @@ async function loadContacts() {
 
     try {
         // Now fetch only friends from the 'friends' table
+        // Uproszczone zapytanie do tabeli 'friends'
         const { data: friendsData, error: friendsError } = await supabase
             .from('friends')
             .select('user1_id, user2_id')
             .or(`user1_id.eq.${currentUser.id},user2_id.eq.${currentUser.id}`);
 
         if (friendsError) {
-            console.error('[loadContacts] Error loading friends:', friendsError);
+            console.error('[loadContacts] Error loading friends from Supabase:', friendsError.message, friendsError.details, friendsError.hint);
+            showCustomMessage(`Błąd ładowania listy znajomych: ${friendsError.message}`, 'error');
             return;
         }
 
@@ -493,7 +495,8 @@ async function loadContacts() {
         });
 
         // Store allFriends globally for easy access
-        allFriends = (await loadAllProfiles()).filter(profile => friendIds.includes(profile.id));
+        const allProfiles = await loadAllProfiles(); // Upewnij się, że profile są załadowane
+        allFriends = allProfiles.filter(profile => friendIds.includes(profile.id));
         console.log("[loadContacts] Current user's friends:", allFriends);
 
         if (contactsListEl) {
@@ -520,6 +523,12 @@ async function loadContacts() {
                         resolve(data.messages);
                     }
                 };
+                // Dodaj timeout, aby zapobiec zawieszeniu, jeśli odpowiedź nie nadejdzie
+                const timeoutId = setTimeout(() => {
+                    console.warn("[loadContacts] Timeout waiting for 'last_messages_for_user_rooms' response.");
+                    socket.removeEventListener('message', tempHandler);
+                    resolve({}); // Rozwiąż z pustym obiektem w przypadku timeoutu
+                }, 5000); // 5 sekund timeout
                 socket.addEventListener('message', tempHandler);
             });
         } else {
@@ -581,6 +590,7 @@ async function loadContacts() {
         await loadUnreadMessagesFromSupabase();
     } catch (e) {
         console.error("Caught error in loadContacts:", e);
+        showCustomMessage("Wystąpił błąd podczas ładowania kontaktów.", "error");
     }
 }
 
@@ -1018,15 +1028,17 @@ function updateUserStatusIndicator(userId, isOnline, lastSeenTimestamp = null) {
         if (activeUsersListEl && noActiveUsersText && String(userId) !== String(currentUser.id)) { // Exclude current user from active list
             const userListItem = activeUsersListEl.querySelector(`li[data-user-id="${userId}"]`);
 
-            if (!isOnline) {
-                // If user goes offline, remove from list
+            // Sprawdź, czy użytkownik jest na liście znajomych, zanim go dodasz do listy aktywnych
+            const isFriend = allFriends.some(friend => String(friend.id) === String(userId));
+
+            if (!isOnline || !isFriend) { // Jeśli offline LUB nie jest znajomym, usuń z listy
                 if (userListItem) {
                     userListItem.remove();
-                    console.log(`Removed offline user ${getUserLabelById(userId)} from desktop active list.`);
+                    console.log(`Removed user ${getUserLabelById(userId)} from desktop active list (offline or not friend).`);
                 }
-            } else { // User is online
+            } else { // Użytkownik jest online i jest znajomym
                 if (!userListItem) {
-                    // If user is online and not in list, add them
+                    // Jeśli użytkownik jest online i nie ma go na liście, dodaj go
                     const li = document.createElement('li');
                     li.classList.add('active-user-item');
                     li.dataset.userId = userId;
@@ -1039,7 +1051,7 @@ function updateUserStatusIndicator(userId, isOnline, lastSeenTimestamp = null) {
                         <span class="status-dot online"></span>
                     `;
                     activeUsersListEl.appendChild(li);
-                    console.log(`Added new online user to desktop active list: ${getUserLabelById(userId)}`);
+                    console.log(`Added new online friend to desktop active list: ${getUserLabelById(userId)}`);
 
                     li.addEventListener('click', async () => {
                         const userProfile = allFriends.find(p => String(p.id) === String(userId)); // ZMIANA: Szukaj tylko wśród znajomych
@@ -1056,7 +1068,7 @@ function updateUserStatusIndicator(userId, isOnline, lastSeenTimestamp = null) {
                     });
 
                 } else {
-                    // If user is online and already in list, ensure status dot is correct
+                    // Jeśli użytkownik jest online i już na liście, upewnij się, że kropka statusu jest poprawna
                     const statusIndicator = userListItem.querySelector('.status-dot');
                     if (statusIndicator) {
                         statusIndicator.classList.add('online');
@@ -1064,7 +1076,7 @@ function updateUserStatusIndicator(userId, isOnline, lastSeenTimestamp = null) {
                     }
                 }
             }
-            // After any change, check if the list is empty and update noActiveUsersText
+            // Po każdej zmianie sprawdź, czy lista jest pusta i zaktualizuj noActiveUsersText
             if (activeUsersListEl.children.length === 0) {
                 noActiveUsersText.style.display = 'block';
                 activeUsersListEl.style.display = 'none';
@@ -1073,7 +1085,7 @@ function updateUserStatusIndicator(userId, isOnline, lastSeenTimestamp = null) {
                 activeUsersListEl.style.display = 'block';
             }
         } else {
-             if (String(userId) !== String(currentUser.id)) { // Only warn if it's not the current user as current user is not in this list
+             if (String(userId) !== String(currentUser.id)) { // Tylko ostrzegaj, jeśli to nie bieżący użytkownik
                  console.error("activeUsersListEl or noActiveUsersText not found during status update.");
              }
         }
@@ -1081,13 +1093,14 @@ function updateUserStatusIndicator(userId, isOnline, lastSeenTimestamp = null) {
         // Update status in the mobile online users list
         if (onlineUsersMobile && String(userId) !== String(currentUser.id)) { // Exclude current user
             const mobileUserItem = onlineUsersMobile.querySelector(`div[data-user-id="${userId}"]`);
+            const isFriend = allFriends.some(friend => String(friend.id) === String(userId));
 
-            if (!isOnline) {
+            if (!isOnline || !isFriend) { // Jeśli offline LUB nie jest znajomym, usuń z listy
                 if (mobileUserItem) {
                     mobileUserItem.remove();
-                    console.log(`Removed offline user ${getUserLabelById(userId)} from mobile active list.`);
+                    console.log(`Removed user ${getUserLabelById(userId)} from mobile active list (offline or not friend).`);
                 }
-            } else { // User is online
+            } else { // Użytkownik jest online i jest znajomym
                 if (!mobileUserItem) {
                     const div = document.createElement('div');
                     div.classList.add('online-user-item-mobile');
@@ -1097,7 +1110,7 @@ function updateUserStatusIndicator(userId, isOnline, lastSeenTimestamp = null) {
 
                     div.innerHTML = `
                         <img src="${avatarSrc}" alt="Avatar" class="avatar">
-                        <span class="username">${getUserLabelById(userId)}</span>
+                        <span class="username">${getUserLabelById(userId) || user.username || 'Nieznany'}</span>
                     `;
                     
                     // Add click listener for mobile item
@@ -1115,11 +1128,11 @@ function updateUserStatusIndicator(userId, isOnline, lastSeenTimestamp = null) {
                         }
                     });
                     onlineUsersMobile.appendChild(div);
-                    console.log(`Added new online user to mobile active list: ${getUserLabelById(userId)}`);
+                    console.log(`Added new online friend to mobile active list: ${getUserLabelById(userId)}`);
                 }
             }
         } else {
-             if (String(userId) !== String(currentUser.id)) { // Only warn if it's not the current user
+             if (String(userId) !== String(currentUser.id)) { // Tylko ostrzegaj, jeśli to nie bieżący użytkownik
                 console.error("onlineUsersMobile not found during status update.");
             }
         }
@@ -1281,7 +1294,7 @@ function initWebSocket() {
                 case 'status':
                     console.log(`[WS MESSAGE] Received status update for user ${data.user}: ${data.online ? 'online' : 'offline'}. Last seen: ${data.last_seen || 'N/A'}`);
                     // ZMIANA: Przekaż last_seen timestamp do funkcji
-                    updateUserStatusIndicator(data.user, data.online, data.last_seen || null);
+                    updateUserStatusIndicator(data.user, data.last_seen ? data.online : false, data.last_seen || null); // Ensure offline if last_seen is provided
                     break;
                 case 'active_users':
                     console.log('[WS MESSAGE] Received initial active users list:', data.users);
@@ -1355,18 +1368,25 @@ function displayActiveUsers(activeUsersData) {
         onlineUsersMobile.innerHTML = ''; 
         onlineUsers.clear(); // Clear existing local data
 
-        const onlineUsersForDisplay = activeUsersData.filter(user => String(user.id) !== String(currentUser.id) && user.online);
+        // ZMIANA: Filtruj aktywnych użytkowników, aby wyświetlać tylko znajomych, którzy są online
+        const onlineFriendsForDisplay = activeUsersData.filter(user => 
+            String(user.id) !== String(currentUser.id) && // Wyklucz bieżącego użytkownika
+            user.online && // Upewnij się, że użytkownik jest online
+            allFriends.some(friend => String(friend.id) === String(user.id)) // Upewnij się, że użytkownik jest znajomym
+        );
+        console.log(`[displayActiveUsers] Number of online friends to display: ${onlineFriendsForDisplay.length}`);
 
-        if (onlineUsersForDisplay.length === 0) {
+
+        if (onlineFriendsForDisplay.length === 0) {
             activeUsersListEl.style.display = 'none';
             noActiveUsersText.style.display = 'block';
-            console.log("[displayActiveUsers] No active users, hiding desktop list, showing text.");
+            console.log("[displayActiveUsers] No online friends to display, hiding desktop list, showing text.");
         } else {
             activeUsersListEl.style.display = 'block';
             noActiveUsersText.style.display = 'none';
-            console.log("[displayActiveUsers] Active users found, showing desktop list, hiding text.");
+            console.log("[displayActiveUsers] Online friends found, showing desktop list, hiding text.");
 
-            onlineUsersForDisplay.forEach(user => { // Iterujemy tylko po użytkownikach online do wyświetlenia w sidebarze
+            onlineFriendsForDisplay.forEach(user => { // Iterujemy tylko po użytkownikach online do wyświetlenia w sidebarze
                 const li = document.createElement('li');
                 li.classList.add('active-user-item');
                 li.dataset.userId = user.id;
@@ -1597,7 +1617,7 @@ async function updateUnreadMessageCountInSupabase(roomId, senderId) {
             });
 
         if (error) {
-            console.error("[Supabase] Error upserting unread message count:", error);
+            console.error("[Supabase] Error upserting unread message count:", error.message, error.details, error.hint);
         } else {
             console.log(`[Supabase] Unread count for room ${roomId} updated (upsert) for user ${currentUser.id}.`);
         }
@@ -1631,7 +1651,7 @@ async function clearUnreadMessageCountInSupabase(roomId) {
             .eq('room_id', roomId);
 
         if (error) {
-            console.error("[Supabase] Error clearing unread message count:", error);
+            console.error("[Supabase] Error clearing unread message count:", error.message, error.details, error.hint);
         } else {
             console.log(`[Supabase] Unread count for room ${roomId} cleared for user ${currentUser.id}.`);
         }
@@ -1658,7 +1678,7 @@ async function loadUnreadMessagesFromSupabase() {
             .eq('user_id', currentUser.id);
 
         if (error) {
-            console.error("[Supabase Loader] Error fetching unread messages:", error);
+            console.error("[Supabase Loader] Error fetching unread messages:", error.message, error.details, error.hint);
             return;
         }
 
@@ -1717,7 +1737,8 @@ async function loadFriendsAndRequests() {
             .eq('status', 'pending');
 
         if (receivedError) {
-            console.error('[Friends] Error fetching pending received friend requests:', receivedError);
+            console.error('[Friends] Error fetching pending received friend requests from Supabase:', receivedError.message, receivedError.details, receivedError.hint);
+            showCustomMessage(`Błąd ładowania oczekujących zaproszeń: ${receivedError.message}`, 'error');
             return;
         }
         console.log("[Friends] Pending received requests:", pendingReceivedRequests);
@@ -1777,7 +1798,7 @@ async function sendFriendRequest() {
         if (recipientError || !recipientProfile) {
             sendRequestStatus.textContent = 'Użytkownik o podanym adresie e-mail nie istnieje.';
             sendRequestStatus.style.color = 'red';
-            console.error('[Friends] Recipient not found:', recipientError);
+            console.error('[Friends] Recipient not found:', recipientError.message, recipientError.details, recipientError.hint);
             return;
         }
 
@@ -1790,7 +1811,7 @@ async function sendFriendRequest() {
             .or(`(sender_id.eq.${currentUser.id},receiver_id.eq.${recipientId}),(sender_id.eq.${recipientId},receiver_id.eq.${currentUser.id})`);
 
         if (existingRequestError) {
-            console.error('[Friends] Error checking existing request:', existingRequestError);
+            console.error('[Friends] Error checking existing request:', existingRequestError.message, existingRequestError.details, existingRequestError.hint);
             sendRequestStatus.textContent = 'Błąd podczas sprawdzania istniejących zaproszeń.';
             sendRequestStatus.style.color = 'red';
             return;
@@ -1816,7 +1837,7 @@ async function sendFriendRequest() {
             ]);
 
         if (error) {
-            console.error('[Friends] Error sending friend request:', error);
+            console.error('[Friends] Error sending friend request:', error.message, error.details, error.hint);
             sendRequestStatus.textContent = `Błąd: ${error.message}`;
             sendRequestStatus.style.color = 'red';
             return;
@@ -1906,7 +1927,7 @@ async function acceptFriendRequest(requestId, senderId) {
             .eq('receiver_id', currentUser.id); // Upewnij się, że tylko odbiorca może zaakceptować
 
         if (updateError) {
-            console.error('[Friends] Error updating friend request status to accepted:', updateError);
+            console.error('[Friends] Error updating friend request status to accepted:', updateError.message, updateError.details, updateError.hint);
             showCustomMessage(`Błąd akceptacji zaproszenia: ${updateError.message}`, "error");
             return;
         }
@@ -1926,7 +1947,7 @@ async function acceptFriendRequest(requestId, senderId) {
             if (insertError.code === '23505') { // duplicate key error
                 console.warn('[Friends] Friendship already exists for these users. Skipping insert.');
             } else {
-                console.error('[Friends] Error inserting into friends table:', insertError);
+                console.error('[Friends] Error inserting into friends table:', insertError.message, insertError.details, insertError.hint);
                 showCustomMessage(`Błąd dodawania do znajomych: ${insertError.message}`, "error");
                 // Możesz chcieć cofnąć status zaproszenia, jeśli dodanie do znajomych się nie powiodło
                 return;
@@ -1968,7 +1989,7 @@ async function declineFriendRequest(requestId) {
             .eq('receiver_id', currentUser.id); // Upewnij się, że tylko odbiorca może odrzucić
 
         if (error) {
-            console.error('[Friends] Error declining friend request:', error);
+            console.error('[Friends] Error declining friend request:', error.message, error.details, error.hint);
             showCustomMessage(`Błąd odrzucenia zaproszenia: ${error.message}`, "error");
             return;
         }
