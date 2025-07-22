@@ -9,19 +9,6 @@ let dropdownMenu;
 let themeToggle;
 let logoutButton;
 
-// NOWE ZMIENNE DLA FUNKCJONALNOŚCI ZNAJOMYCH I POWIADOMIEŃ
-let addFriendButton;
-let notificationButton;
-let notificationCount;
-let friendRequestModal;
-let closeFriendRequestModal;
-let friendEmailInput;
-let sendFriendRequestButton;
-let sendRequestStatus;
-let pendingRequestsList;
-let noPendingRequestsText;
-let attachButton; // Zmienna dla przycisku załączania plików
-
 let container;
 let sidebarWrapper; // Kontener dla main-nav-icons i sidebar
 let mainNavIcons;
@@ -47,29 +34,18 @@ let chatSettingsDropdown; // ID: chatSettingsDropdown, Klasa: dropdown chat-sett
 let typingStatusHeader; // ID: typingStatus, Klasa: typing-status (status w nagłówku czatu)
 let typingIndicatorMessages; // ID: typingIndicator (animowane kropki w obszarze wiadomości)
 
-let messageContainer;
-let messageInput; // ID: messageInput
-let sendMessageButton; // ID: sendMessageButton
-let emojiButton; // ID: emojiButton
-let fileAttachButton; // ID: fileAttachButton
+let messageContainer; 
 
-let rightSidebarWrapper; // Kontener dla chat-info i media-info
-let rightSidebar; // Dodałem 'let' tutaj
-let chatInfo; // ID: chatInfo
-let mediaInfo; // ID: mediaInfo
-let activeUsersListEl; // Element listy aktywnych użytkowników
-let noActiveUsersText; // Tekst, gdy brak aktywnych użytkowników
-
-let messageEditor; // ID: messageEditor
-let textMessageInput; // ID: textMessageInput
-
-// WAŻNE: Deklaracja chatFooter tutaj, aby była dostępna globalnie/w zasięgu pliku
 let chatFooter;
-let sendButton; // Deklaracja sendButton
+let attachButton;
+let messageInput;
+let emojiButton;
+let sendButton;
 
-// Kontener na wiadomości customowe (np. błędy, powiadomienia)
-let customMessageContainer;
-let customMessageText;
+let rightSidebarWrapper;
+let rightSidebar;
+let activeUsersListEl;
+let noActiveUsersText;
 
 // Zmienne stanu czatu
 let allConversations = [];
@@ -81,27 +57,54 @@ let reconnectAttempts = 0;
 let typingTimeout;
 let currentActiveConvoItem = null;
 
-let onlineUsers = new Map(); // userID -> boolean
+// ZMIANA: onlineUsers będzie teraz przechowywać obiekt z isOnline i lastSeen
+let onlineUsers = new Map(); // userID -> { isOnline: boolean, lastSeen: string | null }
+
+// Stan uprawnień do powiadomień
+let notificationPermissionGranted = false;
 
 // Przycisk do włączania dźwięków (obsługa Autoplay Policy)
 let enableSoundButton;
 
-// ZMIANA: NOWA ZMIENNA: Kontrola nad powiadomieniami dźwiękowymi
-let soundNotificationsEnabled = true; // Domyślnie włączone
-// NOWA ZMIENNA: Kontrola nad powiadomieniami wizualnymi
-let visualNotificationsEnabled = true; // Domyślnie włączone
-
-// Zmienne dla Web Audio API
+// NOWE ZMIENNE DLA DŹWIEKU (Web Audio API)
 let audioContext = null;
 let audioContextInitiated = false; // Flaga do śledzenia, czy AudioContext został zainicjowany przez interakcję użytkownika
 
-// NOWE ZMIENNE DLA TYTUŁU ZAKŁADKI PRZEGLĄDARKOWEJ
+// NOWE ZMIENNE DLA TYTUŁU ZAKŁADKI PRZEGLĄDARKI
 let baseDocumentTitle = "Komunikator";
 // Mapa przechowująca nieprzeczytane wiadomości dla każdej konwersacji
 // Klucz: roomId, Wartość: { unreadCount: number, lastSenderId: string }
-let unreadConversationsInfo = new Map();
+let unreadConversationsInfo = new Map(); 
 
-// --- FUNKCJE DŹWIĘKOWE I POMOCNICZE DLA WIADOMOŚCI ---
+// --- Funkcje pomocnicze ---
+
+/**
+ * Formats a given date into a "time ago" string (e.g., "5 minut temu", "wczoraj o 10:30").
+ * @param {Date} date - The date object to format.
+ * @returns {string} The formatted time ago string.
+ */
+function formatTimeAgo(date) {
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (seconds < 60) {
+        return `teraz`;
+    } else if (minutes < 60) {
+        return `${minutes} ${minutes === 1 ? 'minutę' : (minutes >= 2 && minutes <= 4 ? 'minuty' : 'minut')} temu`;
+    } else if (hours < 24) {
+        return `${hours} ${hours === 1 ? 'godzinę' : (hours >= 2 && hours <= 4 ? 'godziny' : 'godzin')} temu`;
+    } else if (days === 1) {
+        return `wczoraj o ${date.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })}`;
+    } else if (days < 7) {
+        return `${days} ${days === 1 ? 'dzień' : 'dni'} temu`;
+    } else {
+        return `${date.toLocaleDateString("pl-PL")} o ${date.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })}`;
+    }
+}
+
 
 /**
  * Wyświetla niestandardowy komunikat w aplikacji.
@@ -130,24 +133,6 @@ function showCustomMessage(message, type = 'info') {
             messageBox.classList.add('hidden'); // Fully hide after fade
         }, 500); // Match CSS transition duration
     }, 3000);
-}
-
-/**
- * Pobiera ID aktualnie zalogowanego użytkownika z sesji Supabase.
- * @returns {Promise<string|null>} ID użytkownika lub null, jeśli nie jest zalogowany.
- */
-async function getCurrentUserId() {
-    try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) {
-            console.error("Błąd pobierania sesji Supabase:", error);
-            return null;
-        }
-        return session?.user?.id || null;
-    } catch (e) {
-            console.error("Wyjątek podczas pobierania ID użytkownika:", e);
-        return null;
-    }
 }
 
 /**
@@ -188,13 +173,14 @@ function ensureAudioContext() {
     }
 }
 
+
 /**
  * Odtwarza prosty, krótki dźwięk powiadomienia (beep).
  * Korzysta z Web Audio API (AudioContext) do generowania dźwięku.
  */
-function playNotificationSound() { // Zmieniona nazwa, aby uniknąć pomyłek z MP3
+function playNotificationSound() {
     console.log("[Notifications] Attempting to play notification sound...");
-
+    
     try {
         ensureAudioContext(); // Zawsze upewnij się, że AudioContext jest aktywny
 
@@ -271,7 +257,7 @@ function checkAudioAutoplay() {
                 enableSoundButton.classList.add('hidden');
             }
         } else {
-            console.log(`[Autoplay Check] AudioContext state: ${audioContext ? audioContext.state : 'null'}`);
+            console.log(`[Autoplay Check] AudioContext state: ${audioContext ? audioContext.state : 'null'}. No immediate action.`);
         }
     } catch (e) {
         console.error("Error during autoplay check:", e);
@@ -281,8 +267,10 @@ function checkAudioAutoplay() {
     }
 }
 
+
 /**
  * Prosi użytkownika o uprawnienia do wyświetlania powiadomień przeglądarkowych.
+ * Aktualizuje zmienną globalną `notificationPermissionGranted`.
  */
 async function requestNotificationPermission() {
     console.log("[Notifications] Checking Notification API support...");
@@ -293,9 +281,11 @@ async function requestNotificationPermission() {
 
     // Sprawdź obecny status uprawnień
     if (Notification.permission === "granted") {
+        notificationPermissionGranted = true;
         console.log("[Notifications] Notification permission already granted.");
         return;
     } else if (Notification.permission === "denied") {
+        notificationPermissionGranted = false;
         console.warn("[Notifications] Notification permission previously denied.");
         showCustomMessage("Powiadomienia zostały zablokowane. Aby je włączyć, zmień ustawienia przeglądarki.", "info");
         return;
@@ -305,20 +295,24 @@ async function requestNotificationPermission() {
     try {
         const permission = await Notification.requestPermission();
         if (permission === "granted") {
+            notificationPermissionGranted = true;
             console.log("[Notifications] Notification permission granted by user.");
             showCustomMessage("Powiadomienia włączone!", "success");
         } else if (permission === "denied") {
+            notificationPermissionGranted = false;
             console.warn("[Notifications] Notification permission denied by user.");
             showCustomMessage("Powiadomienia zostały zablokowane. Nie będziesz otrzymywać alertów o nowych wiadomościach.", "error");
         } else { // 'default'
-            console.info("[Notifications] Notification permission dismissed or default.");
+            notificationPermissionGranted = false;
             showCustomMessage("Powiadomienia nie zostały włączone.", "info");
         }
     } catch (error) {
         console.error("[Notifications] Error requesting notification permission:", error);
+        notificationPermissionGranted = false;
         showCustomMessage("Wystąpił błąd podczas próby włączenia powiadomień.", "error");
     }
 }
+
 
 /**
  * Resets the chat view to its initial state (clears messages, disables input).
@@ -371,7 +365,7 @@ function resetChatView() {
     currentChatUser = null; // Reset current chat user
     currentRoom = null; // Reset current room
     console.log("[resetChatView] currentChatUser and currentRoom reset to null.");
-
+    
     // Remove active state from conversation item if any
     if (currentActiveConvoItem) {
         currentActiveConvoItem.classList.remove('active'); // Deactivate active conversation item
@@ -404,6 +398,8 @@ function getRoomName(user1Id, user2Id) {
  * @param {string} roomId - ID of the chat room.
  * @returns {Promise<Object|null>} The last message object (mapped) or null if no messages.
  */
+// USUNIĘTO: Ta funkcja nie jest już używana bezpośrednio w loadContacts()
+/*
 async function getLastMessageForRoom(roomId) {
     try {
         const { data, error } = await supabase
@@ -417,7 +413,7 @@ async function getLastMessageForRoom(roomId) {
             console.error('Error fetching last message:', error);
             return null;
         }
-
+        
         if (data && data.length > 0) {
             const msg = data[0];
             return {
@@ -433,6 +429,7 @@ async function getLastMessageForRoom(roomId) {
         return null;
     }
 }
+*/
 
 /**
  * Fetches the entire message history for a given room.
@@ -440,10 +437,10 @@ async function getLastMessageForRoom(roomId) {
  * @returns {Promise<Array<Object>>} An array of message objects, sorted oldest to newest.
  */
 async function fetchMessageHistory(roomId) {
-    console.log(`[fetchMessageHistory] Fetched history for room: ${roomId}`);
+    console.log(`[fetchMessageHistory] Fetching history for room: ${roomId}`);
     try {
         // Assume a maximum limit for history to prevent excessive data transfer
-        const limit = 50;
+        const limit = 50; 
         const { data, error } = await supabase
             .from('messages')
             .select('content, sender_id, created_at, room_id')
@@ -490,10 +487,11 @@ function sortConversations(conversations) {
 /**
  * Loads and renders the list of contacts.
  * Fetches other users from Supabase, retrieves their last message, and displays them.
+ * ZMIANA: Teraz pobiera ostatnie wiadomości dla wszystkich pokoi w jednym zapytaniu przez WebSocket.
  */
 async function loadContacts() {
     console.log("[loadContacts] Loading contacts...");
-    if (!currentUser || !currentUser.email) {
+    if (!currentUser || !currentUser.id || !currentUser.email) {
         console.error("[loadContacts] Current user is not defined, cannot load contacts.");
         return;
     }
@@ -512,12 +510,42 @@ async function loadContacts() {
             return;
         }
 
-        // Fetch last message for each contact to sort them
-        const contactsWithLastMessage = await Promise.all(users.map(async user => {
+        // KROK 1: Wyślij żądanie do serwera WebSocket o ostatnie wiadomości dla wszystkich pokoi użytkownika
+        let lastMessagesMap = {};
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({
+                type: 'get_last_messages_for_user_rooms',
+                userId: currentUser.id
+            }));
+            console.log(`[loadContacts] Sent 'get_last_messages_for_user_rooms' request for user ${currentUser.id}.`);
+
+            // Czekaj na odpowiedź z serwera (obsługiwana w socket.onmessage)
+            // Możemy użyć Promise, aby poczekać na odpowiedź, ale dla prostoty na razie polegamy na tym,
+            // że dane zostaną zaktualizowane asynchronicznie i loadContacts zostanie wywołane ponownie
+            // lub UI zostanie odświeżone przez handler WS.
+            // Dla tej optymalizacji, musimy poczekać na odpowiedź, zanim posortujemy kontakty.
+            lastMessagesMap = await new Promise(resolve => {
+                const tempHandler = (event) => {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'last_messages_for_user_rooms') {
+                        console.log("[loadContacts] Received 'last_messages_for_user_rooms' response.");
+                        socket.removeEventListener('message', tempHandler); // Usuń tymczasowy handler
+                        resolve(data.messages);
+                    }
+                };
+                socket.addEventListener('message', tempHandler);
+            });
+        } else {
+            console.warn("[loadContacts] WebSocket not open, cannot request last messages for user rooms. Falling back to no last messages.");
+        }
+
+
+        // KROK 2: Połącz dane o użytkownikach z ich ostatnimi wiadomościami
+        const contactsWithLastMessage = users.map(user => {
             const roomId = getRoomName(String(currentUser.id), String(user.id));
-            const lastMessage = await getLastMessageForRoom(roomId);
+            const lastMessage = lastMessagesMap[roomId] || null; // Pobierz z mapy
             return { user, lastMessage, roomId };
-        }));
+        });
 
         const sortedContacts = sortConversations(contactsWithLastMessage);
 
@@ -531,7 +559,7 @@ async function loadContacts() {
             const avatarSrc = `https://i.pravatar.cc/150?img=${user.id.charCodeAt(0) % 70 + 1}`; // Random avatar based on user ID
 
             let previewText = "Brak wiadomości"; // Default text if no messages
-            let timeText = "";
+            let timeText = ""; 
 
             if (lastMessage) {
                 const senderName = String(lastMessage.username) === String(currentUser.id) ? "Ja" : (getUserLabelById(lastMessage.username) || lastMessage.username);
@@ -540,7 +568,7 @@ async function loadContacts() {
                 const lastMessageTime = new Date(lastMessage.inserted_at);
                 if (isNaN(lastMessageTime.getTime())) {
                     console.warn(`[loadContacts] Invalid Date for room ${roomId}. Raw inserted_at: ${lastMessage.inserted_at}`);
-                    timeText = "Invalid Date";
+                    timeText = "Invalid Date"; 
                 } else {
                     timeText = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
                 }
@@ -554,8 +582,8 @@ async function loadContacts() {
                 </div>
                 <div class="contact-meta">
                     <span class="message-time">${timeText}</span>
-                    <span class="unread-count hidden">0</span>
-                    <span class="status-dot ${onlineUsers.get(String(user.id)) ? 'online' : ''}"></span> <!-- Added status dot -->
+                    <span class="unread-count hidden"></span> <!-- ZMIANA: Usunięto domyślne '0' -->
+                    <span class="status-dot ${onlineUsers.get(String(user.id))?.isOnline ? 'online' : ''}"></span> <!-- Added status dot -->
                 </div>
             `;
 
@@ -656,12 +684,26 @@ async function handleConversationClick(user, clickedConvoItemElement) {
 
         if (chatUserName && messageInput && sendButton && userStatusSpan) {
             chatUserName.textContent = currentChatUser.username;
+            
+            // ZMIANA: Pobierz status z mapy onlineUsers, która teraz przechowuje obiekty
+            const userStatus = onlineUsers.get(String(user.id));
+            const isUserOnline = userStatus ? userStatus.isOnline : false;
+            userStatusSpan.classList.toggle('online', isUserOnline); 
+            userStatusSpan.classList.toggle('offline', !isUserOnline); 
 
-            const isUserOnline = onlineUsers.get(String(user.id)) === true;
-            userStatusSpan.textContent = isUserOnline ? 'Online' : 'Offline';
-            userStatusSpan.classList.toggle('online', isUserOnline);
-            userStatusSpan.classList.toggle('offline', !isUserOnline);
-            console.log(`[handleConversationClick] Initial status for active chat user ${currentChatUser.username} (from onlineUsers map): ${isUserOnline ? 'Online' : 'Offline'}`);
+            if (isUserOnline) {
+                userStatusSpan.textContent = 'Online';
+            } else {
+                let lastSeenText = 'Offline';
+                if (userStatus && userStatus.lastSeen) {
+                    const date = new Date(userStatus.lastSeen);
+                    if (!isNaN(date.getTime())) {
+                         lastSeenText = `Offline (ostatnio widziany ${formatTimeAgo(date)})`;
+                    }
+                }
+                userStatusSpan.textContent = lastSeenText;
+            }
+            console.log(`[handleConversationClick] Initial status for active chat user ${currentChatUser.username} (from onlineUsers map): ${userStatusSpan.textContent}`);
 
             messageInput.disabled = false;
             sendButton.disabled = false;
@@ -673,7 +715,7 @@ async function handleConversationClick(user, clickedConvoItemElement) {
         // Reset unread count for the selected conversation (UI only, Supabase handles global)
         const unreadCount = clickedConvoItemElement.querySelector('.unread-count');
         if (unreadCount) {
-            unreadCount.textContent = '0';
+            unreadCount.textContent = ''; // Upewnij się, że tekst jest wyczyszczony
             unreadCount.classList.add('hidden');
             console.log(`[handleConversationClick] Unread count reset for room ${newRoom} (UI only).`);
         } else {
@@ -758,14 +800,14 @@ function setupSendMessage() {
 
         // Send message on button click
         sendButton.onclick = () => {
-            console.log("[DEBUG: SEND BUTTON] Send button clicked or Enter pressed.");
-
+            console.log("[DEBUG: SEND BUTTON] Send button clicked or Enter pressed."); 
+            
             const text = messageInput.value.trim();
             console.log(`[DEBUG: SEND BUTTON] Message text length: ${text.length}`);
-
+            
             if (!text || !currentChatUser || !socket || socket.readyState !== WebSocket.OPEN) {
                 console.warn("Cannot send message: check conditions below.");
-
+                
                 // Dodatkowe logi do zdiagnozowania warunku
                 console.log(`Debug conditions: text=${!!text}, currentChatUser=${!!currentChatUser ? currentChatUser.id : 'null'}, socket=${!!socket}, socket.readyState=${socket ? socket.readyState : 'N/A'}`);
 
@@ -786,13 +828,13 @@ function setupSendMessage() {
                 type: 'message',
                 username: currentUser.id,
                 text,
-                room: currentRoom,
+                room: currentRoom, 
                 inserted_at: new Date().toISOString()
             };
 
             console.log("[setupSendMessage] Sending message via WS:", msgData);
-            socket.send(JSON.stringify(msgData));
-
+            socket.send(JSON.stringify(msgData)); 
+            
             // Przenieś konwersację na górę dla wysłanych wiadomości
             const convoItemToMove = contactsListEl.querySelector(`.contact[data-room-id="${currentRoom}"]`);
             if (convoItemToMove && contactsListEl.firstChild !== convoItemToMove) {
@@ -800,16 +842,16 @@ function setupSendMessage() {
                 console.log(`[Reorder] Moved conversation for room ${currentRoom} to top due to sent message.`);
             }
 
-            messageInput.value = '';
-            messageInput.focus();
+            messageInput.value = ''; 
+            messageInput.focus(); 
         };
 
         // Send message on Enter key press
         messageInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
-                e.preventDefault();
-                console.log("[DEBUG: SEND BUTTON] Enter key pressed.");
-                sendButton.click();
+                e.preventDefault(); 
+                console.log("[DEBUG: SEND BUTTON] Enter key pressed."); 
+                sendButton.click(); 
             }
         });
         console.log("[setupSendMessage] Message send event listeners attached.");
@@ -823,7 +865,7 @@ function setupSendMessage() {
  * Includes logic for displaying browser notifications.
  * @param {Object} msg - The message object.
  */
-async function addMessageToChat(msg) {
+async function addMessageToChat(msg) { 
     console.log(`[addMessageToChat] Processing message: sender=${msg.username}, room=${msg.room}. Global currentRoom (active chat): ${currentRoom}`);
 
     try {
@@ -832,29 +874,29 @@ async function addMessageToChat(msg) {
 
         if (!convoItemToUpdate) {
             console.warn(`[addMessageToChat] Conversation item for room ${msg.room} not found initially. Reloading contacts to sync list.`);
-            await loadContacts();
+            await loadContacts(); 
             convoItemToUpdate = contactsListEl.querySelector(`.contact[data-room-id="${msg.room}"]`);
-            if (!convoItemToUpdate) {
+            if (!convoItemToUpdate) { 
                 console.error(`[addMessageToChat] Conversation item for room ${msg.room} still NOT found after reloading contacts. Cannot update UI.`);
-                return;
+                return; 
             }
         }
 
         const previewEl = convoItemToUpdate.querySelector('.last-message');
         const timeEl = convoItemToUpdate.querySelector('.message-time');
-        const unreadCountEl = convoItemToUpdate.querySelector('.unread-count');
+        const unreadCountEl = convoItemToUpdate.querySelector('.unread-count'); 
 
         let previewText = "Brak wiadomości"; // Default text if no messages
 
         if (previewEl && timeEl) {
             const senderId = String(msg.username);
             const senderName = senderId === String(currentUser.id) ? "Ja" : (getUserLabelById(senderId) || senderId);
-            previewText = `${senderName}: ${msg.text}`;
+            previewText = `${senderName}: ${msg.text}`; 
             const lastMessageTime = new Date(msg.inserted_at || Date.now()); // Fallback to current time if inserted_at is missing
-            const timeString = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
-            timeEl.textContent = timeString;
-            console.log(`[addMessageToChat] Updated preview and time for room ${msg.room}. Preview: "${previewText}"`);
-            previewEl.textContent = previewText;
+            const timeString = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" }); 
+            timeEl.textContent = timeString; 
+            console.log(`[addMessageToChat] Updated preview and time for room ${msg.room}. Preview: "${previewText}"`); 
+            previewEl.textContent = previewText; 
         } else {
             console.warn(`[addMessageToChat] Could not find previewEl or timeEl for room ${msg.room}. Preview/time not updated.`);
         }
@@ -872,52 +914,35 @@ async function addMessageToChat(msg) {
                 console.warn("[Supabase] Supabase client not ready or currentUser not set. Cannot update unread count in Supabase.");
             }
 
-            // ZMIANA: Powiadomienie dźwiękowe ZAWSZE, jeśli wiadomość jest nowa i od innego użytkownika,
-            // ORAZ jeśli soundNotificationsEnabled jest true
-            if (soundNotificationsEnabled) { // Warunek na powiadomienia dźwiękowe
-                console.log("[addMessageToChat] Conditions met for playing sound. Playing notification sound.");
-                playNotificationSound();
-            } else {
-                console.log("[addMessageToChat] Sound notifications are disabled by user settings. Not playing sound.");
-            }
+            // Logic for browser notifications and sound
+            // Show notification if tab is hidden OR if user is in a different chat
+            const shouldNotify = notificationPermissionGranted && (document.hidden || isDifferentRoom);
+            if (shouldNotify) {
+                console.log("[addMessageToChat] Conditions met for showing browser notification and playing sound.");
+                const senderLabel = getUserLabelById(msg.username) || msg.username;
+                const notificationTitle = `Nowa wiadomość od ${senderLabel}`;
+                const notificationBody = msg.text;
+                
+                const notification = new Notification(notificationTitle, {
+                    body: notificationBody,
+                    icon: 'https://placehold.co/48x48/000000/FFFFFF?text=💬', // Prosta ikona powiadomienia
+                    silent: true // Dźwięk obsługujemy osobną funkcją, aby ominąć blokady autoplay
+                });
 
-            // Logika dla powiadomień przeglądarkowych (wizualnych)
-            if (visualNotificationsEnabled) { // Sprawdź flagę ustawień powiadomień wizualnych
-                // Poproś o uprawnienia tylko wtedy, gdy powiadomienie jest faktycznie potrzebne i jeszcze nie udzielono zgody
-                if (Notification.permission !== "granted" && Notification.permission !== "denied") {
-                     await requestNotificationPermission();
-                }
+                notification.onclick = function() {
+                    window.focus(); // Przełącz na okno przeglądarki
+                    // Możesz dodać logikę do automatycznego przełączenia na odpowiedni czat,
+                    // np. wywołując handleConversationClick z odpowiednimi danymi użytkownika.
+                    console.log("[Notifications] Notification clicked. Focusing window.");
+                };
 
-                const shouldShowBrowserNotification = Notification.permission === "granted" && (document.hidden || isDifferentRoom);
-                if (shouldShowBrowserNotification) {
-                    console.log("[addMessageToChat] Conditions met for showing browser notification.");
-                    const senderLabel = getUserLabelById(msg.username) || msg.username;
-                    const notificationTitle = `Nowa wiadomość od ${senderLabel}`;
-                    const notificationBody = msg.text;
-
-                    const notification = new Notification(notificationTitle, {
-                        body: notificationBody,
-                        icon: 'https://placehold.co/48x48/000000/FFFFFF?text=💬', // Prosta ikona powiadomienia
-                        silent: true // Dźwięk obsługujemy osobną funkcją, aby ominąć blokady autoplay
-                    });
-
-                    notification.onclick = function() {
-                        window.focus(); // Przełącz na okno przeglądarki
-                        // Możesz dodać logikę do automatycznego przełączenia na odpowiedni czat,
-                        // np. wywołując handleConversationClick z odpowiednimi danymi użytkownika.
-                        console.log("[Notifications] Notification clicked. Focusing window.");
-                    };
-                } else {
-                    console.log("[addMessageToChat] Browser notification not shown (either permission not granted, or visual notifications disabled by user, or tab is visible for same room).");
-                }
-            } else {
-                console.log("[addMessageToChat] Visual notifications are disabled by user settings. Not showing browser notification.");
+                playNotificationSound(); // Odtwórz dźwięk osobno
             }
         } else if (String(msg.username) === String(currentUser.id) || msg.room === currentRoom) {
             // If message is from current user or for the active room, ensure unread count is zeroed and hidden
             console.log(`[addMessageToChat] Message is from current user (${String(msg.username) === String(currentUser.id)}) OR for the active room (${msg.room === currentRoom}). Ensuring unread count is hidden.`);
             if (unreadCountEl) {
-                unreadCountEl.textContent = '0';
+                unreadCountEl.textContent = ''; // ZMIANA: Wyczyszczono tekst
                 unreadCountEl.classList.add('hidden');
             }
             // Clear this conversation from the global unread tracker in Supabase if it was previously unread
@@ -932,7 +957,7 @@ async function addMessageToChat(msg) {
 
         // Display message in the active chat only if it belongs to the current room
         console.log(`[addMessageToChat Display Check] Comparing msg.room (${msg.room}) with currentRoom (${currentRoom}). Match: ${msg.room === currentRoom}`);
-        if (msg.room === currentRoom) {
+        if (msg.room === currentRoom) { 
             const div = document.createElement('div');
             div.classList.add('message', String(msg.username) === String(currentUser.id) ? 'sent' : 'received');
 
@@ -945,7 +970,7 @@ async function addMessageToChat(msg) {
             `;
             if (messageContainer) {
                 messageContainer.appendChild(div);
-                messageContainer.scrollTop = messageContainer.scrollHeight;
+                messageContainer.scrollTop = messageContainer.scrollHeight; 
                 console.log(`[addMessageToChat] Message displayed in active chat for room: ${msg.room}`);
             } else {
                 console.error("[addMessageToChat] messageContainer is null when trying to add message to active chat.");
@@ -962,20 +987,42 @@ async function addMessageToChat(msg) {
  * Updates the online/offline status indicator for a specific user.
  * @param {string} userId - The ID of the user whose status is being updated.
  * @param {boolean} isOnline - True if the user is online, false otherwise.
+ * @param {string | null} lastSeenTimestamp - Optional: The timestamp when the user was last seen.
  */
-function updateUserStatusIndicator(userId, isOnline) {
-    console.log(`[Status Update Debug] Function called for userId: ${userId}, isOnline: ${isOnline}`);
+function updateUserStatusIndicator(userId, isOnline, lastSeenTimestamp = null) {
+    console.log(`[Status Update Debug] Function called for userId: ${userId}, isOnline: ${isOnline}, lastSeenTimestamp: ${lastSeenTimestamp}`);
     try {
-        onlineUsers.set(String(userId), isOnline); // ZAWSZE AKTUALIZUJ MAPĘ onlineUsers
+        // ZMIANA: Aktualizuj mapę onlineUsers o obiekt z isOnline i lastSeen
+        if (isOnline) {
+            onlineUsers.set(String(userId), { isOnline: true, lastSeen: null });
+        } else {
+            // Użyj dostarczonego timestampu lub bieżącego czasu, jeśli przechodzi w tryb offline
+            onlineUsers.set(String(userId), { isOnline: false, lastSeen: lastSeenTimestamp || new Date().toISOString() });
+        }
 
         // Update status in the active chat header
         if (currentChatUser && userStatusSpan) {
             console.log(`[Status Update Debug] currentChatUser.id: ${currentChatUser.id}, userId from WS: ${userId}`);
             if (String(currentChatUser.id) === String(userId)) {
-                userStatusSpan.textContent = isOnline ? 'Online' : 'Offline';
-                userStatusSpan.classList.toggle('online', isOnline);
-                userStatusSpan.classList.toggle('offline', !isOnline);
-                console.log(`[Status Update Debug] Chat header status updated for ${getUserLabelById(userId)} to: ${isOnline ? 'Online' : 'Offline'}`);
+                userStatusSpan.classList.toggle('online', isOnline); 
+                userStatusSpan.classList.toggle('offline', !isOnline); 
+
+                if (isOnline) {
+                    userStatusSpan.textContent = 'Online';
+                } else {
+                    const lastSeenInfo = onlineUsers.get(String(userId));
+                    let lastSeenText = 'Offline';
+                    if (lastSeenInfo && lastSeenInfo.lastSeen) {
+                        const date = new Date(lastSeenInfo.lastSeen);
+                        if (!isNaN(date.getTime())) {
+                            lastSeenText = `Offline (ostatnio widziany ${formatTimeAgo(date)})`;
+                        } else {
+                            lastSeenText = `Offline`; // Fallback if date is invalid
+                        }
+                    }
+                    userStatusSpan.textContent = lastSeenText;
+                }
+                console.log(`[Status Update Debug] Chat header status updated for ${getUserLabelById(userId)} to: ${userStatusSpan.textContent}`);
             } else {
                 console.log("[Status Update Debug] userId " + userId + " does not match currentChatUser.id " + currentChatUser.id + ". Header not updated.");
             }
@@ -1014,9 +1061,9 @@ function updateUserStatusIndicator(userId, isOnline) {
                         const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(userId));
                         if (userProfile) {
                             const mockConvoItem = document.createElement('li');
-                            mockConvoItem.dataset.convoId = userProfile.id;
+                            mockConvoItem.dataset.convoId = userProfile.id; 
                             mockConvoItem.dataset.email = userProfile.email;
-                            mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(userProfile.id));
+                            mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(userProfile.id)); 
                             handleConversationClick(userProfile, mockConvoItem);
                         }
                     });
@@ -1065,13 +1112,13 @@ function updateUserStatusIndicator(userId, isOnline) {
                         <img src="${avatarSrc}" alt="Avatar" class="avatar">
                         <span class="username">${getUserLabelById(userId)}</span>
                     `;
-
+                    
                     // Add click listener for mobile item
                     div.addEventListener('click', async () => {
-                        const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(userId));
+                        const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(user.id));
                         if (userProfile) {
                             const mockConvoItem = document.createElement('li');
-                            mockConvoItem.dataset.convoId = userProfile.id;
+                            mockConvoItem.dataset.convoId = user.id;
                             mockConvoItem.dataset.email = userProfile.email;
                             mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(user.id));
                             handleConversationClick(userProfile, mockConvoItem);
@@ -1086,8 +1133,8 @@ function updateUserStatusIndicator(userId, isOnline) {
                 console.error("onlineUsersMobile not found during status update.");
             }
         }
-
-        // Update status dots in the main contacts list
+        
+        // Update status dots in the main contacts list (unchanged - only dot, no timestamp)
         const contactConvoItem = contactsListEl.querySelector(`.contact[data-convo-id="${userId}"]`);
         if (contactConvoItem) {
             const statusDot = contactConvoItem.querySelector('.status-dot');
@@ -1117,17 +1164,17 @@ function showTypingIndicator(usernameId) {
         if (currentChatUser && String(usernameId) === String(currentChatUser.id)) {
             // Pokaż wskaźnik pisania w nagłówku
             if (typingStatusHeader) {
-                typingStatusHeader.classList.remove('hidden');
+                typingStatusHeader.classList.remove('hidden'); 
                 typingStatusHeader.textContent = `${getUserLabelById(usernameId)} pisze...`; // Set text
                 console.log(`[showTypingIndicator] Typing status header shown for ${getUserLabelById(usernameId)}`);
             }
             // Pokaż animowane kropki w obszarze wiadomości
             if (typingIndicatorMessages) {
-                typingIndicatorMessages.classList.remove('hidden');
+                typingIndicatorMessages.classList.remove('hidden'); 
                 console.log(`[showTypingIndicator] Typing indicator messages shown for ${getUserLabelById(usernameId)}`);
             }
 
-            clearTimeout(typingTimeout);
+            clearTimeout(typingTimeout); 
             typingTimeout = setTimeout(() => {
                 if (typingStatusHeader) {
                     typingStatusHeader.classList.add('hidden');
@@ -1138,7 +1185,7 @@ function showTypingIndicator(usernameId) {
                     typingIndicatorMessages.classList.add('hidden');
                     console.log(`[showTypingIndicator] Typing indicator messages hidden for ${getUserLabelById(usernameId)}`);
                 }
-            }, 3000);
+            }, 3000); 
             console.log(`${getUserLabelById(usernameId)} is typing...`);
         } else {
             console.log(`[showTypingIndicator] Typing update for ${getUserLabelById(usernameId)}, but not current chat user. Ignoring.`);
@@ -1162,10 +1209,10 @@ function initWebSocket() {
     socket = new WebSocket(wsUrl);
     console.log(`[initWebSocket] Attempting to connect to WebSocket at: ${wsUrl}`);
 
-    socket.onopen = () => {
+    socket.onopen = async () => { // Make onopen async
         console.log('[initWebSocket] WebSocket connected successfully.');
-        reconnectAttempts = 0;
-        if (currentUser) {
+        reconnectAttempts = 0; 
+        if (currentUser) { 
             // ZAWSZE dołączamy do "global" pokoju po otwarciu WS
             socket.send(JSON.stringify({
                 type: 'join',
@@ -1178,7 +1225,8 @@ function initWebSocket() {
             socket.send(JSON.stringify({
                 type: 'status',
                 user: currentUser.id,
-                online: true
+                online: true,
+                last_seen: null // Online, więc last_seen jest null
             }));
             console.log(`[initWebSocket] Sent 'online' status for user ${currentUser.id}`);
 
@@ -1191,11 +1239,19 @@ function initWebSocket() {
                 }));
                 console.log(`[initWebSocket] Re-joining previous room (${currentRoom}) after reconnection.`);
             }
+            
+            // NOWE MIEJSCE DLA loadContacts() i loadActiveUsers()
+            // Te funkcje wymagają otwartego połączenia WebSocket
+            console.log("[initWebSocket] Loading user profiles and contacts (after WS open)...");
+            await loadAllProfiles(); // Ensure profiles are loaded before contacts
+            await loadContacts(); 
+            console.log("[initWebSocket] User profiles and contacts loaded.");
+
+            // Request active users list after successful connection
+            loadActiveUsers(); // This is already here, keep it.
         } else {
             console.warn("[initWebSocket] WebSocket opened but currentUser is not set. Cannot join room yet.");
         }
-        // Request active users list after successful connection
-        loadActiveUsers();
     };
 
     socket.onmessage = (event) => {
@@ -1209,7 +1265,7 @@ function initWebSocket() {
                         username: data.username,
                         text: data.text,
                         inserted_at: data.inserted_at,
-                        room: data.room,
+                        room: data.room, 
                     });
                     // Przenieś konwersację na górę tylko dla nowo otrzymanych wiadomości
                     if (String(data.username) !== String(currentUser.id)) { // Tylko jeśli wiadomość nie jest od nas samych
@@ -1230,12 +1286,13 @@ function initWebSocket() {
                     // Ta sekcja jest głównie do celów debugowania lub jeśli historia byłaby ładowana w inny sposób
                     break;
                 case 'status':
-                    console.log(`[WS MESSAGE] Received status update for user ${data.user}: ${data.online ? 'online' : 'offline'}`);
-                    updateUserStatusIndicator(data.user, data.online);
+                    console.log(`[WS MESSAGE] Received status update for user ${data.user}: ${data.online ? 'online' : 'offline'}. Last seen: ${data.last_seen || 'N/A'}`);
+                    // ZMIANA: Przekaż last_seen timestamp do funkcji
+                    updateUserStatusIndicator(data.user, data.online, data.last_seen || null);
                     break;
                 case 'active_users':
                     console.log('[WS MESSAGE] Received initial active users list:', data.users);
-                    displayActiveUsers(data.users);
+                    displayActiveUsers(data.users); 
                     break;
                 // NOWY CASE: Obsługa ostatnich wiadomości dla pokoi użytkownika
                 case 'last_messages_for_user_rooms':
@@ -1243,33 +1300,6 @@ function initWebSocket() {
                     // Ta wiadomość jest obsługiwana w loadContacts() poprzez Promise,
                     // więc nie potrzebujemy tu dodatkowej logiki, chyba że chcemy odświeżyć UI
                     // w inny sposób po otrzymaniu tych danych.
-                    break;
-                case 'friendRequest':
-                    // Przychodzące zaproszenie do znajomych
-                    showCustomMessage(`Otrzymano nowe zaproszenie od: ${data.fromEmail}`, "info");
-                    // Odśwież listę oczekujących zaproszeń
-                    loadPendingFriendRequests();
-                    // Zwiększ licznik powiadomień
-                    updateNotificationCount();
-                    break;
-                case 'friendRequestAccepted':
-                    // Zaproszenie zaakceptowane
-                    showCustomMessage(`Użytkownik ${data.acceptedByEmail} zaakceptował Twoje zaproszenie!`, "success");
-                    // Odśwież listy konwersacji i znajomych
-                    loadContacts(); // Ta funkcja nie istnieje, powinna być loadContacts
-                    updateNotificationCount();
-                    break;
-                case 'friendRequestRejected':
-                    // Zaproszenie odrzucone
-                    showCustomMessage(`Użytkownik ${data.rejectedByEmail} odrzucił Twoje zaproszenie.`, "info");
-                    // Odśwież listę oczekujących zaproszeń, jeśli ma to sens (może po prostu usunąć z listy wysłanych)
-                    loadPendingFriendRequests();
-                    updateNotificationCount();
-                    break;
-                case 'newConversation':
-                    // Nowa konwersacja została utworzona, np. po zaakceptowaniu zaproszenia
-                    // Ponownie załaduj wszystkie konwersacje, aby uwzględnić nową
-                    loadContacts(); // Poprawiono z loadAllConversations
                     break;
                 default:
                     console.warn("[WS MESSAGE] Unknown WS message type:", data.type, data);
@@ -1281,16 +1311,16 @@ function initWebSocket() {
 
     socket.onclose = (event) => {
         console.log(`[initWebSocket] WebSocket disconnected. Code: ${event.code}, Reason: ${event.reason}`);
-        if (event.code !== 1000) {
+        if (event.code !== 1000) { 
             console.log('[initWebSocket] Attempting to reconnect...');
-            setTimeout(initWebSocket, Math.min(1000 * ++reconnectAttempts, 10000));
+            setTimeout(initWebSocket, Math.min(1000 * ++reconnectAttempts, 10000)); 
         }
     };
 
     socket.onerror = (error) => {
         console.error('[initWebSocket] WebSocket Error:', error);
         if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
-            socket.close();
+            socket.close(); 
         }
     };
 }
@@ -1328,13 +1358,16 @@ function displayActiveUsers(activeUsersData) {
     }
 
     try {
-        activeUsersListEl.innerHTML = '';
-        onlineUsersMobile.innerHTML = '';
-        onlineUsers.clear();
+        activeUsersListEl.innerHTML = ''; 
+        onlineUsersMobile.innerHTML = ''; 
+        onlineUsers.clear(); // Clear existing local data
 
-        const filteredUsers = activeUsersData.filter(user => String(user.id) !== String(currentUser.id));
+        // ZMIANA: Usunięto filtrowanie, aby przetwarzać wszystkich użytkowników i ich statusy z DB
+        // const filteredUsers = activeUsersData.filter(user => String(user.id) !== String(currentUser.id)); // Usunięto tę linię
 
-        if (filteredUsers.length === 0) {
+        const onlineUsersForDisplay = activeUsersData.filter(user => String(user.id) !== String(currentUser.id) && user.online);
+
+        if (onlineUsersForDisplay.length === 0) {
             activeUsersListEl.style.display = 'none';
             noActiveUsersText.style.display = 'block';
             console.log("[displayActiveUsers] No active users, hiding desktop list, showing text.");
@@ -1343,7 +1376,7 @@ function displayActiveUsers(activeUsersData) {
             noActiveUsersText.style.display = 'none';
             console.log("[displayActiveUsers] Active users found, showing desktop list, hiding text.");
 
-            filteredUsers.forEach(user => {
+            onlineUsersForDisplay.forEach(user => { // Iterujemy tylko po użytkownikach online do wyświetlenia w sidebarze
                 const li = document.createElement('li');
                 li.classList.add('active-user-item');
                 li.dataset.userId = user.id;
@@ -1357,6 +1390,7 @@ function displayActiveUsers(activeUsersData) {
                     `;
                 activeUsersListEl.appendChild(li);
 
+                // ZMIANA: Tworzenie mobilnej listy online - tylko dla faktycznie online
                 const divMobile = document.createElement('div');
                 divMobile.classList.add('online-user-item-mobile');
                 divMobile.dataset.userId = user.id;
@@ -1365,37 +1399,27 @@ function displayActiveUsers(activeUsersData) {
                         <img src="${avatarSrc}" alt="Avatar" class="avatar">
                         <span class="username">${getUserLabelById(user.id) || user.username || 'Nieznany'}</span>
                     `;
-
+                
                 divMobile.addEventListener('click', async () => {
-                    const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(user.id)); // Corrected user.id here
+                    const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(user.id));
                     if (userProfile) {
                         const mockConvoItem = document.createElement('li');
-                        mockConvoItem.dataset.convoId = userProfile.id;
+                        mockConvoItem.dataset.convoId = user.id;
                         mockConvoItem.dataset.email = userProfile.email;
                         mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(user.id));
                         handleConversationClick(userProfile, mockConvoItem);
                     }
                 });
                 onlineUsersMobile.appendChild(divMobile);
-
-                onlineUsers.set(String(user.id), true);
             });
         }
-        console.log("[Status Update Debug] onlineUsers map after displayActiveUsers:", onlineUsers);
-
-        // NOWY KOD: Aktualizacja kropek statusu w głównej liście kontaktów
-        contactsListEl.querySelectorAll('.contact').forEach(convoItem => {
-            const userId = convoItem.dataset.convoId;
-            const statusDot = convoItem.querySelector('.status-dot');
-            if (statusDot) {
-                if (onlineUsers.has(String(userId))) {
-                    statusDot.classList.add('online');
-                } else {
-                    statusDot.classList.remove('online');
-                }
-            }
+        
+        // ZMIANA: Prawidłowe wypełnienie mapy onlineUsers dla WSZYSTKICH użytkowników otrzymanych z serwera
+        activeUsersData.forEach(user => {
+            onlineUsers.set(String(user.id), { isOnline: user.online, lastSeen: user.last_seen });
         });
 
+        console.log("[Status Update Debug] onlineUsers map after displayActiveUsers:", onlineUsers);
     } finally {
         console.log("Wykonano operacje czyszczące w bloku finally.");
     }
@@ -1413,7 +1437,7 @@ function setupChatSettingsDropdown() {
 
     try {
         chatSettingsButton.addEventListener('click', (event) => {
-            event.stopPropagation();
+            event.stopPropagation(); 
             chatSettingsDropdown.classList.toggle('hidden');
             console.log(`[setupChatSettingsDropdown] Chat settings dropdown toggled. Hidden: ${chatSettingsDropdown.classList.contains('hidden')}`);
         });
@@ -1421,34 +1445,35 @@ function setupChatSettingsDropdown() {
         document.addEventListener('click', (event) => {
             if (!chatSettingsDropdown.classList.contains('hidden') && chatSettingsButton && !chatSettingsButton.contains(event.target)) {
                 chatSettingsDropdown.classList.add('hidden');
-                console.log("[setupChatSettingsDropdown] Chat settings dropdown hidden due to outside click.");
+                console.log("[initializeApp] Chat settings dropdown hidden due to outside click.");
             }
             if (!dropdownMenu.classList.contains('hidden') && menuButton && !menuButton.contains(event.target)) {
                 dropdownMenu.classList.add('hidden');
+                console.log("[initializeApp] Main dropdown hidden due to outside click.");
             }
         });
 
         const colorOptions = chatSettingsDropdown.querySelectorAll('.color-box');
         colorOptions.forEach(option => {
             option.addEventListener('click', () => {
-                colorOptions.forEach(box => box.classList.remove('active'));
-                option.classList.add('active');
+                colorOptions.forEach(box => box.classList.remove('active')); 
+                option.classList.add('active'); 
                 const colorTheme = option.dataset.color;
                 if (messageContainer) {
                     messageContainer.classList.remove('default-theme', 'blue-theme', 'green-theme', 'red-theme');
                     if (colorTheme !== 'default') {
-                        messageContainer.classList.add(`${colorTheme}-theme`);
+                        messageContainer.classList.add(`${colorTheme}-theme`); 
                     }
                 }
                 console.log('[setupChatSettingsDropdown] Message theme changed to:', colorTheme);
             });
         });
 
-        const backgroundOptions = chatSettingsDropdown.querySelectorAll('.bg-box');
+        const backgroundOptions = chatSettingsDropdown.querySelectorAll('.bg-box'); 
         backgroundOptions.forEach(option => {
             option.addEventListener('click', () => {
-                backgroundOptions.forEach(box => box.classList.remove('active'));
-                option.classList.add('active');
+                backgroundOptions.forEach(box => box.classList.remove('active')); 
+                option.classList.add('active'); 
                 const bgTheme = option.dataset.bg;
                 if (messageContainer) {
                     // Ensure correct classes are removed/added. Your HTML uses classes like 'dark-bg' and 'pattern-bg' directly.
@@ -1472,7 +1497,7 @@ function setupChatSettingsDropdown() {
                         const { data, error } = await supabase
                             .from('profiles')
                             .update({ username: newNickname })
-                            .eq('id', currentUser.id);
+                            .eq('id', currentUser.id); 
 
                         if (error) {
                             throw error;
@@ -1480,11 +1505,11 @@ function setupChatSettingsDropdown() {
 
                         console.log('New nickname set:', newNickname, 'for user:', currentUser.id);
                         showCustomMessage(`Nickname '${newNickname}' has been set successfully.`, 'success');
-                        await loadAllProfiles();
+                        await loadAllProfiles(); 
                         if (chatUserName && currentChatUser && String(currentUser.id) === String(currentChatUser.id)) {
                             chatUserName.textContent = newNickname;
                         }
-                        await loadContacts();
+                        await loadContacts(); 
 
                     } catch (error) {
                         console.error('Error updating nickname:', error.message);
@@ -1508,40 +1533,11 @@ function setupChatSettingsDropdown() {
                 console.log("[setupChatSettingsDropdown] Search messages button clicked.");
                 const searchTerm = messageSearchInput.value.trim();
                 console.log('Searching messages for:', searchTerm, '(functionality to be implemented)');
-                showCustomMessage(`Searching messages for '${searchTerm}' (functionality to be implemented).`, 'info');
+                showCustomMessage(`Searching messages for '${searchTerm}' (functionality to be implemented).`, "info");
             });
         } else {
-                    console.warn("[setupChatSettingsDropdown] Message search input or button not found.");
+            console.warn("[setupChatSettingsDropdown] Message search input or button not found.");
         }
-
-        // Obsługa przełącznika powiadomień wizualnych
-        const toggleVisualNotificationsEl = document.getElementById('toggleVisualNotifications');
-        if (toggleVisualNotificationsEl) {
-            toggleVisualNotificationsEl.checked = visualNotificationsEnabled; // Ustaw stan początkowy
-            toggleVisualNotificationsEl.addEventListener('change', (event) => {
-                visualNotificationsEnabled = event.target.checked;
-                localStorage.setItem('visualNotificationsEnabled', JSON.stringify(visualNotificationsEnabled));
-                console.log(`[Notifications] Visual notifications ${visualNotificationsEnabled ? 'enabled' : 'disabled'}.`);
-            });
-            console.log(`UI Element: toggleVisualNotificationsEl found: ${!!toggleVisualNotificationsEl}`);
-        } else {
-            console.warn("UI Element: toggleVisualNotificationsEl not found. Visual notifications toggle functionality will not be available.");
-        }
-
-        // ZMIANA: Obsługa przełącznika powiadomień dźwiękowych
-        const toggleSoundNotificationsEl = document.getElementById('toggleSoundNotifications');
-        if (toggleSoundNotificationsEl) {
-            toggleSoundNotificationsEl.checked = soundNotificationsEnabled; // Ustaw stan początkowy
-            toggleSoundNotificationsEl.addEventListener('change', (event) => {
-                soundNotificationsEnabled = event.target.checked;
-                localStorage.setItem('soundNotificationsEnabled', JSON.stringify(soundNotificationsEnabled));
-                console.log(`[Notifications] Sound notifications ${soundNotificationsEnabled ? 'enabled' : 'disabled'}.`);
-            });
-            console.log(`UI Element: toggleSoundNotificationsEl found: ${!!toggleSoundNotificationsEl}`);
-        } else {
-            console.warn("UI Element: toggleSoundNotificationsEl not found. Sound notifications toggle functionality will not be available. Please ensure an element with id 'toggleSoundNotifications' exists in your HTML.");
-        }
-
     } catch (e) {
         console.error("Caught error in setupChatSettingsDropdown:", e);
     }
@@ -1555,7 +1551,7 @@ function setupChatSettingsDropdown() {
  */
 function updateDocumentTitle() {
     let totalUnreadConvos = 0;
-    let singleUnreadSenderId = null;
+    let singleUnreadSenderId = null; 
 
     // Iteruj po mapie, aby zliczyć nieprzeczytane konwersacje i znaleźć pojedynczego nadawcę
     unreadConversationsInfo.forEach((info, roomId) => {
@@ -1564,7 +1560,7 @@ function updateDocumentTitle() {
             if (totalUnreadConvos === 1) { // Pierwsza znaleziona nieprzeczytana konwersacja
                 singleUnreadSenderId = info.lastSenderId;
             } else { // Znaleziono więcej niż jedną, więc nie ma pojedynczego nadawcy
-                singleUnreadSenderId = null;
+                singleUnreadSenderId = null; 
             }
         }
     });
@@ -1710,7 +1706,7 @@ async function loadUnreadMessagesFromSupabase() {
                         unreadCountEl.textContent = record.count;
                         unreadCountEl.classList.remove('hidden');
                     } else {
-                        unreadCountEl.textContent = '0';
+                        unreadCountEl.textContent = ''; // ZMIANA: Wyczyszczono tekst
                         unreadCountEl.classList.add('hidden');
                     }
                 }
@@ -1720,333 +1716,6 @@ async function loadUnreadMessagesFromSupabase() {
         updateDocumentTitle(); // Update browser tab title based on new data
     } catch (e) {
         console.error("[Supabase Loader] Caught error loading unread messages from Supabase:", e);
-    }
-}
-
-
-// --- Obsługa znajomych i zaproszeń ---
-
-/**
- * Pokazuje modal zaproszeń do znajomych.
- * @param {string} sectionToShow - 'send' lub 'pending' do określenia, którą sekcję pokazać.
- */
-function showFriendRequestModal(sectionToShow) {
-    if (friendRequestModal) {
-        friendRequestModal.classList.remove('hidden');
-        friendRequestModal.classList.add('visible'); // Dodaj klasę visible
-
-        const sendSection = document.getElementById('sendFriendRequestSection');
-        const pendingSection = document.getElementById('pendingRequestsSection');
-
-        if (sendSection && pendingSection) {
-            if (sectionToShow === 'send') {
-                sendSection.classList.remove('hidden');
-                pendingSection.classList.add('hidden');
-                if (sendRequestStatus) sendRequestStatus.textContent = ''; // Clear status message
-            } else if (sectionToShow === 'pending') {
-                sendSection.classList.add('hidden');
-                pendingSection.classList.remove('hidden');
-                loadPendingFriendRequests(); // Load requests when modal opens
-            }
-        } else {
-            console.warn("sendFriendRequestSection or pendingRequestsSection not found.");
-        }
-    }
-}
-
-/**
- * Ukrywa modal zaproszeń do znajomych.
- */
-function hideFriendRequestModal() {
-    if (friendRequestModal) {
-        friendRequestModal.classList.remove('visible'); // Usuń klasę visible
-        friendRequestModal.classList.add('hidden');
-    }
-}
-
-
-/**
- * Ładuje oczekujące zaproszenia do znajomych dla bieżącego użytkownika.
- */
-async function loadPendingFriendRequests() {
-    if (!currentUser || !pendingRequestsList || !noPendingRequestsText) return;
-
-    try {
-        const { data, error } = await supabase
-            .from('friend_requests')
-            .select('id, from_user_id, profiles!from_user_id(email)') // Select email from profiles table
-            .eq('to_user_id', currentUser.id)
-            .eq('status', 'pending');
-
-        if (error) throw error;
-
-        pendingRequestsList.innerHTML = ''; // Clear previous list
-
-        if (data.length === 0) {
-            noPendingRequestsText.classList.remove('hidden');
-        } else {
-            noPendingRequestsText.classList.add('hidden');
-            data.forEach(request => {
-                const listItem = document.createElement('li');
-                listItem.classList.add('friend-request-item'); // Dodaj klasę dla stylizacji
-                listItem.innerHTML = `
-                    <div class="request-info">
-                        <span>Zaproszenie od: <span class="sender-name">${request.profiles.email}</span></span>
-                    </div>
-                    <div class="request-actions">
-                        <button class="accept-request accept-button" data-request-id="${request.id}" data-from-user-id="${request.from_user_id}">Akceptuj</button>
-                        <button class="reject-request reject-button" data-request-id="${request.id}" data-from-user-id="${request.from_user_id}">Odrzuć</button>
-                    </div>
-                `;
-                pendingRequestsList.appendChild(listItem);
-            });
-
-            // Add event listeners for accept/reject buttons
-            pendingRequestsList.querySelectorAll('.accept-request').forEach(button => {
-                button.addEventListener('click', async (event) => {
-                    const requestId = event.target.dataset.requestId;
-                    const fromUserId = event.target.dataset.fromUserId;
-                    await handleFriendRequestResponse(requestId, fromUserId, 'accepted');
-                });
-            });
-
-            pendingRequestsList.querySelectorAll('.reject-request').forEach(button => {
-                button.addEventListener('click', async (event) => {
-                    const requestId = event.target.dataset.requestId;
-                    const fromUserId = event.target.dataset.fromUserId; // Potrzebne do wysłania powiadomienia do nadawcy
-                    await handleFriendRequestResponse(requestId, fromUserId, 'rejected');
-                });
-            });
-        }
-    } catch (error) {
-        console.error('Error loading pending friend requests:', error.message);
-        showCustomMessage("Nie udało się załadować zaproszeń do znajomych.", "error");
-    }
-}
-
-/**
- * Handles accepting or rejecting a friend request.
- * @param {string} requestId - The ID of the friend request.
- * @param {string} fromUserId - The ID of the user who sent the request.
- * @param {string} status - 'accepted' or 'rejected'.
- */
-async function handleFriendRequestResponse(requestId, fromUserId, status) {
-    if (!currentUser || !socket) return;
-
-    try {
-        const { error } = await supabase
-            .from('friend_requests')
-            .update({ status: status })
-            .eq('id', requestId);
-
-        if (error) throw error;
-
-        showCustomMessage(`Zaproszenie ${status === 'accepted' ? 'zaakceptowane' : 'odrzucone'}.`, "success");
-
-        if (status === 'accepted' && fromUserId) {
-            // Create a new DM room for the accepted friendship
-            const { data: newRoom, error: roomError } = await supabase
-                .from('rooms')
-                .insert({ type: 'dm' })
-                .select()
-                .single();
-
-            if (roomError) {
-                console.error('Error creating new room on friend accept:', roomError);
-                showCustomMessage("Nie udało się utworzyć pokoju czatu dla nowego znajomego.", "error");
-                return;
-            }
-
-            // Add both users to room_participants
-            const { error: participant1Error } = await supabase
-                .from('room_participants')
-                .insert({ room_id: newRoom.id, user_id: currentUser.id });
-            const { error: participant2Error } = await supabase
-                .from('room_participants')
-                .insert({ room_id: newRoom.id, user_id: fromUserId });
-
-            if (participant1Error || participant2Error) {
-                console.error('Error adding participants to new room:', participant1Error || participant2Error);
-                showCustomMessage("Wystąpił błąd podczas dodawania uczestników do pokoju czatu.", "error");
-                return;
-            }
-
-            // Notify sender via WebSocket that request was accepted and new conversation created
-            if (socket && socket.readyState === WebSocket.OPEN) { // Dodano sprawdzenie stanu socket
-                socket.send(JSON.stringify({
-                    type: 'friendRequestAccepted',
-                    fromUserId: currentUser.id,
-                    acceptedByEmail: currentUser.email, // Or username
-                    newRoomId: newRoom.id,
-                    otherUserId: fromUserId
-                }));
-                // Also notify that a new conversation has been created
-                socket.send(JSON.stringify({
-                    type: 'newConversation',
-                    userId: fromUserId // Notify the other user to reload conversations
-                }));
-            } else {
-                console.warn("[handleFriendRequestResponse] WebSocket not open, cannot send friendRequestAccepted/newConversation notification.");
-            }
-        } else if (status === 'rejected') {
-            if (socket && socket.readyState === WebSocket.OPEN) { // Dodano sprawdzenie stanu socket
-                socket.send(JSON.stringify({
-                    type: 'friendRequestRejected',
-                    fromUserId: currentUser.id, // The current user rejected
-                    rejectedByEmail: currentUser.email,
-                    toUserId: fromUserId // The user who sent the request
-                }));
-            } else {
-                console.warn("[handleFriendRequestResponse] WebSocket not open, cannot send friendRequestRejected notification.");
-            }
-        }
-
-        loadPendingFriendRequests(); // Refresh the list
-        await loadContacts(); // Reload conversations to show the new one
-        updateNotificationCount(); // Update notification bell
-    } catch (error) {
-        console.error('Error responding to friend request:', error.message);
-        showCustomMessage("Nie udało się zaktualizować statusu zaproszenia.", "error");
-    }
-}
-
-/**
- * Handles sending a new friend request.
- */
-async function handleSendFriendRequest() {
-    if (!friendEmailInput || !sendRequestStatus || !currentUser) return;
-
-    const friendEmail = friendEmailInput.value.trim();
-
-    if (!friendEmail) {
-        sendRequestStatus.textContent = "Adres e-mail nie może być pusty.";
-        sendRequestStatus.style.color = 'red';
-        return;
-    }
-    if (currentUser.email === friendEmail) {
-        sendRequestStatus.textContent = "Nie możesz wysłać zaproszenia do samego siebie.";
-        sendRequestStatus.style.color = 'orange';
-        return;
-    }
-
-    try {
-        // 1. Find the target user's ID by email
-        const { data: targetUser, error: targetError } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('email', friendEmail)
-            .single();
-
-        if (targetError) {
-            if (targetError.code === 'PGRST116') { // No rows found
-                sendRequestStatus.textContent = "Użytkownik o podanym adresie e-mail nie istnieje.";
-                sendRequestStatus.style.color = 'red';
-                return;
-            }
-            throw targetError;
-        }
-
-        const toUserId = targetUser.id;
-
-        // 2. Check if a request already exists (pending, accepted, or rejected)
-        const { data: existingRequests, error: existingError } = await supabase
-            .from('friend_requests')
-            .select('*')
-            // POPRAWIONA SKŁADNIA DLA .or()
-            .or(`and(from_user_id.eq.${currentUser.id},to_user_id.eq.${toUserId}),and(from_user_id.eq.${toUserId},to_user_id.eq.${currentUser.id})`);
-
-
-        if (existingError) throw existingError;
-
-        if (existingRequests && existingRequests.length > 0) {
-            const alreadyFriends = existingRequests.some(req =>
-                (req.from_user_id === currentUser.id && req.to_user_id === toUserId && req.status === 'accepted') ||
-                (req.from_user_id === toUserId && req.to_user_id === currentUser.id && req.status === 'accepted')
-            );
-            const pendingRequestSentByMe = existingRequests.some(req =>
-                req.from_user_id === currentUser.id && req.to_user_id === toUserId && req.status === 'pending'
-            );
-             const pendingRequestSentToMe = existingRequests.some(req =>
-                req.from_user_id === toUserId && req.to_user_id === currentUser.id && req.status === 'pending'
-            );
-
-            if (alreadyFriends) {
-                sendRequestStatus.textContent = `Jesteś już znajomym z ${friendEmail}.`;
-                sendRequestStatus.style.color = 'orange';
-                return;
-            }
-            if (pendingRequestSentByMe) {
-                sendRequestStatus.textContent = `Zaproszenie do ${friendEmail} zostało już wysłane i oczekuje na akceptację.`;
-                sendRequestStatus.style.color = 'orange';
-                return;
-            }
-            if (pendingRequestSentToMe) {
-                sendRequestStatus.textContent = `Masz oczekujące zaproszenie od ${friendEmail}. Akceptuj je w zakładce 'Powiadomienia'.`;
-                sendRequestStatus.style.color = 'orange';
-                return;
-            }
-        }
-
-        // 3. Insert the new friend request
-        const { error: insertError } = await supabase
-            .from('friend_requests')
-            .insert({
-                from_user_id: currentUser.id,
-                to_user_id: toUserId,
-                status: 'pending'
-            });
-
-        if (insertError) throw insertError;
-
-        sendRequestStatus.textContent = `Zaproszenie do ${friendEmail} zostało wysłane pomyślnie!`;
-        sendRequestStatus.style.color = 'green';
-        friendEmailInput.value = ''; // Clear input
-
-        // Send WebSocket notification to the target user
-        if (socket && socket.readyState === WebSocket.OPEN) { // Dodano sprawdzenie stanu socket
-            socket.send(JSON.stringify({
-                type: 'friendRequest',
-                toUserId: toUserId,
-                fromEmail: currentUser.email,
-                fromUserId: currentUser.id
-            }));
-        } else {
-            console.warn("[handleSendFriendRequest] WebSocket not open, cannot send friendRequest notification.");
-            sendRequestStatus.textContent = "Połączenie z serwerem nie jest aktywne. Spróbuj ponownie za chwilę.";
-            sendRequestStatus.style.color = 'orange';
-        }
-
-
-    } catch (error) {
-        console.error('Error sending friend request:', error.message);
-        sendRequestStatus.textContent = `Wystąpił błąd: ${error.message}`;
-        sendRequestStatus.style.color = 'red';
-    }
-}
-
-/**
- * Aktualizuje licznik powiadomień wyświetlany na ikonie dzwonka.
- */
-async function updateNotificationCount() {
-    if (!currentUser || !notificationCount) return;
-
-    try {
-        const { count, error } = await supabase
-            .from('friend_requests')
-            .select('*', { count: 'exact', head: true })
-            .eq('to_user_id', currentUser.id)
-            .eq('status', 'pending');
-
-        if (error) throw error;
-
-        if (count > 0) {
-            notificationCount.textContent = count;
-            notificationCount.classList.remove('hidden');
-        } else {
-            notificationCount.classList.add('hidden');
-        }
-    } catch (error) {
-        console.error('Error fetching notification count:', error.message);
     }
 }
 
@@ -2069,18 +1738,6 @@ async function initializeApp() {
 
         // NOWY ELEMENT: Przycisk do włączania dźwięków
         enableSoundButton = document.getElementById('enableSoundButton'); console.log(`UI Element: enableSoundButton found: ${!!enableSoundButton}`);
-
-        // NOWE ELEMENTY DLA FUNKCJONALNOŚCI ZNAJOMYCH
-        addFriendButton = document.getElementById('addFriendButton'); console.log(`UI Element: addFriendButton found: ${!!addFriendButton}`);
-        notificationButton = document.getElementById('notificationButton'); console.log(`UI Element: notificationButton found: ${!!notificationButton}`);
-        notificationCount = document.getElementById('notificationCount'); console.log(`UI Element: notificationCount found: ${!!notificationCount}`);
-        friendRequestModal = document.getElementById('friendRequestModal'); console.log(`UI Element: friendRequestModal found: ${!!friendRequestModal}`);
-        closeFriendRequestModal = document.getElementById('closeFriendRequestModal'); console.log(`UI Element: closeFriendRequestModal found: ${!!closeFriendRequestModal}`);
-        friendEmailInput = document.getElementById('friendEmailInput'); console.log(`UI Element: friendEmailInput found: ${!!friendEmailInput}`);
-        sendFriendRequestButton = document.getElementById('sendFriendRequestButton'); console.log(`UI Element: sendFriendRequestButton found: ${!!sendFriendRequestButton}`);
-        sendRequestStatus = document.getElementById('sendRequestStatus'); console.log(`UI Element: sendRequestStatus found: ${!!sendRequestStatus}`);
-        pendingRequestsList = document.getElementById('pendingFriendRequestsList'); console.log(`UI Element: pendingRequestsList found: ${!!pendingRequestsList}`);
-        noPendingRequestsText = document.getElementById('noPendingRequestsText'); console.log(`UI Element: noPendingRequestsText found: ${!!noPendingRequestsText}`);
 
 
         container = document.querySelector('.container'); console.log(`UI Element: container found: ${!!container}`);
@@ -2109,15 +1766,10 @@ async function initializeApp() {
         typingIndicatorMessages = document.getElementById('typingIndicator'); console.log(`UI Element: typingIndicatorMessages found: ${!!typingIndicatorMessages}`);
 
         // Aktualizacja tej linii
-        messageContainer = document.getElementById('messageContainer');
+        messageContainer = document.getElementById('messageContainer'); 
         console.log(`UI Element: messageContainer found: ${!!messageContainer}`); // Dostosowane logowanie
 
-        // WAŻNE: Najpierw pobieramy chatFooter, zanim użyjemy go do pobrania jego potomków.
-        chatFooter = document.querySelector('.chat-footer');
-        console.log(`UI Element: chatFooter found: ${!!chatFooter}`);
-
-        // Teraz możemy bezpiecznie pobierać elementy potomne chatFooter
-        // Upewnij się, że element ma klasę 'attach-button' (co jest w HTML)
+        chatFooter = document.querySelector('.chat-footer'); console.log(`UI Element: chatFooter found: ${!!chatFooter}`);
         attachButton = chatFooter ? chatFooter.querySelector('.attach-button') : null; console.log(`UI Element: attachButton found: ${!!attachButton}`);
         messageInput = document.getElementById('messageInput'); console.log(`UI Element: messageInput found: ${!!messageInput}`);
         emojiButton = chatFooter ? chatFooter.querySelector('.emoji-button') : null; console.log(`UI Element: emojiButton found: ${!!emojiButton}`);
@@ -2129,16 +1781,13 @@ async function initializeApp() {
         noActiveUsersText = document.getElementById('noActiveUsersText'); console.log(`UI Element: noActiveUsersText found: ${!!noActiveUsersText}`);
 
         const criticalElementsCheck = {
-            mainHeader, menuButton, dropdownMenu, themeToggle, logoutButton, enableSoundButton,
-            addFriendButton, notificationButton, notificationCount, friendRequestModal, closeFriendRequestModal,
-            friendEmailInput, sendFriendRequestButton, sendRequestStatus, pendingRequestsList, noPendingRequestsText,
+            mainHeader, menuButton, dropdownMenu, themeToggle, logoutButton, enableSoundButton, 
             container, sidebarWrapper, mainNavIcons, onlineUsersMobile,
             sidebarEl, searchInput, contactsListEl,
             chatAreaWrapper, logoScreen, chatArea,
             chatHeader, backButton, chatUserName, userStatusSpan,
             chatHeaderActions, chatSettingsButton, chatSettingsDropdown,
-            typingStatusHeader, typingIndicatorMessages, messageContainer,
-            // Sprawdzamy też, czy chatFooter został znaleziony i jego potomkowie
+            typingStatusHeader, typingIndicatorMessages, messageContainer, 
             chatFooter, attachButton, messageInput, emojiButton, sendButton,
             rightSidebarWrapper, rightSidebar, activeUsersListEl, noActiveUsersText
         };
@@ -2151,17 +1800,17 @@ async function initializeApp() {
                 allElementsFound = false;
             }
         }
-
+        
         if (!allElementsFound) {
             console.error('[initializeApp] Initialization failed due to missing critical UI elements. Aborting.');
             showCustomMessage('Wystąpił krytyczny błąd inicjalizacji. Brakuje elementów interfejsu. Sprawdź konsolę przeglądarki.', 'error');
-            return;
+            return; 
         } else {
             console.log('[initializeApp] All critical UI elements found. Proceeding with app initialization.');
         }
 
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
+        
         if (sessionError) {
             console.error('[initializeApp] Error getting Supabase session:', sessionError.message);
             showCustomMessage(`Błąd uwierzytelniania: ${sessionError.message}. Przekierowuję do logowania.`, 'error');
@@ -2174,7 +1823,7 @@ async function initializeApp() {
             window.location.href = 'login.html';
             return;
         }
-
+        
         currentUser = session.user; // Ensure currentUser is set from Supabase
         console.log('[initializeApp] Current authenticated user ID:', currentUser.id, 'Email:', currentUser.email);
 
@@ -2188,20 +1837,26 @@ async function initializeApp() {
                         name: currentUser.id,
                         room: currentRoom || 'global'
                     }));
+                    // ZMIANA: Wyślij status "offline" z timestampem przy zamykaniu strony
+                    socket.send(JSON.stringify({
+                        type: 'status',
+                        user: currentUser.id,
+                        online: false,
+                        last_seen: new Date().toISOString()
+                    }));
                 } catch (sendError) {
-                    console.warn(`[beforeunload] Failed to send leave message via WebSocket: ${sendError.message}`);
+                    console.warn(`[beforeunload] Failed to send offline status: ${sendError.message}`);
                 }
             }
         });
         console.log("[initializeApp] 'beforeunload' listener attached for WebSocket leave signal.");
 
-        // 4. Load profiles and contacts
-        console.log("[initializeApp] Loading user profiles and contacts...");
-        await loadAllProfiles();
-        await loadContacts(); // This now calls loadUnreadMessagesFromSupabase internally
-        console.log("[initializeApp] User profiles and contacts loaded.");
+        // 4. Load profiles (loadContacts will be called after WS connection)
+        console.log("[initializeApp] Loading user profiles (before WS init)...");
+        await loadAllProfiles(); // Keep this here as it's a prerequisite for getUserLabelById etc.
+        console.log("[initializeApp] User profiles loaded.");
 
-        // 5. Initialize WebSocket connection
+        // 5. Initialize WebSocket connection (this will now trigger loadContacts on open)
         console.log("[initializeApp] Initializing WebSocket connection...");
         initWebSocket();
 
@@ -2223,7 +1878,7 @@ async function initializeApp() {
             if (logoScreen) logoScreen.classList.add('hidden'); // Ensure hidden on mobile init
             console.log("[initializeApp] Mobile initial state: chatArea inactive, logoScreen hidden.");
         }
-
+        
         if (messageInput) messageInput.disabled = true;
         if (sendButton) sendButton.disabled = true;
 
@@ -2231,47 +1886,47 @@ async function initializeApp() {
         console.log("[initializeApp] Attaching general UI event listeners...");
         backButton.addEventListener('click', () => {
             console.log('[backButton] Back button clicked (UI)');
-
+            
             // Wysyłamy wiadomość 'leave' do serwera, informując go, że opuszczamy obecny pokój czatu
             if (socket && socket.readyState === WebSocket.OPEN && currentRoom && currentRoom !== 'global') {
                 socket.send(JSON.stringify({
                     type: 'leave',
                     name: currentUser.id,
-                    room: currentRoom
+                    room: currentRoom 
                 }));
                 console.log(`[backButton] Sent leave message to WebSocket for room: ${currentRoom}`);
             }
-
-            resetChatView();
+            
+            resetChatView(); 
 
             if (window.matchMedia('(max-width: 768px)').matches) {
                 console.log("[backButton] Mobile view logic triggered. Showing sidebar.");
                 if (sidebarWrapper) {
-                    sidebarWrapper.classList.remove('hidden-on-mobile');
+                    sidebarWrapper.classList.remove('hidden-on-mobile'); 
                     console.log("[backButton] Mobile: sidebarWrapper visible.");
                 } else { console.warn("[backButton] Mobile: sidebarWrapper not found."); }
-
+                
                 if (chatAreaWrapper) {
-                    chatAreaWrapper.classList.remove('active-on-mobile');
-                    chatAreaWrapper.style.display = 'none'; // Ensure it's hidden after backing out
+                    chatAreaWrapper.classList.remove('active-on-mobile'); 
+                    chatAreaWrapper.style.display = 'none'; 
                     console.log("[backButton] Mobile: chatAreaWrapper deactivated and hidden.");
                 } else { console.warn("[backButton] Mobile: chatAreaWrapper not found."); }
-
+                
                 if (chatArea) {
-                    chatArea.classList.remove('active');
+                    chatArea.classList.remove('active'); 
                     console.log("[backButton] Mobile: chatArea deactivated.");
                 } else { console.warn("[backButton] Mobile: chatArea not found."); }
-
+                
                 if (logoScreen) {
-                    logoScreen.classList.add('hidden');
+                    logoScreen.classList.add('hidden'); 
                     console.log("[backButton] Mobile: logoScreen hidden.");
                 } else { console.warn("[backButton] Mobile: logoScreen not found."); }
-
+                
                 if (backButton) {
-                    backButton.style.display = 'none';
+                    backButton.style.display = 'none'; 
                     console.log("[backButton] Mobile: backButton hidden.");
                 } else { console.warn("[backButton] Mobile: backButton not found."); }
-
+                
                 if (rightSidebarWrapper) {
                     rightSidebarWrapper.style.display = 'none';
                     console.log("[backButton] Mobile: rightSidebarWrapper hidden.");
@@ -2281,26 +1936,26 @@ async function initializeApp() {
             } else {
                 console.log("[backButton] Desktop view logic triggered. Showing logo screen.");
                 if (logoScreen) {
-                    logoScreen.classList.remove('hidden');
+                    logoScreen.classList.remove('hidden'); 
                     console.log("[backButton] Desktop: logoScreen visible.");
                 } else { console.warn("[backButton] Desktop: logoScreen not found."); }
-
+                
                 if (chatArea) {
-                    chatArea.classList.remove('active');
+                    chatArea.classList.remove('active'); 
                     console.log("[backButton] Desktop: chatArea deactivated.");
                 } else { console.warn("[backButton] Desktop: chatArea not found."); }
-
+                
                 if (chatAreaWrapper) {
-                    chatAreaWrapper.classList.remove('active-on-mobile');
-                    chatAreaWrapper.style.display = 'flex';
+                    chatAreaWrapper.classList.remove('active-on-mobile'); 
+                    chatAreaWrapper.style.display = 'flex'; 
                     console.log("[backButton] Desktop: chatAreaWrapper set to flex.");
                 } else { console.warn("[backButton] Desktop: chatAreaWrapper not found."); }
             }
         });
 
         menuButton.addEventListener('click', (event) => {
-            event.stopPropagation();
-            dropdownMenu.classList.toggle('hidden');
+            event.stopPropagation(); 
+            dropdownMenu.classList.toggle('hidden'); 
             console.log(`[initializeApp] Menu dropdown toggled. Hidden: ${dropdownMenu.classList.contains('hidden')}`);
         });
 
@@ -2311,6 +1966,7 @@ async function initializeApp() {
             }
             if (!dropdownMenu.classList.contains('hidden') && menuButton && !menuButton.contains(event.target)) {
                 dropdownMenu.classList.add('hidden');
+                console.log("[initializeApp] Main dropdown hidden due to outside click.");
             }
         });
 
@@ -2343,13 +1999,18 @@ async function initializeApp() {
                     socket.send(JSON.stringify({
                         type: 'status',
                         user: currentUser.id,
-                        online: false
+                        online: false,
+                        last_seen: new Date().toISOString() // ZMIANA: Wyslij timestamp last_seen przy wylogowaniu
                     }));
                     console.log(`[logoutButton] Sent 'offline' status for user ${currentUser.id} before logging out.`);
                 } catch (sendError) {
                     console.warn(`[logoutButton] Failed to send offline status: ${sendError.message}`);
                 }
             }
+
+            // No Firestore listener to detach here, as we are using Supabase for unread messages.
+            // unreadConversationsInfo.clear(); // Clear local unread info (handled by loadUnreadMessagesFromSupabase on next login)
+            // updateDocumentTitle(); // Reset title (handled by loadUnreadMessagesFromSupabase on next login)
 
             const { error } = await supabase.auth.signOut();
             if (error) {
@@ -2384,108 +2045,84 @@ async function initializeApp() {
             });
         }
 
-        // NOWE LISTENERY DLA FUNKCJONALNOŚCI ZNAJOMYCH
-        if (addFriendButton) {
-            addFriendButton.addEventListener('click', () => showFriendRequestModal('send'));
-        }
-        if (notificationButton) {
-            notificationButton.addEventListener('click', () => showFriendRequestModal('pending'));
-        }
-        if (closeFriendRequestModal) {
-            closeFriendRequestModal.addEventListener('click', hideFriendRequestModal);
-            // Close modal when clicking outside
-            friendRequestModal.addEventListener('click', (event) => {
-                if (event.target === friendRequestModal) {
-                    hideFriendRequestModal();
-                }
-            });
-        }
-        if (sendFriendRequestButton) {
-            sendFriendRequestButton.addEventListener('click', handleSendFriendRequest);
-        }
-        // Initial load of notification count
-        await updateNotificationCount();
-
 
         function handleMediaQueryChange(mq) {
             console.log(`[handleMediaQueryChange] Media query listener triggered. mq.matches: ${mq.matches} (max-width: 768px)`);
             if (mq.matches) {
                 console.log("[handleMediaQueryChange] Mobile view activated. Adjusting initial visibility for mobile.");
                 if (sidebarWrapper) {
-                    sidebarWrapper.classList.remove('hidden-on-mobile');
+                    sidebarWrapper.classList.remove('hidden-on-mobile'); 
                     console.log("[handleMediaQueryChange] Mobile: sidebarWrapper ensured visible (no hidden-on-mobile).");
                 } else { console.warn("[handleMediaQueryChange] Mobile: sidebarWrapper not found in mq change."); }
 
                 if (chatAreaWrapper) {
-                    chatAreaWrapper.classList.remove('active-on-mobile');
-                    chatAreaWrapper.style.display = 'none';
+                    chatAreaWrapper.classList.remove('active-on-mobile'); 
+                    chatAreaWrapper.style.display = 'none'; 
                     console.log("[handleMediaQueryChange] Mobile: chatAreaWrapper hidden.");
                 } else { console.warn("[handleMediaQueryChange] Mobile: chatAreaWrapper not found in mq change."); }
 
                 if (chatArea) {
-                    chatArea.classList.remove('active');
+                    chatArea.classList.remove('active'); 
                     console.log("[handleMediaQueryChange] Mobile: chatArea deactivated.");
                 } else { console.warn("[handleMediaQueryChange] Mobile: chatArea not found in mq change."); }
-
+                
                 if (logoScreen) {
-                    logoScreen.classList.add('hidden');
+                    logoScreen.classList.add('hidden'); 
                     console.log("[handleMediaQueryChange] Mobile: logoScreen hidden.");
                 } else { console.warn("[handleMediaQueryChange] Mobile: logoScreen not found in mq change."); }
-
+                
                 if (backButton) {
-                    backButton.style.display = 'none';
+                    backButton.style.display = 'none'; 
                     console.log("[handleMediaQueryChange] Mobile: backButton hidden.");
                 } else { console.warn("[handleMediaQueryChange] Mobile: backButton not found in mq change."); }
-
+                
                 if (rightSidebarWrapper) {
                     rightSidebarWrapper.style.display = 'none';
                     console.log("[handleMediaQueryChange] Mobile: rightSidebarWrapper hidden.");
-                } else { console.warn("[handleMediaQueryChange] Mobile: rightSidebarWrapper not found."); }
-
-
+                } else { console.warn("[handleMediaQueryChange] Mobile: rightSidebarWrapper not found in mq change."); }
             } else { // Widok desktopowy/tabletowy (min-width: 769px)
                 console.log("[handleMediaQueryChange] Desktop/Tablet view activated. Adjusting initial visibility for desktop.");
                 if (sidebarWrapper) {
-                    sidebarWrapper.classList.remove('hidden-on-mobile');
+                    sidebarWrapper.classList.remove('hidden-on-mobile'); 
                     console.log("[handleMediaQueryChange] Desktop: sidebarWrapper visible.");
                 } else { console.warn("[handleMediaQueryChange] Desktop: sidebarWrapper not found in mq change."); }
-
+                
                 if (chatAreaWrapper) {
-                    chatAreaWrapper.classList.remove('active-on-mobile');
-                    chatAreaWrapper.style.display = 'flex';
+                    chatAreaWrapper.classList.remove('active-on-mobile'); 
+                    chatAreaWrapper.style.display = 'flex'; 
                     console.log("[handleMediaQueryChange] Desktop: chatAreaWrapper set to flex.");
                 } else { console.warn("[handleMediaQueryChange] Desktop: chatAreaWrapper not found in mq change."); }
-
+                
                 // On desktop, logoScreen should be visible by default, chatArea should be hidden unless a chat is active
                 if (logoScreen) {
                     // Only show logoScreen if no chat is currently selected
                     if (!currentChatUser) { // If no current chat user, show logo screen
-                        logoScreen.classList.remove('hidden');
+                        logoScreen.classList.remove('hidden'); 
                         console.log("[handleMediaQueryChange] Desktop: logoScreen visible (no current chat user).");
                     } else { // If a chat is active, ensure logo screen is hidden
                         logoScreen.classList.add('hidden');
                         console.log("[handleMediaQueryChange] Desktop: logoScreen hidden (chat active).");
                     }
                 } else { console.warn("[handleMediaQueryChange] Desktop: logoScreen not found in mq change."); }
-
+                
                 if (chatArea) {
                     // Only activate chatArea if a chat is currently selected
                     if (currentChatUser) { // If current chat user, ensure chatArea is active
-                        chatArea.classList.add('active');
+                        chatArea.classList.add('active'); 
                         console.log("[handleMediaQueryChange] Desktop: chatArea activated (current chat user).");
                     } else { // If no chat active, ensure chatArea is not active
-                        chatArea.classList.remove('active');
+                        chatArea.classList.remove('active'); 
                         console.log("[handleMediaQueryChange] Desktop: chatArea deactivated (no current chat user).");
                     }
                 } else { console.warn("[handleMediaQueryChange] Desktop: chatArea not found in mq change."); }
-
+                
                 if (rightSidebarWrapper) {
-                    rightSidebarWrapper.style.display = 'flex';
+                    rightSidebarWrapper.style.display = 'flex'; 
                     console.log("[handleMediaQueryChange] Desktop: rightSidebarWrapper visible.");
                 } else { console.warn("[handleMediaQueryChange] Desktop: rightSidebarWrapper not found in mq change."); }
-
+                
                 if (backButton) {
-                    backButton.style.display = 'none';
+                    backButton.style.display = 'none'; 
                     console.log("[handleMediaQueryChange] Desktop: backButton hidden.");
                 } else { console.warn("[handleMediaQueryChange] Desktop: backButton not found in mq change."); }
             }
@@ -2496,24 +2133,14 @@ async function initializeApp() {
         mq.addListener(handleMediaQueryChange);
         handleMediaQueryChange(mq); // Initial call to set correct layout
 
+        // Now that the app is initialized, request notification permission
+        await requestNotificationPermission();
+        
         // Sprawdź politykę Autoplay po inicjalizacji
         checkAudioAutoplay();
 
         // Tytuł zakładki będzie aktualizowany po załadowaniu nieprzeczytanych wiadomości z Supabase
         updateDocumentTitle(); // Ustawienie początkowego tytułu na "Komunikator"
-
-        // Wczytaj stan powiadomień wizualnych z localStorage
-        const savedVisualNotificationsState = localStorage.getItem('visualNotificationsEnabled');
-        if (savedVisualNotificationsState !== null) {
-            visualNotificationsEnabled = JSON.parse(savedVisualNotificationsState);
-        }
-        // ZMIANA: Wczytaj stan powiadomień dźwiękowych z localStorage
-        const savedSoundNotificationsState = localStorage.getItem('soundNotificationsEnabled');
-        if (savedSoundNotificationsState !== null) {
-            soundNotificationsEnabled = JSON.parse(savedSoundNotificationsState);
-        }
-
-        // Ustaw checkboxa, jeśli istnieje, w setupChatSettingsDropdown() - to jest wywoływane później
 
         console.log("[initializeApp] Komunikator application initialized successfully.");
     } catch (e) {
