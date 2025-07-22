@@ -76,6 +76,20 @@ let baseDocumentTitle = "Komunikator";
 // Klucz: roomId, Wartość: { unreadCount: number, lastSenderId: string }
 let unreadConversationsInfo = new Map(); 
 
+// NOWE ZMIENNE DLA FUNKCJONALNOŚCI ZNAJOMYCH
+let addFriendButton;
+let notificationButton;
+let notificationCount;
+let friendRequestModal;
+let closeFriendRequestModal;
+let friendEmailInput;
+let sendFriendRequestButton;
+let sendRequestStatus;
+let pendingRequestsList;
+let noPendingRequestsText;
+let myFriendsList; // Lista moich znajomych (do wyświetlania w przyszłości, jeśli będzie potrzeba)
+
+
 // --- Funkcje pomocnicze ---
 
 /**
@@ -1047,7 +1061,7 @@ function updateUserStatusIndicator(userId, isOnline, lastSeenTimestamp = null) {
                     li.classList.add('active-user-item');
                     li.dataset.userId = userId;
 
-                    const avatarSrc = `https://i.pravatar.cc/150?img=${userId.charCodeAt(0) % 70 + 1}`;
+                    let avatarSrc = `https://i.pravatar.cc/150?img=${userId.charCodeAt(0) % 70 + 1}`;
 
                     li.innerHTML = `
                         <img src="${avatarSrc}" alt="Avatar" class="avatar">
@@ -1300,6 +1314,33 @@ function initWebSocket() {
                     // Ta wiadomość jest obsługiwana w loadContacts() poprzez Promise,
                     // więc nie potrzebujemy tu dodatkowej logiki, chyba że chcemy odświeżyć UI
                     // w inny sposób po otrzymaniu tych danych.
+                    break;
+                case 'friendRequest':
+                    // Przychodzące zaproszenie do znajomych
+                    showCustomMessage(`Otrzymano nowe zaproszenie od: ${data.fromEmail}`, "info");
+                    // Odśwież listę oczekujących zaproszeń
+                    loadPendingFriendRequests();
+                    // Zwiększ licznik powiadomień
+                    updateNotificationCount();
+                    break;
+                case 'friendRequestAccepted':
+                    // Zaproszenie zaakceptowane
+                    showCustomMessage(`Użytkownik ${data.acceptedByEmail} zaakceptował Twoje zaproszenie!`, "success");
+                    // Odśwież listy konwersacji i znajomych
+                    loadAllConversations();
+                    updateNotificationCount();
+                    break;
+                case 'friendRequestRejected':
+                    // Zaproszenie odrzucone
+                    showCustomMessage(`Użytkownik ${data.rejectedByEmail} odrzucił Twoje zaproszenie.`, "info");
+                    // Odśwież listę oczekujących zaproszeń, jeśli ma to sens (może po prostu usunąć z listy wysłanych)
+                    loadPendingFriendRequests();
+                    updateNotificationCount();
+                    break;
+                case 'newConversation':
+                    // Nowa konwersacja została utworzona, np. po zaakceptowaniu zaproszenia
+                    // Ponownie załaduj wszystkie konwersacje, aby uwzględnić nową
+                    loadAllConversations();
                     break;
                 default:
                     console.warn("[WS MESSAGE] Unknown WS message type:", data.type, data);
@@ -1720,6 +1761,310 @@ async function loadUnreadMessagesFromSupabase() {
 }
 
 
+// --- Obsługa znajomych i zaproszeń ---
+
+/**
+ * Pokazuje modal zaproszeń do znajomych.
+ * @param {string} sectionToShow - 'send' lub 'pending' do określenia, którą sekcję pokazać.
+ */
+function showFriendRequestModal(sectionToShow) {
+    if (friendRequestModal) {
+        friendRequestModal.classList.remove('hidden');
+        friendRequestModal.classList.add('visible'); // Dodaj klasę visible
+        
+        const sendSection = document.getElementById('sendFriendRequestSection');
+        const pendingSection = document.getElementById('pendingRequestsSection');
+        
+        if (sectionToShow === 'send') {
+            sendSection.classList.remove('hidden');
+            pendingSection.classList.add('hidden');
+            sendRequestStatus.textContent = ''; // Clear status message
+        } else if (sectionToShow === 'pending') {
+            sendSection.classList.add('hidden');
+            pendingSection.classList.remove('hidden');
+            loadPendingFriendRequests(); // Load requests when modal opens
+        }
+    }
+}
+
+/**
+ * Ukrywa modal zaproszeń do znajomych.
+ */
+function hideFriendRequestModal() {
+    if (friendRequestModal) {
+        friendRequestModal.classList.remove('visible'); // Usuń klasę visible
+        friendRequestModal.classList.add('hidden');
+    }
+}
+
+
+/**
+ * Ładuje oczekujące zaproszenia do znajomych dla bieżącego użytkownika.
+ */
+async function loadPendingFriendRequests() {
+    if (!currentUser) return;
+
+    try {
+        const { data, error } = await supabase
+            .from('friend_requests')
+            .select('id, from_user_id, profiles!from_user_id(email)') // Select email from profiles table
+            .eq('to_user_id', currentUser.id)
+            .eq('status', 'pending');
+
+        if (error) throw error;
+
+        pendingRequestsList.innerHTML = ''; // Clear previous list
+
+        if (data.length === 0) {
+            noPendingRequestsText.classList.remove('hidden');
+        } else {
+            noPendingRequestsText.classList.add('hidden');
+            data.forEach(request => {
+                const listItem = document.createElement('li');
+                listItem.classList.add('friend-request-item'); // Dodaj klasę dla stylizacji
+                listItem.innerHTML = `
+                    <div class="request-info">
+                        <span>Zaproszenie od: <span class="sender-name">${request.profiles.email}</span></span>
+                    </div>
+                    <div class="request-actions">
+                        <button class="accept-request accept-button" data-request-id="${request.id}" data-from-user-id="${request.from_user_id}">Akceptuj</button>
+                        <button class="reject-request reject-button" data-request-id="${request.id}" data-from-user-id="${request.from_user_id}">Odrzuć</button>
+                    </div>
+                `;
+                pendingRequestsList.appendChild(listItem);
+            });
+
+            // Add event listeners for accept/reject buttons
+            pendingRequestsList.querySelectorAll('.accept-request').forEach(button => {
+                button.addEventListener('click', async (event) => {
+                    const requestId = event.target.dataset.requestId;
+                    const fromUserId = event.target.dataset.fromUserId;
+                    await handleFriendRequestResponse(requestId, fromUserId, 'accepted');
+                });
+            });
+
+            pendingRequestsList.querySelectorAll('.reject-request').forEach(button => {
+                button.addEventListener('click', async (event) => {
+                    const requestId = event.target.dataset.requestId;
+                    const fromUserId = event.target.dataset.fromUserId; // Potrzebne do wysłania powiadomienia do nadawcy
+                    await handleFriendRequestResponse(requestId, fromUserId, 'rejected');
+                });
+            });
+        }
+    } catch (error) {
+        console.error('Error loading pending friend requests:', error.message);
+        showCustomMessage("Nie udało się załadować zaproszeń do znajomych.", "error");
+    }
+}
+
+/**
+ * Handles accepting or rejecting a friend request.
+ * @param {string} requestId - The ID of the friend request.
+ * @param {string} fromUserId - The ID of the user who sent the request.
+ * @param {string} status - 'accepted' or 'rejected'.
+ */
+async function handleFriendRequestResponse(requestId, fromUserId, status) {
+    try {
+        const { error } = await supabase
+            .from('friend_requests')
+            .update({ status: status })
+            .eq('id', requestId);
+
+        if (error) throw error;
+
+        showCustomMessage(`Zaproszenie ${status === 'accepted' ? 'zaakceptowane' : 'odrzucone'}.`, "success");
+
+        if (status === 'accepted' && fromUserId) {
+            // Create a new DM room for the accepted friendship
+            const { data: newRoom, error: roomError } = await supabase
+                .from('rooms')
+                .insert({ type: 'dm' })
+                .select()
+                .single();
+
+            if (roomError) {
+                console.error('Error creating new room on friend accept:', roomError);
+                showCustomMessage("Nie udało się utworzyć pokoju czatu dla nowego znajomego.", "error");
+                return;
+            }
+
+            // Add both users to room_participants
+            const { error: participant1Error } = await supabase
+                .from('room_participants')
+                .insert({ room_id: newRoom.id, user_id: currentUser.id });
+            const { error: participant2Error } = await supabase
+                .from('room_participants')
+                .insert({ room_id: newRoom.id, user_id: fromUserId });
+
+            if (participant1Error || participant2Error) {
+                console.error('Error adding participants to new room:', participant1Error || participant2Error);
+                showCustomMessage("Wystąpił błąd podczas dodawania uczestników do pokoju czatu.", "error");
+                return;
+            }
+
+            // Notify sender via WebSocket that request was accepted and new conversation created
+            sendMessage(JSON.stringify({
+                type: 'friendRequestAccepted',
+                fromUserId: currentUser.id,
+                acceptedByEmail: currentUser.email, // Or username
+                newRoomId: newRoom.id,
+                otherUserId: fromUserId
+            }));
+            // Also notify that a new conversation has been created
+            sendMessage(JSON.stringify({
+                type: 'newConversation',
+                userId: fromUserId // Notify the other user to reload conversations
+            }));
+        } else if (status === 'rejected') {
+             sendMessage(JSON.stringify({
+                type: 'friendRequestRejected',
+                fromUserId: currentUser.id, // The current user rejected
+                rejectedByEmail: currentUser.email,
+                toUserId: fromUserId // The user who sent the request
+            }));
+        }
+
+        loadPendingFriendRequests(); // Refresh the list
+        await loadAllConversations(); // Reload conversations to show the new one
+        updateNotificationCount(); // Update notification bell
+    } catch (error) {
+        console.error('Error responding to friend request:', error.message);
+        showCustomMessage("Nie udało się zaktualizować statusu zaproszenia.", "error");
+    }
+}
+
+/**
+ * Handles sending a new friend request.
+ */
+async function handleSendFriendRequest() {
+    const friendEmail = friendEmailInput.value.trim();
+
+    if (!friendEmail) {
+        sendRequestStatus.textContent = "Adres e-mail nie może być pusty.";
+        sendRequestStatus.style.color = 'red';
+        return;
+    }
+    if (currentUser.email === friendEmail) {
+        sendRequestStatus.textContent = "Nie możesz wysłać zaproszenia do samego siebie.";
+        sendRequestStatus.style.color = 'orange';
+        return;
+    }
+
+    try {
+        // 1. Find the target user's ID by email
+        const { data: targetUser, error: targetError } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('email', friendEmail)
+            .single();
+
+        if (targetError) {
+            if (targetError.code === 'PGRST116') { // No rows found
+                sendRequestStatus.textContent = "Użytkownik o podanym adresie e-mail nie istnieje.";
+                sendRequestStatus.style.color = 'red';
+                return;
+            }
+            throw targetError;
+        }
+
+        const toUserId = targetUser.id;
+
+        // 2. Check if a request already exists (pending, accepted, or rejected)
+        const { data: existingRequests, error: existingError } = await supabase
+            .from('friend_requests')
+            .select('*')
+            .or(`(from_user_id.eq.${currentUser.id},to_user_id.eq.${toUserId}),(from_user_id.eq.${toUserId},to_user_id.eq.${currentUser.id})`);
+
+        if (existingError) throw existingError;
+
+        if (existingRequests && existingRequests.length > 0) {
+            const alreadyFriends = existingRequests.some(req => 
+                (req.from_user_id === currentUser.id && req.to_user_id === toUserId && req.status === 'accepted') ||
+                (req.from_user_id === toUserId && req.to_user_id === currentUser.id && req.status === 'accepted')
+            );
+            const pendingRequestSentByMe = existingRequests.some(req => 
+                req.from_user_id === currentUser.id && req.to_user_id === toUserId && req.status === 'pending'
+            );
+             const pendingRequestSentToMe = existingRequests.some(req => 
+                req.from_user_id === toUserId && req.to_user_id === currentUser.id && req.status === 'pending'
+            );
+
+            if (alreadyFriends) {
+                sendRequestStatus.textContent = `Jesteś już znajomym z ${friendEmail}.`;
+                sendRequestStatus.style.color = 'orange';
+                return;
+            }
+            if (pendingRequestSentByMe) {
+                sendRequestStatus.textContent = `Zaproszenie do ${friendEmail} zostało już wysłane i oczekuje na akceptację.`;
+                sendRequestStatus.style.color = 'orange';
+                return;
+            }
+            if (pendingRequestSentToMe) {
+                sendRequestStatus.textContent = `Masz oczekujące zaproszenie od ${friendEmail}. Akceptuj je w zakładce 'Powiadomienia'.`;
+                sendRequestStatus.style.color = 'orange';
+                return;
+            }
+        }
+        
+        // 3. Insert the new friend request
+        const { error: insertError } = await supabase
+            .from('friend_requests')
+            .insert({
+                from_user_id: currentUser.id,
+                to_user_id: toUserId,
+                status: 'pending'
+            });
+
+        if (insertError) throw insertError;
+
+        sendRequestStatus.textContent = `Zaproszenie do ${friendEmail} zostało wysłane pomyślnie!`;
+        sendRequestStatus.style.color = 'green';
+        friendEmailInput.value = ''; // Clear input
+
+        // Send WebSocket notification to the target user
+        sendMessage(JSON.stringify({
+            type: 'friendRequest',
+            toUserId: toUserId,
+            fromEmail: currentUser.email,
+            fromUserId: currentUser.id
+        }));
+
+    } catch (error) {
+        console.error('Error sending friend request:', error.message);
+        sendRequestStatus.textContent = `Wystąpił błąd: ${error.message}`;
+        sendRequestStatus.style.color = 'red';
+    }
+}
+
+/**
+ * Aktualizuje licznik powiadomień wyświetlany na ikonie dzwonka.
+ */
+async function updateNotificationCount() {
+    if (!currentUser) return;
+
+    try {
+        const { count, error } = await supabase
+            .from('friend_requests')
+            .select('*', { count: 'exact', head: true })
+            .eq('to_user_id', currentUser.id)
+            .eq('status', 'pending');
+
+        if (error) throw error;
+
+        if (notificationCount) {
+            if (count > 0) {
+                notificationCount.textContent = count;
+                notificationCount.classList.remove('hidden');
+            } else {
+                notificationCount.classList.add('hidden');
+            }
+        }
+    } catch (error) {
+        console.error('Error fetching notification count:', error.message);
+    }
+}
+
+
 // --- Główna inicjalizacja aplikacji ---
 /**
  * Main function to initialize the entire application.
@@ -1738,6 +2083,18 @@ async function initializeApp() {
 
         // NOWY ELEMENT: Przycisk do włączania dźwięków
         enableSoundButton = document.getElementById('enableSoundButton'); console.log(`UI Element: enableSoundButton found: ${!!enableSoundButton}`);
+
+        // NOWE ELEMENTY DLA FUNKCJONALNOŚCI ZNAJOMYCH
+        addFriendButton = document.getElementById('addFriendButton'); console.log(`UI Element: addFriendButton found: ${!!addFriendButton}`);
+        notificationButton = document.getElementById('notificationButton'); console.log(`UI Element: notificationButton found: ${!!notificationButton}`);
+        notificationCount = document.getElementById('notificationCount'); console.log(`UI Element: notificationCount found: ${!!notificationCount}`);
+        friendRequestModal = document.getElementById('friendRequestModal'); console.log(`UI Element: friendRequestModal found: ${!!friendRequestModal}`);
+        closeFriendRequestModal = document.getElementById('closeFriendRequestModal'); console.log(`UI Element: closeFriendRequestModal found: ${!!closeFriendRequestModal}`);
+        friendEmailInput = document.getElementById('friendEmailInput'); console.log(`UI Element: friendEmailInput found: ${!!friendEmailInput}`);
+        sendFriendRequestButton = document.getElementById('sendFriendRequestButton'); console.log(`UI Element: sendFriendRequestButton found: ${!!sendFriendRequestButton}`);
+        sendRequestStatus = document.getElementById('sendRequestStatus'); console.log(`UI Element: sendRequestStatus found: ${!!sendRequestStatus}`);
+        pendingRequestsList = document.getElementById('pendingFriendRequestsList'); console.log(`UI Element: pendingRequestsList found: ${!!pendingRequestsList}`);
+        noPendingRequestsText = document.getElementById('noPendingRequestsText'); console.log(`UI Element: noPendingRequestsText found: ${!!noPendingRequestsText}`);
 
 
         container = document.querySelector('.container'); console.log(`UI Element: container found: ${!!container}`);
@@ -1782,6 +2139,8 @@ async function initializeApp() {
 
         const criticalElementsCheck = {
             mainHeader, menuButton, dropdownMenu, themeToggle, logoutButton, enableSoundButton, 
+            addFriendButton, notificationButton, notificationCount, friendRequestModal, closeFriendRequestModal,
+            friendEmailInput, sendFriendRequestButton, sendRequestStatus, pendingRequestsList, noPendingRequestsText,
             container, sidebarWrapper, mainNavIcons, onlineUsersMobile,
             sidebarEl, searchInput, contactsListEl,
             chatAreaWrapper, logoScreen, chatArea,
@@ -2044,6 +2403,28 @@ async function initializeApp() {
                 enableSoundButton.classList.add('hidden'); // Ukryj przycisk po kliknięciu
             });
         }
+
+        // NOWE LISTENERY DLA FUNKCJONALNOŚCI ZNAJOMYCH
+        if (addFriendButton) {
+            addFriendButton.addEventListener('click', () => showFriendRequestModal('send'));
+        }
+        if (notificationButton) {
+            notificationButton.addEventListener('click', () => showFriendRequestModal('pending'));
+        }
+        if (closeFriendRequestModal) {
+            closeFriendRequestModal.addEventListener('click', hideFriendRequestModal);
+            // Close modal when clicking outside
+            friendRequestModal.addEventListener('click', (event) => {
+                if (event.target === friendRequestModal) {
+                    hideFriendRequestModal();
+                }
+            });
+        }
+        if (sendFriendRequestButton) {
+            sendFriendRequestButton.addEventListener('click', handleSendFriendRequest);
+        }
+        // Initial load of notification count
+        await updateNotificationCount();
 
 
         function handleMediaQueryChange(mq) {
