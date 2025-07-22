@@ -27,7 +27,7 @@ let allFriends = []; // Nowa zmienna do przechowywania listy znajomych
 let container;
 let sidebarWrapper; // Kontener dla main-nav-icons i sidebar
 let mainNavIcons;
-let navIcons;
+let navIcons; // Deklaracja przeniesiona wyżej
 let addNewButton; // Nowy przycisk "Dodaj nowy kontakt/grupę"
 
 let onlineUsersMobile; // NOWA ZMIENNA: Kontener dla aktywnych użytkowników na mobile
@@ -693,7 +693,7 @@ async function handleConversationClick(user, clickedConvoItemElement) {
 
             // ZMIANA: Pobierz status z mapy onlineUsers, która teraz przechowuje obiekty
             const userStatus = onlineUsers.get(String(user.id));
-            const isUserOnline = userStatus ? userStatus.isOnline : false;
+            const isUserOnline = userStatus ? userStatus.status : false; // Changed to userStatus.status
             userStatusSpan.classList.toggle('online', isUserOnline);
             userStatusSpan.classList.toggle('offline', !isUserOnline);
 
@@ -724,8 +724,6 @@ async function handleConversationClick(user, clickedConvoItemElement) {
             unreadCount.textContent = ''; // Upewnij się, że tekst jest wyczyszczony
             unreadCount.classList.add('hidden');
             console.log(`[handleConversationClick] Unread count reset for room ${newRoom} (UI only).`);
-        } else {
-            console.warn("[handleConversationClick] Unread count element not found for selected conversation.");
         }
         // updateDocumentTitle will be called after Supabase update.
 
@@ -2107,8 +2105,9 @@ async function initializeApp() {
 
         container = document.querySelector('.container'); console.log(`UI Element: container found: ${!!container}`);
         sidebarWrapper = document.querySelector('.sidebar-wrapper'); console.log(`UI Element: sidebarWrapper found: ${!!sidebarWrapper}`);
-        mainNavIcons = document.querySelector('.main-nav-icons'); console.log(`UI Element: mainNavIcons found: ${navIcons.length > 0}`);
+        // POPRAWKA: Przeniesiono definicję navIcons przed użyciem w mainNavIcons logu
         navIcons = document.querySelectorAll('.nav-icon'); console.log(`UI Element: navIcons found: ${navIcons.length > 0}`);
+        mainNavIcons = document.querySelector('.main-nav-icons'); console.log(`UI Element: mainNavIcons found: ${!!mainNavIcons}`); // Zmieniono logowanie na sprawdzanie samego elementu
         addNewButton = document.querySelector('.nav-icon.add-new-button'); console.log(`UI Element: addNewButton found: ${!!addNewButton}`);
 
 
