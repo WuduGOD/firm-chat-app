@@ -490,9 +490,13 @@ async function loadContacts() {
             return;
         }
 
+        // Dodatkowe sprawdzenie, aby upewnić się, że friendsData jest tablicą
+        // Chociaż Supabase zazwyczaj zwraca [], jeśli nie ma wyników, to dobra praktyka.
+        const safeFriendsData = friendsData || [];
+
         // Extract friend IDs and fetch their profiles
         const friendIds = new Set();
-        friendsData.forEach(f => {
+        safeFriendsData.forEach(f => { // Użyj safeFriendsData tutaj
             if (String(f.user_id) === String(currentUser.id)) {
                 friendIds.add(f.friend_id);
             } else if (String(f.friend_id) === String(currentUser.id)) {
@@ -501,7 +505,8 @@ async function loadContacts() {
         });
 
         // Store allFriends globally for easy access
-        const allProfilesData = await loadAllProfiles(); // Upewnij się, że profile są załadowane
+        // TUTAJ JEST GŁÓWNA ZMIANA: Zapewniamy, że allProfilesData jest tablicą
+        const allProfilesData = (await loadAllProfiles()) || []; // Jeśli loadAllProfiles() zwróci null/undefined, użyj pustej tablicy
         allFriends = allProfilesData.filter(profile => friendIds.has(profile.id));
         console.log("[loadContacts] Current user's friends:", allFriends);
 
@@ -541,7 +546,8 @@ async function loadContacts() {
             console.warn("[loadContacts] WebSocket not open, cannot request last messages for user rooms. Falling back to no last messages.");
         }
 
-        const contactsWithLastMessage = allFriends.map(user => {
+        // Upewnij się, że allFriends jest tablicą, zanim użyjesz map
+        const contactsWithLastMessage = (allFriends || []).map(user => {
             const roomId = getRoomName(String(currentUser.id), String(user.id));
             const lastMessage = lastMessagesMap[roomId] || null;
             return { user, lastMessage, roomId };
