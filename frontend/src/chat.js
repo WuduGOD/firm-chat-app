@@ -50,7 +50,7 @@ let chatSettingsDropdown; // ID: chatSettingsDropdown, Klasa: dropdown chat-sett
 let typingStatusHeader; // ID: typingStatus, Klasa: typing-status (status w nagłówku czatu)
 let typingIndicatorMessages; // ID: typingIndicator (animowane kropki w obszarze wiadomości)
 
-let messageContainer; 
+let messageContainer;
 
 let chatFooter;
 let attachButton;
@@ -90,7 +90,7 @@ let audioContextInitiated = false; // Flaga do śledzenia, czy AudioContext zost
 let baseDocumentTitle = "Komunikator";
 // Mapa przechowująca nieprzeczytane wiadomości dla każdej konwersacji
 // Klucz: roomId, Wartość: { unreadCount: number, lastSenderId: string }
-let unreadConversationsInfo = new Map(); 
+let unreadConversationsInfo = new Map();
 
 // --- Funkcje pomocnicze ---
 
@@ -198,7 +198,7 @@ function ensureAudioContext() {
  */
 function playNotificationSound() {
     console.log("[Notifications] Attempting to play notification sound...");
-    
+
     try {
         ensureAudioContext(); // Zawsze upewnij się, że AudioContext jest aktywny
 
@@ -383,7 +383,7 @@ function resetChatView() {
     currentChatUser = null; // Reset current chat user
     currentRoom = null; // Reset current room
     console.log("[resetChatView] currentChatUser and currentRoom reset to null.");
-    
+
     // Remove active state from conversation item if any
     if (currentActiveConvoItem) {
         currentActiveConvoItem.classList.remove('active'); // Deactivate active conversation item
@@ -418,7 +418,7 @@ async function fetchMessageHistory(roomId) {
     console.log(`[fetchMessageHistory] Fetching history for room: ${roomId}`);
     try {
         // Assume a maximum limit for history to prevent excessive data transfer
-        const limit = 50; 
+        const limit = 50;
         const { data, error } = await supabase
             .from('messages')
             .select('content, sender_id, created_at, room_id')
@@ -470,7 +470,7 @@ function sortConversations(conversations) {
  */
 async function loadContacts() {
     console.log("[loadContacts] Loading contacts (friends only)...");
-    if (!currentUser || !currentUser.id || !currentUser.email) {
+    if (!currentUser || !currentUser.id) {
         console.error("[loadContacts] Current user is not defined, cannot load contacts.");
         return;
     }
@@ -480,8 +480,9 @@ async function loadContacts() {
         // Uproszczone zapytanie do tabeli 'friends'
         const { data: friendsData, error: friendsError } = await supabase
             .from('friends')
-            .select('user1_id, user2_id')
-            .or(`user1_id.eq.${currentUser.id},user2_id.eq.${currentUser.id}`);
+            .select('user_id, friend_id, status')
+            .or(`user_id.eq.${currentUser.id},friend_id.eq.${currentUser.id}`)
+            .eq('status', 'accepted'); // Only accepted relations are friends
 
         if (friendsError) {
             console.error('[loadContacts] Error loading friends from Supabase:', friendsError.message, friendsError.details, friendsError.hint);
@@ -490,13 +491,18 @@ async function loadContacts() {
         }
 
         // Extract friend IDs and fetch their profiles
-        const friendIds = friendsData.map(f => {
-            return String(f.user1_id) === String(currentUser.id) ? f.user2_id : f.user1_id;
+        const friendIds = new Set();
+        friendsData.forEach(f => {
+            if (String(f.user_id) === String(currentUser.id)) {
+                friendIds.add(f.friend_id);
+            } else if (String(f.friend_id) === String(currentUser.id)) {
+                friendIds.add(f.user_id);
+            }
         });
 
         // Store allFriends globally for easy access
-        const allProfiles = await loadAllProfiles(); // Upewnij się, że profile są załadowane
-        allFriends = allProfiles.filter(profile => friendIds.includes(profile.id));
+        const allProfilesData = await loadAllProfiles(); // Upewnij się, że profile są załadowane
+        allFriends = allProfilesData.filter(profile => friendIds.has(profile.id));
         console.log("[loadContacts] Current user's friends:", allFriends);
 
         if (contactsListEl) {
@@ -553,7 +559,7 @@ async function loadContacts() {
             const avatarSrc = `https://i.pravatar.cc/150?img=${user.id.charCodeAt(0) % 70 + 1}`;
 
             let previewText = "Brak wiadomości";
-            let timeText = ""; 
+            let timeText = "";
 
             if (lastMessage) {
                 const senderName = String(lastMessage.username) === String(currentUser.id) ? "Ja" : (getUserLabelById(lastMessage.username) || lastMessage.username);
@@ -562,7 +568,7 @@ async function loadContacts() {
                 const lastMessageTime = new Date(lastMessage.inserted_at);
                 if (isNaN(lastMessageTime.getTime())) {
                     console.warn(`[loadContacts] Invalid Date for room ${roomId}. Raw inserted_at: ${lastMessage.inserted_at}`);
-                    timeText = "Invalid Date"; 
+                    timeText = "Invalid Date";
                 } else {
                     timeText = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
                 }
@@ -678,12 +684,12 @@ async function handleConversationClick(user, clickedConvoItemElement) {
 
         if (chatUserName && messageInput && sendButton && userStatusSpan) {
             chatUserName.textContent = currentChatUser.username;
-            
+
             // ZMIANA: Pobierz status z mapy onlineUsers, która teraz przechowuje obiekty
             const userStatus = onlineUsers.get(String(user.id));
             const isUserOnline = userStatus ? userStatus.isOnline : false;
-            userStatusSpan.classList.toggle('online', isUserOnline); 
-            userStatusSpan.classList.toggle('offline', !isUserOnline); 
+            userStatusSpan.classList.toggle('online', isUserOnline);
+            userStatusSpan.classList.toggle('offline', !isUserOnline);
 
             if (isUserOnline) {
                 userStatusSpan.textContent = 'Online';
@@ -794,14 +800,14 @@ function setupSendMessage() {
 
         // Send message on button click
         sendButton.onclick = () => {
-            console.log("[DEBUG: SEND BUTTON] Send button clicked or Enter pressed."); 
-            
+            console.log("[DEBUG: SEND BUTTON] Send button clicked or Enter pressed.");
+
             const text = messageInput.value.trim();
             console.log(`[DEBUG: SEND BUTTON] Message text length: ${text.length}`);
-            
+
             if (!text || !currentChatUser || !socket || socket.readyState !== WebSocket.OPEN) {
                 console.warn("Cannot send message: check conditions below.");
-                
+
                 // Dodatkowe logi do zdiagnozowania warunku
                 console.log(`Debug conditions: text=${!!text}, currentChatUser=${!!currentChatUser ? currentChatUser.id : 'null'}, socket=${!!socket}, socket.readyState=${socket ? socket.readyState : 'N/A'}`);
 
@@ -822,13 +828,13 @@ function setupSendMessage() {
                 type: 'message',
                 username: currentUser.id,
                 text,
-                room: currentRoom, 
+                room: currentRoom,
                 inserted_at: new Date().toISOString()
             };
 
             console.log("[setupSendMessage] Sending message via WS:", msgData);
-            socket.send(JSON.stringify(msgData)); 
-            
+            socket.send(JSON.stringify(msgData));
+
             // Przenieś konwersację na górę dla wysłanych wiadomości
             const convoItemToMove = contactsListEl.querySelector(`.contact[data-room-id="${currentRoom}"]`);
             if (convoItemToMove && contactsListEl.firstChild !== convoItemToMove) {
@@ -836,16 +842,16 @@ function setupSendMessage() {
                 console.log(`[Reorder] Moved conversation for room ${currentRoom} to top due to sent message.`);
             }
 
-            messageInput.value = ''; 
-            messageInput.focus(); 
+            messageInput.value = '';
+            messageInput.focus();
         };
 
         // Send message on Enter key press
         messageInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
-                e.preventDefault(); 
-                console.log("[DEBUG: SEND BUTTON] Enter key pressed."); 
-                sendButton.click(); 
+                e.preventDefault();
+                console.log("[DEBUG: SEND BUTTON] Enter key pressed.");
+                sendButton.click();
             }
         });
         console.log("[setupSendMessage] Message send event listeners attached.");
@@ -859,7 +865,7 @@ function setupSendMessage() {
  * Includes logic for displaying browser notifications.
  * @param {Object} msg - The message object.
  */
-async function addMessageToChat(msg) { 
+async function addMessageToChat(msg) {
     console.log(`[addMessageToChat] Processing message: sender=${msg.username}, room=${msg.room}. Global currentRoom (active chat): ${currentRoom}`);
 
     try {
@@ -868,29 +874,29 @@ async function addMessageToChat(msg) {
 
         if (!convoItemToUpdate) {
             console.warn(`[addMessageToChat] Conversation item for room ${msg.room} not found initially. Reloading contacts to sync list.`);
-            await loadContacts(); 
+            await loadContacts();
             convoItemToUpdate = contactsListEl.querySelector(`.contact[data-room-id="${msg.room}"]`);
-            if (!convoItemToUpdate) { 
+            if (!convoItemToUpdate) {
                 console.error(`[addMessageToChat] Conversation item for room ${msg.room} still NOT found after reloading contacts. Cannot update UI.`);
-                return; 
+                return;
             }
         }
 
         const previewEl = convoItemToUpdate.querySelector('.last-message');
         const timeEl = convoItemToUpdate.querySelector('.message-time');
-        const unreadCountEl = convoItemToUpdate.querySelector('.unread-count'); 
+        const unreadCountEl = convoItemToUpdate.querySelector('.unread-count');
 
         let previewText = "Brak wiadomości"; // Default text if no messages
 
         if (previewEl && timeEl) {
             const senderId = String(msg.username);
             const senderName = senderId === String(currentUser.id) ? "Ja" : (getUserLabelById(senderId) || senderId);
-            previewText = `${senderName}: ${msg.text}`; 
+            previewText = `${senderName}: ${msg.text}`;
             const lastMessageTime = new Date(msg.inserted_at || Date.now()); // Fallback to current time if inserted_at is missing
-            const timeString = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" }); 
-            timeEl.textContent = timeString; 
-            console.log(`[addMessageToChat] Updated preview and time for room ${msg.room}. Preview: "${previewText}"`); 
-            previewEl.textContent = previewText; 
+            const timeString = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+            timeEl.textContent = timeString;
+            console.log(`[addMessageToChat] Updated preview and time for room ${msg.room}. Preview: "${previewText}"`);
+            previewEl.textContent = previewText;
         } else {
             console.warn(`[addMessageToChat] Could not find previewEl or timeEl for room ${msg.room}. Preview/time not updated.`);
         }
@@ -916,7 +922,7 @@ async function addMessageToChat(msg) {
                 const senderLabel = getUserLabelById(msg.username) || msg.username;
                 const notificationTitle = `Nowa wiadomość od ${senderLabel}`;
                 const notificationBody = msg.text;
-                
+
                 const notification = new Notification(notificationTitle, {
                     body: notificationBody,
                     icon: 'https://placehold.co/48x48/000000/FFFFFF?text=💬', // Prosta ikona powiadomienia
@@ -951,7 +957,7 @@ async function addMessageToChat(msg) {
 
         // Display message in the active chat only if it belongs to the current room
         console.log(`[addMessageToChat Display Check] Comparing msg.room (${msg.room}) with currentRoom (${currentRoom}). Match: ${msg.room === currentRoom}`);
-        if (msg.room === currentRoom) { 
+        if (msg.room === currentRoom) {
             const div = document.createElement('div');
             div.classList.add('message', String(msg.username) === String(currentUser.id) ? 'sent' : 'received');
 
@@ -964,7 +970,7 @@ async function addMessageToChat(msg) {
             `;
             if (messageContainer) {
                 messageContainer.appendChild(div);
-                messageContainer.scrollTop = messageContainer.scrollHeight; 
+                messageContainer.scrollTop = messageContainer.scrollHeight;
                 console.log(`[addMessageToChat] Message displayed in active chat for room: ${msg.room}`);
             } else {
                 console.error("[addMessageToChat] messageContainer is null when trying to add message to active chat.");
@@ -998,8 +1004,8 @@ function updateUserStatusIndicator(userId, isOnline, lastSeenTimestamp = null) {
         if (currentChatUser && userStatusSpan) {
             console.log(`[Status Update Debug] currentChatUser.id: ${currentChatUser.id}, userId from WS: ${userId}`);
             if (String(currentChatUser.id) === String(userId)) {
-                userStatusSpan.classList.toggle('online', isOnline); 
-                userStatusSpan.classList.toggle('offline', !isOnline); 
+                userStatusSpan.classList.toggle('online', isOnline);
+                userStatusSpan.classList.toggle('offline', !isOnline);
 
                 if (isOnline) {
                     userStatusSpan.textContent = 'Online';
@@ -1057,9 +1063,9 @@ function updateUserStatusIndicator(userId, isOnline, lastSeenTimestamp = null) {
                         const userProfile = allFriends.find(p => String(p.id) === String(userId)); // ZMIANA: Szukaj tylko wśród znajomych
                         if (userProfile) {
                             const mockConvoItem = document.createElement('li');
-                            mockConvoItem.dataset.convoId = userProfile.id; 
+                            mockConvoItem.dataset.convoId = userProfile.id;
                             mockConvoItem.dataset.email = userProfile.email;
-                            mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(userProfile.id)); 
+                            mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(userProfile.id));
                             handleConversationClick(userProfile, mockConvoItem);
                         } else {
                             console.warn(`[updateUserStatusIndicator] Clicked active user ${userId} is not in current user's friends list. Cannot open chat.`);
@@ -1112,7 +1118,7 @@ function updateUserStatusIndicator(userId, isOnline, lastSeenTimestamp = null) {
                         <img src="${avatarSrc}" alt="Avatar" class="avatar">
                         <span class="username">${getUserLabelById(userId) || user.username || 'Nieznany'}</span>
                     `;
-                    
+
                     // Add click listener for mobile item
                     div.addEventListener('click', async () => {
                         const userProfile = allFriends.find(p => String(p.id) === String(userId)); // ZMIANA: Szukaj tylko wśród znajomych
@@ -1136,7 +1142,7 @@ function updateUserStatusIndicator(userId, isOnline, lastSeenTimestamp = null) {
                 console.error("onlineUsersMobile not found during status update.");
             }
         }
-        
+
         // Update status dots in the main contacts list (unchanged - only dot, no timestamp)
         const contactConvoItem = contactsListEl.querySelector(`.contact[data-convo-id="${userId}"]`);
         if (contactConvoItem) {
@@ -1170,17 +1176,17 @@ function showTypingIndicator(usernameId) {
         if (currentChatUser && String(usernameId) === String(currentChatUser.id)) {
             // Pokaż wskaźnik pisania w nagłówku
             if (typingStatusHeader) {
-                typingStatusHeader.classList.remove('hidden'); 
+                typingStatusHeader.classList.remove('hidden');
                 typingStatusHeader.textContent = `${getUserLabelById(usernameId)} pisze...`; // Set text
                 console.log(`[showTypingIndicator] Typing status header shown for ${getUserLabelById(usernameId)}`);
             }
             // Pokaż animowane kropki w obszarze wiadomości
             if (typingIndicatorMessages) {
-                typingIndicatorMessages.classList.remove('hidden'); 
+                typingIndicatorMessages.classList.remove('hidden');
                 console.log(`[showTypingIndicator] Typing indicator messages shown for ${getUserLabelById(usernameId)}`);
             }
 
-            clearTimeout(typingTimeout); 
+            clearTimeout(typingTimeout);
             typingTimeout = setTimeout(() => {
                 if (typingStatusHeader) {
                     typingStatusHeader.classList.add('hidden');
@@ -1191,7 +1197,7 @@ function showTypingIndicator(usernameId) {
                     typingIndicatorMessages.classList.add('hidden');
                     console.log(`[showTypingIndicator] Typing indicator messages hidden for ${getUserLabelById(usernameId)}`);
                 }
-            }, 3000); 
+            }, 3000);
             console.log(`${getUserLabelById(usernameId)} is typing...`);
         } else {
             console.log(`[showTypingIndicator] Typing update for ${getUserLabelById(usernameId)}, but not current chat user. Ignoring.`);
@@ -1217,8 +1223,8 @@ function initWebSocket() {
 
     socket.onopen = async () => { // Make onopen async
         console.log('[initWebSocket] WebSocket connected successfully.');
-        reconnectAttempts = 0; 
-        if (currentUser) { 
+        reconnectAttempts = 0;
+        if (currentUser) {
             // ZAWSZE dołączamy do "global" pokoju po otwarciu WS
             socket.send(JSON.stringify({
                 type: 'join',
@@ -1245,12 +1251,12 @@ function initWebSocket() {
                 }));
                 console.log(`[initWebSocket] Re-joining previous room (${currentRoom}) after reconnection.`);
             }
-            
+
             // NOWE MIEJSCE DLA loadContacts() i loadActiveUsers()
             // Te funkcje wymagają otwartego połączenia WebSocket
             console.log("[initWebSocket] Loading user profiles and contacts (after WS open)...");
             await loadAllProfiles(); // Ensure profiles are loaded before contacts
-            await loadContacts(); 
+            await loadContacts();
             console.log("[initWebSocket] User profiles and contacts loaded.");
 
             // Request active users list after successful connection
@@ -1271,7 +1277,7 @@ function initWebSocket() {
                         username: data.username,
                         text: data.text,
                         inserted_at: data.inserted_at,
-                        room: data.room, 
+                        room: data.room,
                     });
                     // Przenieś konwersację na górę tylko dla nowo otrzymanych wiadomości
                     if (String(data.username) !== String(currentUser.id)) { // Tylko jeśli wiadomość nie jest od nas samych
@@ -1298,7 +1304,7 @@ function initWebSocket() {
                     break;
                 case 'active_users':
                     console.log('[WS MESSAGE] Received initial active users list:', data.users);
-                    displayActiveUsers(data.users); 
+                    displayActiveUsers(data.users);
                     break;
                 // NOWY CASE: Obsługa ostatnich wiadomości dla pokoi użytkownika
                 case 'last_messages_for_user_rooms':
@@ -1317,16 +1323,16 @@ function initWebSocket() {
 
     socket.onclose = (event) => {
         console.log(`[initWebSocket] WebSocket disconnected. Code: ${event.code}, Reason: ${event.reason}`);
-        if (event.code !== 1000) { 
+        if (event.code !== 1000) {
             console.log('[initWebSocket] Attempting to reconnect...');
-            setTimeout(initWebSocket, Math.min(1000 * ++reconnectAttempts, 10000)); 
+            setTimeout(initWebSocket, Math.min(1000 * ++reconnectAttempts, 10000));
         }
     };
 
     socket.onerror = (error) => {
         console.error('[initWebSocket] WebSocket Error:', error);
         if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
-            socket.close(); 
+            socket.close();
         }
     };
 }
@@ -1364,12 +1370,12 @@ function displayActiveUsers(activeUsersData) {
     }
 
     try {
-        activeUsersListEl.innerHTML = ''; 
-        onlineUsersMobile.innerHTML = ''; 
+        activeUsersListEl.innerHTML = '';
+        onlineUsersMobile.innerHTML = '';
         onlineUsers.clear(); // Clear existing local data
 
         // ZMIANA: Filtruj aktywnych użytkowników, aby wyświetlać tylko znajomych, którzy są online
-        const onlineFriendsForDisplay = activeUsersData.filter(user => 
+        const onlineFriendsForDisplay = activeUsersData.filter(user =>
             String(user.id) !== String(currentUser.id) && // Wyklucz bieżącego użytkownika
             user.online && // Upewnij się, że użytkownik jest online
             allFriends.some(friend => String(friend.id) === String(user.id)) // Upewnij się, że użytkownik jest znajomym
@@ -1409,7 +1415,7 @@ function displayActiveUsers(activeUsersData) {
                         <img src="${avatarSrc}" alt="Avatar" class="avatar">
                         <span class="username">${getUserLabelById(user.id) || user.username || 'Nieznany'}</span>
                     `;
-                
+
                 divMobile.addEventListener('click', async () => {
                     const userProfile = allFriends.find(p => String(p.id) === String(user.id)); // ZMIANA: Szukaj tylko wśród znajomych
                     if (userProfile) {
@@ -1426,7 +1432,7 @@ function displayActiveUsers(activeUsersData) {
                 onlineUsersMobile.appendChild(divMobile);
             });
         }
-        
+
         // ZMIANA: Prawidłowe wypełnienie mapy onlineUsers dla WSZYSTKICH użytkowników otrzymanych z serwera
         activeUsersData.forEach(user => {
             onlineUsers.set(String(user.id), { isOnline: user.online, lastSeen: user.last_seen });
@@ -1450,7 +1456,7 @@ function setupChatSettingsDropdown() {
 
     try {
         chatSettingsButton.addEventListener('click', (event) => {
-            event.stopPropagation(); 
+            event.stopPropagation();
             chatSettingsDropdown.classList.toggle('hidden');
             console.log(`[setupChatSettingsDropdown] Chat settings dropdown toggled. Hidden: ${chatSettingsDropdown.classList.contains('hidden')}`);
         });
@@ -1469,8 +1475,8 @@ function setupChatSettingsDropdown() {
         const colorOptions = chatSettingsDropdown.querySelectorAll('.color-box');
         colorOptions.forEach(option => {
             option.addEventListener('click', () => {
-                colorOptions.forEach(box => box.classList.remove('active')); 
-                option.classList.add('active'); 
+                colorOptions.forEach(box => box.classList.remove('active'));
+                option.classList.add('active');
                 const colorTheme = option.dataset.color;
                 if (messageContainer) {
                     messageContainer.classList.remove('default-color', 'blue-color', 'green-color', 'red-color'); // Updated class names
@@ -1482,11 +1488,11 @@ function setupChatSettingsDropdown() {
             });
         });
 
-        const backgroundOptions = chatSettingsDropdown.querySelectorAll('.bg-box'); 
+        const backgroundOptions = chatSettingsDropdown.querySelectorAll('.bg-box');
         backgroundOptions.forEach(option => {
             option.addEventListener('click', () => {
-                backgroundOptions.forEach(box => box.classList.remove('active')); 
-                option.classList.add('active'); 
+                backgroundOptions.forEach(box => box.classList.remove('active'));
+                option.classList.add('active');
                 const bgTheme = option.dataset.bg;
                 if (messageContainer) {
                     // Ensure correct classes are removed/added. Your HTML uses classes like 'dark-bg' and 'pattern-bg' directly.
@@ -1510,7 +1516,7 @@ function setupChatSettingsDropdown() {
                         const { data, error } = await supabase
                             .from('profiles')
                             .update({ username: newNickname })
-                            .eq('id', currentUser.id); 
+                            .eq('id', currentUser.id);
 
                         if (error) {
                             throw error;
@@ -1518,11 +1524,11 @@ function setupChatSettingsDropdown() {
 
                         console.log('New nickname set:', newNickname, 'for user:', currentUser.id);
                         showCustomMessage(`Nickname '${newNickname}' has been set successfully.`, 'success');
-                        await loadAllProfiles(); 
+                        await loadAllProfiles();
                         if (chatUserName && currentChatUser && String(currentUser.id) === String(currentChatUser.id)) {
                             chatUserName.textContent = newNickname;
                         }
-                        await loadContacts(); 
+                        await loadContacts();
 
                     } catch (error) {
                         console.error('Error updating nickname:', error.message);
@@ -1564,7 +1570,7 @@ function setupChatSettingsDropdown() {
  */
 function updateDocumentTitle() {
     let totalUnreadConvos = 0;
-    let singleUnreadSenderId = null; 
+    let singleUnreadSenderId = null;
 
     // Iteruj po mapie, aby zliczyć nieprzeczytane konwersacje i znaleźć pojedynczego nadawcę
     unreadConversationsInfo.forEach((info, roomId) => {
@@ -1573,7 +1579,7 @@ function updateDocumentTitle() {
             if (totalUnreadConvos === 1) { // Pierwsza znaleziona nieprzeczytana konwersacja
                 singleUnreadSenderId = info.lastSenderId;
             } else { // Znaleziono więcej niż jedną, więc nie ma pojedynczego nadawcy
-                singleUnreadSenderId = null; 
+                singleUnreadSenderId = null;
             }
         }
     });
@@ -1612,8 +1618,8 @@ async function updateUnreadMessageCountInSupabase(roomId, senderId) {
                 last_sender_id: senderId,
                 updated_at: new Date().toISOString()
             }, {
-                onConflict: 'user_id, room_id', 
-                ignoreDuplicates: false 
+                onConflict: 'user_id, room_id',
+                ignoreDuplicates: false
             });
 
         if (error) {
@@ -1730,24 +1736,23 @@ async function loadFriendsAndRequests() {
         await loadContacts();
 
         // 2. Załaduj oczekujące zaproszenia (gdzie bieżący użytkownik jest odbiorcą i status to 'pending')
-        const { data: pendingReceivedRequests, error: receivedError } = await supabase
-            .from('friend_requests')
-            .select('id, sender_id, status')
-            .eq('receiver_id', currentUser.id)
+        const { data: pendingReceivedRequests, error: pendingError } = await supabase
+            .from('friends') // Changed from 'friend_requests' to 'friends'
+            .select('id, user_id, friend_id, status') // Changed sender_id to user_id
+            .eq('friend_id', currentUser.id) // Current user is the receiver
             .eq('status', 'pending');
 
-        if (receivedError) {
-            console.error('[Friends] Error fetching pending received friend requests from Supabase:', receivedError.message, receivedError.details, receivedError.hint);
-            showCustomMessage(`Błąd ładowania oczekujących zaproszeń: ${receivedError.message}`, 'error');
-            return;
+        if (pendingError) {
+            console.error("[Friends] Error fetching pending received friend requests from Supabase:", pendingError.message, pendingError.details, pendingError.hint);
+        } else {
+			console.log("[Friends] Pending received friend requests:", pendingReceivedRequests);
+
+            // 3. Renderuj oczekujące zaproszenia w modal
+            renderPendingFriendRequests(pendingReceivedRequests);
+
+            // 4. Zaktualizuj badge powiadomień
+            updateNotificationBadge(pendingReceivedRequests.length);
         }
-        console.log("[Friends] Pending received requests:", pendingReceivedRequests);
-
-        // 3. Renderuj oczekujące zaproszenia w modal
-        renderPendingFriendRequests(pendingReceivedRequests);
-
-        // 4. Zaktualizuj badge powiadomień
-        updateNotificationBadge(pendingReceivedRequests.length);
 
     } catch (e) {
         console.error("[Friends] Caught error in loadFriendsAndRequests:", e);
@@ -1804,36 +1809,45 @@ async function sendFriendRequest() {
 
         const recipientId = recipientProfile.id;
 
-        // 2. Sprawdź, czy zaproszenie już istnieje (pending lub accepted)
-        const { data: existingRequest, error: existingRequestError } = await supabase
-            .from('friend_requests')
-            .select('id, status')
-            .or(`(sender_id.eq.${currentUser.id},receiver_id.eq.${recipientId}),(sender_id.eq.${recipientId},receiver_id.eq.${currentUser.id})`);
+        // 2. Sprawdź, czy zaproszenie już istnieje w tabeli 'friends'
+        const { data: existingRelation, error: relationError } = await supabase
+            .from('friends')
+            .select('id, status, user_id, friend_id')
+            .or(`(user_id.eq.${currentUser.id},friend_id.eq.${recipientId}),(user_id.eq.${recipientId},friend_id.eq.${currentUser.id})`)
+            .single();
 
-        if (existingRequestError) {
-            console.error('[Friends] Error checking existing request:', existingRequestError.message, existingRequestError.details, existingRequestError.hint);
-            sendRequestStatus.textContent = 'Błąd podczas sprawdzania istniejących zaproszeń.';
+        if (relationError && relationError.code !== 'PGRST116') { // PGRST116 means "no rows found" which is expected if no relation exists
+            console.error('[Friends] Error checking existing relation:', relationError.message, relationError.details, relationError.hint);
+            sendRequestStatus.textContent = 'Błąd podczas sprawdzania istniejących relacji.';
             sendRequestStatus.style.color = 'red';
             return;
         }
 
-        if (existingRequest && existingRequest.length > 0) {
-            const request = existingRequest[0];
-            if (request.status === 'pending') {
-                sendRequestStatus.textContent = 'Zaproszenie już zostało wysłane lub oczekuje na Twoją akceptację.';
+        if (existingRelation) {
+            if (existingRelation.status === 'pending') {
+                // Check if it's a pending request sent by this user or received by this user
+                if (existingRelation.user_id === currentUser.id) {
+                    sendRequestStatus.textContent = "Zaproszenie do tego użytkownika już oczekuje.";
+                    sendRequestStatus.style.color = 'orange';
+                } else { // existingRelation.friend_id === currentUser.id
+                    sendRequestStatus.textContent = "Ten użytkownik wysłał Ci zaproszenie, które oczekuje na Twoją akceptację.";
+                    sendRequestStatus.style.color = 'orange';
+                }
+            } else if (existingRelation.status === 'accepted') {
+                sendRequestStatus.textContent = "Jesteście już znajomymi.";
                 sendRequestStatus.style.color = 'orange';
-            } else if (request.status === 'accepted') {
-                sendRequestStatus.textContent = 'Jesteście już znajomymi.';
-                sendRequestStatus.style.color = 'orange';
+            } else if (existingRelation.status === 'declined') {
+                 sendRequestStatus.textContent = "Zaproszenie zostało odrzucone. Spróbuj ponownie później.";
+                 sendRequestStatus.style.color = 'orange';
             }
             return;
         }
 
-        // 3. Wstaw nowe zaproszenie do bazy danych
+        // 3. Wstaw nowe zaproszenie do tabeli 'friends' ze statusem 'pending'
         const { data, error } = await supabase
-            .from('friend_requests')
+            .from('friends')
             .insert([
-                { sender_id: currentUser.id, receiver_id: recipientId, status: 'pending' }
+                { user_id: currentUser.id, friend_id: recipientId, status: 'pending' }
             ]);
 
         if (error) {
@@ -1878,18 +1892,18 @@ async function renderPendingFriendRequests(requests) {
         pendingRequestsSection.classList.remove('empty');
 
         // Załaduj profile wszystkich nadawców zaproszeń
-        const senderIds = requests.map(req => req.sender_id);
+        const senderIds = requests.map(req => req.user_id); // Changed from sender_id to user_id
         const senderProfiles = (await loadAllProfiles()).filter(p => senderIds.includes(p.id));
         const senderProfileMap = new Map(senderProfiles.map(p => [p.id, p]));
 
         requests.forEach(request => {
-            const senderProfile = senderProfileMap.get(request.sender_id);
+            const senderProfile = senderProfileMap.get(request.user_id); // Changed from sender_id to user_id
             const senderName = senderProfile ? (senderProfile.username || senderProfile.email) : 'Nieznany Użytkownik';
 
             const listItem = document.createElement('li');
             listItem.classList.add('friend-request-item');
             listItem.dataset.requestId = request.id;
-            listItem.dataset.senderId = request.sender_id;
+            listItem.dataset.senderId = request.user_id; // Changed from sender_id to user_id
 
             listItem.innerHTML = `
                 <div class="request-info">
@@ -1902,7 +1916,7 @@ async function renderPendingFriendRequests(requests) {
             `;
             pendingFriendRequestsList.appendChild(listItem);
 
-            listItem.querySelector('.accept-button').addEventListener('click', () => acceptFriendRequest(request.id, request.sender_id));
+            listItem.querySelector('.accept-button').addEventListener('click', () => acceptFriendRequest(request.id, request.user_id)); // Changed sender_id to user_id
             listItem.querySelector('.reject-button').addEventListener('click', () => declineFriendRequest(request.id));
         });
     }
@@ -1911,7 +1925,7 @@ async function renderPendingFriendRequests(requests) {
 /**
  * Akceptuje zaproszenie do znajomych.
  * @param {string} requestId - ID zaproszenia.
- * @param {string} senderId - ID nadawcy zaproszenia.
+ * @param {string} senderId - ID nadawcy zaproszenia (user_id w tabeli friends).
  */
 async function acceptFriendRequest(requestId, senderId) {
     if (!supabase || !currentUser || !currentUser.id) {
@@ -1919,39 +1933,18 @@ async function acceptFriendRequest(requestId, senderId) {
         return;
     }
     try {
-        // 1. Zaktualizuj status zaproszenia na 'accepted'
+        // Zaktualizuj status zaproszenia na 'accepted' w tabeli 'friends'
         const { error: updateError } = await supabase
-            .from('friend_requests')
+            .from('friends') // Changed from 'friend_requests' to 'friends'
             .update({ status: 'accepted', updated_at: new Date().toISOString() })
             .eq('id', requestId)
-            .eq('receiver_id', currentUser.id); // Upewnij się, że tylko odbiorca może zaakceptować
+            .eq('friend_id', currentUser.id) // Ensure current user is the receiver
+            .eq('user_id', senderId); // Ensure sender matches
 
         if (updateError) {
             console.error('[Friends] Error updating friend request status to accepted:', updateError.message, updateError.details, updateError.hint);
             showCustomMessage(`Błąd akceptacji zaproszenia: ${updateError.message}`, "error");
             return;
-        }
-
-        // 2. Dodaj wpisy do tabeli 'friends' (dwie strony relacji)
-        // Aby zapewnić unikalność i łatwe wyszukiwanie, user1_id i user2_id powinny być zawsze posortowane
-        const [id1, id2] = [String(currentUser.id), String(senderId)].sort();
-
-        const { error: insertError } = await supabase
-            .from('friends')
-            .insert([
-                { user1_id: id1, user2_id: id2 }
-            ]);
-
-        if (insertError) {
-            // Jeśli relacja już istnieje (np. przez race condition), to nie jest błąd krytyczny
-            if (insertError.code === '23505') { // duplicate key error
-                console.warn('[Friends] Friendship already exists for these users. Skipping insert.');
-            } else {
-                console.error('[Friends] Error inserting into friends table:', insertError.message, insertError.details, insertError.hint);
-                showCustomMessage(`Błąd dodawania do znajomych: ${insertError.message}`, "error");
-                // Możesz chcieć cofnąć status zaproszenia, jeśli dodanie do znajomych się nie powiodło
-                return;
-            }
         }
 
         showCustomMessage('Zaproszenie zaakceptowane! Jesteście teraz znajomymi.', 'success');
@@ -1981,12 +1974,12 @@ async function declineFriendRequest(requestId) {
         return;
     }
     try {
-        // Zaktualizuj status zaproszenia na 'declined' lub usuń je
+        // Zaktualizuj status zaproszenia na 'declined' w tabeli 'friends'
         const { error } = await supabase
-            .from('friend_requests')
+            .from('friends') // Changed from 'friend_requests' to 'friends'
             .update({ status: 'declined', updated_at: new Date().toISOString() })
             .eq('id', requestId)
-            .eq('receiver_id', currentUser.id); // Upewnij się, że tylko odbiorca może odrzucić
+            .eq('friend_id', currentUser.id); // Ensure current user is the receiver
 
         if (error) {
             console.error('[Friends] Error declining friend request:', error.message, error.details, error.hint);
@@ -2132,7 +2125,7 @@ async function initializeApp() {
         typingIndicatorMessages = document.getElementById('typingIndicator'); console.log(`UI Element: typingIndicatorMessages found: ${!!typingIndicatorMessages}`);
 
         // Aktualizacja tej linii
-        messageContainer = document.getElementById('messageContainer'); 
+        messageContainer = document.getElementById('messageContainer');
         console.log(`UI Element: messageContainer found: ${!!messageContainer}`); // Dostosowane logowanie
 
         chatFooter = document.querySelector('.chat-footer'); console.log(`UI Element: chatFooter found: ${!!chatFooter}`);
@@ -2147,7 +2140,7 @@ async function initializeApp() {
         noActiveUsersText = document.getElementById('noActiveUsersText'); console.log(`UI Element: noActiveUsersText found: ${!!noActiveUsersText}`);
 
         const criticalElementsCheck = {
-            mainHeader, menuButton, dropdownMenu, themeToggle, logoutButton, enableSoundButton, 
+            mainHeader, menuButton, dropdownMenu, themeToggle, logoutButton, enableSoundButton,
             addFriendButton, notificationButton, notificationBadge, friendRequestModal, closeFriendRequestModal,
             sendFriendRequestSection, friendEmailInput, sendFriendRequestButton, sendRequestStatus,
             pendingRequestsSection, pendingFriendRequestsList, noPendingRequestsText,
@@ -2156,7 +2149,7 @@ async function initializeApp() {
             chatAreaWrapper, logoScreen, chatArea,
             chatHeader, backButton, chatUserName, userStatusSpan,
             chatHeaderActions, chatSettingsButton, chatSettingsDropdown,
-            typingStatusHeader, typingIndicatorMessages, messageContainer, 
+            typingStatusHeader, typingIndicatorMessages, messageContainer,
             chatFooter, attachButton, messageInput, emojiButton, sendButton,
             rightSidebarWrapper, rightSidebar, activeUsersListEl, noActiveUsersText
         };
@@ -2169,17 +2162,17 @@ async function initializeApp() {
                 allElementsFound = false;
             }
         }
-        
+
         if (!allElementsFound) {
             console.error('[initializeApp] Initialization failed due to missing critical UI elements. Aborting.');
             showCustomMessage('Wystąpił krytyczny błąd inicjalizacji. Brakuje elementów interfejsu. Sprawdź konsolę przeglądarki.', 'error');
-            return; 
+            return;
         } else {
             console.log('[initializeApp] All critical UI elements found. Proceeding with app initialization.');
         }
 
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
+
         if (sessionError) {
             console.error('[initializeApp] Error getting Supabase session:', sessionError.message);
             showCustomMessage(`Błąd uwierzytelniania: ${sessionError.message}. Przekierowuję do logowania.`, 'error');
@@ -2192,7 +2185,7 @@ async function initializeApp() {
             window.location.href = 'login.html';
             return;
         }
-        
+
         currentUser = session.user; // Ensure currentUser is set from Supabase
         console.log('[initializeApp] Current authenticated user ID:', currentUser.id, 'Email:', currentUser.email);
 
@@ -2247,7 +2240,7 @@ async function initializeApp() {
             if (logoScreen) logoScreen.classList.add('hidden'); // Ensure hidden on mobile init
             console.log("[initializeApp] Mobile initial state: chatArea inactive, logoScreen hidden.");
         }
-        
+
         if (messageInput) messageInput.disabled = true;
         if (sendButton) sendButton.disabled = true;
 
@@ -2255,47 +2248,47 @@ async function initializeApp() {
         console.log("[initializeApp] Attaching general UI event listeners...");
         backButton.addEventListener('click', () => {
             console.log('[backButton] Back button clicked (UI)');
-            
+
             // Wysyłamy wiadomość 'leave' do serwera, informując go, że opuszczamy obecny pokój czatu
             if (socket && socket.readyState === WebSocket.OPEN && currentRoom && currentRoom !== 'global') {
                 socket.send(JSON.stringify({
                     type: 'leave',
                     name: currentUser.id,
-                    room: currentRoom 
+                    room: currentRoom
                 }));
                 console.log(`[backButton] Sent leave message to WebSocket for room: ${currentRoom}`);
             }
-            
-            resetChatView(); 
+
+            resetChatView();
 
             if (window.matchMedia('(max-width: 768px)').matches) {
                 console.log("[backButton] Mobile view logic triggered. Showing sidebar.");
                 if (sidebarWrapper) {
-                    sidebarWrapper.classList.remove('hidden-on-mobile'); 
+                    sidebarWrapper.classList.remove('hidden-on-mobile');
                     console.log("[backButton] Mobile: sidebarWrapper visible.");
                 } else { console.warn("[backButton] Mobile: sidebarWrapper not found."); }
-                
+
                 if (chatAreaWrapper) {
-                    chatAreaWrapper.classList.remove('active-on-mobile'); 
-                    chatAreaWrapper.style.display = 'none'; 
+                    chatAreaWrapper.classList.remove('active-on-mobile');
+                    chatAreaWrapper.style.display = 'none';
                     console.log("[backButton] Mobile: chatAreaWrapper deactivated and hidden.");
                 } else { console.warn("[backButton] Mobile: chatAreaWrapper not found."); }
-                
+
                 if (chatArea) {
-                    chatArea.classList.remove('active'); 
+                    chatArea.classList.remove('active');
                     console.log("[backButton] Mobile: chatArea deactivated.");
                 } else { console.warn("[backButton] Mobile: chatArea not found."); }
-                
+
                 if (logoScreen) {
-                    logoScreen.classList.add('hidden'); 
+                    logoScreen.classList.add('hidden');
                     console.log("[backButton] Mobile: logoScreen hidden.");
                 } else { console.warn("[backButton] Mobile: logoScreen not found."); }
-                
+
                 if (backButton) {
-                    backButton.style.display = 'none'; 
+                    backButton.style.display = 'none';
                     console.log("[backButton] Mobile: backButton hidden.");
                 } else { console.warn("[backButton] Mobile: backButton not found."); }
-                
+
                 if (rightSidebarWrapper) {
                     rightSidebarWrapper.style.display = 'none';
                     console.log("[backButton] Mobile: rightSidebarWrapper hidden.");
@@ -2305,26 +2298,26 @@ async function initializeApp() {
             } else {
                 console.log("[backButton] Desktop view logic triggered. Showing logo screen.");
                 if (logoScreen) {
-                    logoScreen.classList.remove('hidden'); 
+                    logoScreen.classList.remove('hidden');
                     console.log("[backButton] Desktop: logoScreen visible.");
                 } else { console.warn("[backButton] Desktop: logoScreen not found."); }
-                
+
                 if (chatArea) {
-                    chatArea.classList.remove('active'); 
+                    chatArea.classList.remove('active');
                     console.log("[backButton] Desktop: chatArea deactivated.");
                 } else { console.warn("[backButton] Desktop: chatArea not found."); }
-                
+
                 if (chatAreaWrapper) {
-                    chatAreaWrapper.classList.remove('active-on-mobile'); 
-                    chatAreaWrapper.style.display = 'flex'; 
+                    chatAreaWrapper.classList.remove('active-on-mobile');
+                    chatAreaWrapper.style.display = 'flex';
                     console.log("[backButton] Desktop: chatAreaWrapper set to flex.");
                 } else { console.warn("[backButton] Desktop: chatAreaWrapper not found."); }
             }
         });
 
         menuButton.addEventListener('click', (event) => {
-            event.stopPropagation(); 
-            dropdownMenu.classList.toggle('hidden'); 
+            event.stopPropagation();
+            dropdownMenu.classList.toggle('hidden');
             console.log(`[initializeApp] Menu dropdown toggled. Hidden: ${dropdownMenu.classList.contains('hidden')}`);
         });
 
@@ -2489,7 +2482,7 @@ async function initializeApp() {
             sendFriendRequestButton.addEventListener('click', sendFriendRequest);
         }
 
-        // Supabase Realtime Listener for new friend requests
+        // Supabase Realtime Listener for new friend requests (status 'pending' in 'friends' table)
         supabase
             .channel('friend_requests_channel') // Nazwa kanału
             .on(
@@ -2497,15 +2490,15 @@ async function initializeApp() {
                 {
                     event: 'INSERT', // Interesują nas tylko nowe wpisy
                     schema: 'public',
-                    table: 'friend_requests',
-                    filter: `receiver_id=eq.${currentUser.id}` // Tylko zaproszenia, gdzie jesteśmy odbiorcą
+                    table: 'friends', // Changed from 'friend_requests' to 'friends'
+                    filter: `friend_id=eq.${currentUser.id}` // Only requests where we are the receiver
                 },
                 (payload) => {
                     console.log('[Supabase Realtime] New friend request received:', payload);
-                    // Sprawdź, czy status to 'pending' i czy nadawca nie jest bieżącym użytkownikiem
-                    if (payload.new.status === 'pending' && payload.new.sender_id !== currentUser.id) {
-                        handleNewFriendRequestNotification(payload.new.sender_id);
-                        loadFriendsAndRequests(); // Odśwież UI
+                    // Check if the status is 'pending' and the sender is not the current user
+                    if (payload.new.status === 'pending' && payload.new.user_id !== currentUser.id) { // Changed sender_id to user_id
+                        handleNewFriendRequestNotification(payload.new.user_id); // Changed sender_id to user_id
+                        loadFriendsAndRequests(); // Refresh UI
                     }
                 }
             )
@@ -2520,17 +2513,17 @@ async function initializeApp() {
                 {
                     event: 'UPDATE', // Interesują nas tylko aktualizacje
                     schema: 'public',
-                    table: 'friend_requests',
-                    filter: `sender_id=eq.${currentUser.id}` // Tylko zaproszenia, które wysłaliśmy
+                    table: 'friends', // Changed from 'friend_requests' to 'friends'
+                    filter: `user_id=eq.${currentUser.id}` // Only requests that we sent (user_id is sender)
                 },
                 (payload) => {
                     console.log('[Supabase Realtime] Friend request status updated:', payload);
                     if (payload.new.status === 'accepted') {
-                        showCustomMessage(`Twoje zaproszenie do ${getUserLabelById(payload.new.receiver_id) || payload.new.receiver_id} zostało zaakceptowane!`, 'success');
-                        loadFriendsAndRequests(); // Odśwież UI, aby dodać nowego znajomego
+                        showCustomMessage(`Twoje zaproszenie do ${getUserLabelById(payload.new.friend_id) || payload.new.friend_id} zostało zaakceptowane!`, 'success'); // Changed receiver_id to friend_id
+                        loadFriendsAndRequests(); // Refresh UI, to add new friend
                     } else if (payload.new.status === 'declined') {
-                        showCustomMessage(`Twoje zaproszenie do ${getUserLabelById(payload.new.receiver_id) || payload.new.receiver_id} zostało odrzucone.`, 'info');
-                        loadFriendsAndRequests(); // Odśwież UI (np. usuń zaproszenie z listy wysłanych, jeśli ją wyświetlasz)
+                        showCustomMessage(`Twoje zaproszenie do ${getUserLabelById(payload.new.friend_id) || payload.new.friend_id} zostało odrzucone.`, 'info'); // Changed receiver_id to friend_id
+                        loadFriendsAndRequests(); // Refresh UI (e.g., remove request from sent list if displayed)
                     }
                 }
             )
@@ -2543,31 +2536,31 @@ async function initializeApp() {
             if (mq.matches) {
                 console.log("[handleMediaQueryChange] Mobile view activated. Adjusting initial visibility for mobile.");
                 if (sidebarWrapper) {
-                    sidebarWrapper.classList.remove('hidden-on-mobile'); 
+                    sidebarWrapper.classList.remove('hidden-on-mobile');
                     console.log("[handleMediaQueryChange] Mobile: sidebarWrapper ensured visible (no hidden-on-mobile).");
                 } else { console.warn("[handleMediaQueryChange] Mobile: sidebarWrapper not found in mq change."); }
 
                 if (chatAreaWrapper) {
-                    chatAreaWrapper.classList.remove('active-on-mobile'); 
-                    chatAreaWrapper.style.display = 'none'; 
+                    chatAreaWrapper.classList.remove('active-on-mobile');
+                    chatAreaWrapper.style.display = 'none';
                     console.log("[handleMediaQueryChange] Mobile: chatAreaWrapper hidden.");
                 } else { console.warn("[handleMediaQueryChange] Mobile: chatAreaWrapper not found in mq change."); }
 
                 if (chatArea) {
-                    chatArea.classList.remove('active'); 
+                    chatArea.classList.remove('active');
                     console.log("[handleMediaQueryChange] Mobile: chatArea deactivated.");
                 } else { console.warn("[handleMediaQueryChange] Mobile: chatArea not found in mq change."); }
-                
+
                 if (logoScreen) {
-                    logoScreen.classList.add('hidden'); 
+                    logoScreen.classList.add('hidden');
                     console.log("[handleMediaQueryChange] Mobile: logoScreen hidden.");
                 } else { console.warn("[handleMediaQueryChange] Mobile: logoScreen not found in mq change."); }
-                
+
                 if (backButton) {
-                    backButton.style.display = 'none'; 
+                    backButton.style.display = 'none';
                     console.log("[handleMediaQueryChange] Mobile: backButton hidden.");
                 } else { console.warn("[handleMediaQueryChange] Mobile: backButton not found in mq change."); }
-                
+
                 if (rightSidebarWrapper) {
                     rightSidebarWrapper.style.display = 'none';
                     console.log("[handleMediaQueryChange] Mobile: rightSidebarWrapper hidden.");
@@ -2575,46 +2568,46 @@ async function initializeApp() {
             } else { // Widok desktopowy/tabletowy (min-width: 769px)
                 console.log("[handleMediaQueryChange] Desktop/Tablet view activated. Adjusting initial visibility for desktop.");
                 if (sidebarWrapper) {
-                    sidebarWrapper.classList.remove('hidden-on-mobile'); 
+                    sidebarWrapper.classList.remove('hidden-on-mobile');
                     console.log("[handleMediaQueryChange] Desktop: sidebarWrapper visible.");
                 } else { console.warn("[handleMediaQueryChange] Desktop: sidebarWrapper not found in mq change."); }
-                
+
                 if (chatAreaWrapper) {
-                    chatAreaWrapper.classList.remove('active-on-mobile'); 
-                    chatAreaWrapper.style.display = 'flex'; 
+                    chatAreaWrapper.classList.remove('active-on-mobile');
+                    chatAreaWrapper.style.display = 'flex';
                     console.log("[handleMediaQueryChange] Desktop: chatAreaWrapper set to flex.");
                 } else { console.warn("[handleMediaQueryChange] Desktop: chatAreaWrapper not found in mq change."); }
-                
+
                 // On desktop, logoScreen should be visible by default, chatArea should be hidden unless a chat is active
                 if (logoScreen) {
                     // Only show logoScreen if no chat is currently selected
                     if (!currentChatUser) { // If no current chat user, show logo screen
-                        logoScreen.classList.remove('hidden'); 
+                        logoScreen.classList.remove('hidden');
                         console.log("[handleMediaQueryChange] Desktop: logoScreen visible (no current chat user).");
                     } else { // If a chat is active, ensure logo screen is hidden
                         logoScreen.classList.add('hidden');
                         console.log("[handleMediaQueryChange] Desktop: logoScreen hidden (chat active).");
                     }
                 } else { console.warn("[handleMediaQueryChange] Desktop: logoScreen not found in mq change."); }
-                
+
                 if (chatArea) {
                     // Only activate chatArea if a chat is currently selected
                     if (currentChatUser) { // If current chat user, ensure chatArea is active
-                        chatArea.classList.add('active'); 
+                        chatArea.classList.add('active');
                         console.log("[handleMediaQueryChange] Desktop: chatArea activated (current chat user).");
                     } else { // If no chat active, ensure chatArea is not active
-                        chatArea.classList.remove('active'); 
+                        chatArea.classList.remove('active');
                         console.log("[handleMediaQueryChange] Desktop: chatArea deactivated (no current chat user).");
                     }
                 } else { console.warn("[handleMediaQueryChange] Desktop: chatArea not found in mq change."); }
-                
+
                 if (rightSidebarWrapper) {
-                    rightSidebarWrapper.style.display = 'flex'; 
+                    rightSidebarWrapper.style.display = 'flex';
                     console.log("[handleMediaQueryChange] Desktop: rightSidebarWrapper visible.");
                 } else { console.warn("[handleMediaQueryChange] Desktop: rightSidebarWrapper not found in mq change."); }
-                
+
                 if (backButton) {
-                    backButton.style.display = 'none'; 
+                    backButton.style.display = 'none';
                     console.log("[handleMediaQueryChange] Desktop: backButton hidden.");
                 } else { console.warn("[handleMediaQueryChange] Desktop: backButton not found in mq change."); }
             }
@@ -2627,7 +2620,7 @@ async function initializeApp() {
 
         // Now that the app is initialized, request notification permission
         await requestNotificationPermission();
-        
+
         // Sprawdź politykę Autoplay po inicjalizacji
         checkAudioAutoplay();
 
