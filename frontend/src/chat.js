@@ -96,7 +96,7 @@ let unreadConversationsInfo = new Map();
 
 /**
  * Formats a given date into a "time ago" string (e.g., "5 minut temu", "wczoraj o 10:30").
- * @param {Date} date - The date object to format.
+ * @param {Date} date The date object to format.
  * @returns {string} The formatted time ago string.
  */
 function formatTimeAgo(date) {
@@ -1337,7 +1337,7 @@ function initWebSocket() {
 
     socket.onerror = (error) => {
         console.error('[initWebSocket] WebSocket Error:', error);
-        if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
+        if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTing) {
             socket.close();
         }
     };
@@ -1819,7 +1819,10 @@ async function sendFriendRequest() {
         const { data: existingRelation, error: relationError } = await supabase
             .from('friends')
             .select('id, status, user_id, friend_id')
-            .or(`(user_id.eq.${currentUser.id},friend_id.eq.${recipientId}),(user_id.eq.${recipientId},friend_id.eq.${currentUser.id})`)
+            .or([ // Zmieniono na tablicę obiektów dla OR
+                { user_id: currentUser.id, friend_id: recipientId },
+                { user_id: recipientId, friend_id: currentUser.id }
+            ])
             .single();
 
         if (relationError && relationError.code !== 'PGRST116') { // PGRST116 means "no rows found" which is expected if no relation exists
@@ -2104,7 +2107,7 @@ async function initializeApp() {
 
         container = document.querySelector('.container'); console.log(`UI Element: container found: ${!!container}`);
         sidebarWrapper = document.querySelector('.sidebar-wrapper'); console.log(`UI Element: sidebarWrapper found: ${!!sidebarWrapper}`);
-        mainNavIcons = document.querySelector('.main-nav-icons'); console.log(`UI Element: mainNavIcons found: ${!!mainNavIcons}`);
+        mainNavIcons = document.querySelector('.main-nav-icons'); console.log(`UI Element: mainNavIcons found: ${navIcons.length > 0}`);
         navIcons = document.querySelectorAll('.nav-icon'); console.log(`UI Element: navIcons found: ${navIcons.length > 0}`);
         addNewButton = document.querySelector('.nav-icon.add-new-button'); console.log(`UI Element: addNewButton found: ${!!addNewButton}`);
 
