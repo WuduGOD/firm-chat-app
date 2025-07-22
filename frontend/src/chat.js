@@ -539,8 +539,7 @@ async function loadContacts() {
                 <div class="contact-meta">
                     <span class="message-time">${timeText}</span>
                     <span class="unread-count hidden">0</span>
-                    <span class="status-dot ${onlineUsers.get(String(user.id)) ? 'online' : ''}"></span> <!-- Added status dot -->
-                </div>
+                    <span class="status-dot ${onlineUsers.get(String(user.id)) ? 'online' : ''}"></span> </div>
             `;
 
             convoItem.addEventListener('click', () => {
@@ -1907,7 +1906,7 @@ async function handleSendFriendRequest() {
             .from('friend_requests')
             .select('*')
             // POPRAWIONA SKŁADNIA DLA .or()
-            .or(`from_user_id.eq.${currentUser.id}.and.to_user_id.eq.${toUserId},from_user_id.eq.${toUserId}.and.to_user_id.eq.${currentUser.id}`);
+            .or(`and(from_user_id.eq.${currentUser.id},to_user_id.eq.${toUserId}),and(from_user_id.eq.${toUserId},to_user_id.eq.${currentUser.id})`);
 
 
         if (existingError) throw existingError;
