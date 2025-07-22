@@ -110,7 +110,7 @@ wss.on('connection', (ws) => {
                                 room: msg.room 
                             })),
                         }));
-                        console.log(`Sent history to room ${parsedMessage.room} for user ${userData.userId}:`, history.length, 'messages.');
+                        console.log(`Sent history to room ${parsedMessage.room} for user ${userData.userId}.`);
                     } else if (parsedMessage.room === 'global') {
                         console.log(`User ${userData.userId} joined global room, not sending chat history.`);
                     } else {
@@ -310,23 +310,8 @@ wss.on('connection', (ws) => {
 // ---------------------- Helper functions --------------------------
 
 // Funkcja resetująca statusy wszystkich użytkowników na offline przy starcie serwera
-async function resetAllUserStatusesToOfflineOnStartup() {
-    const client = await pool.connect();
-    try {
-        const query = `
-            UPDATE public.profiles
-            SET is_online = FALSE, last_seen_at = NOW()
-            WHERE is_online = TRUE;
-        `;
-        await client.query(query);
-        console.log(`DB: All previously online users reset to offline on server startup.`);
-    } catch (err) {
-        console.error('DB Error: Failed to reset all user statuses to offline on startup:', err);
-    } finally {
-        client.release();
-    }
-}
-
+// Przeniesiona na górę, aby uniknąć duplikacji i być dostępna dla pool.connect().
+// async function resetAllUserStatusesToOfflineOnStartup() { /* ... */ } -- USUNIĘTO DUPLIKACJĘ
 
 async function updateProfileStatus(userId, isOnline) {
     const client = await pool.connect();
