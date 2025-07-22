@@ -9,6 +9,19 @@ let dropdownMenu;
 let themeToggle;
 let logoutButton;
 
+// NOWE ZMIENNE DLA FUNKCJONALNOŚCI ZNAJOMYCH I POWIADOMIEŃ
+let addFriendButton;
+let notificationButton;
+let notificationCount;
+let friendRequestModal;
+let closeFriendRequestModal;
+let friendEmailInput;
+let sendFriendRequestButton;
+let sendRequestStatus;
+let pendingRequestsList;
+let noPendingRequestsText;
+let attachButton; // Zmienna dla przycisku załączania plików
+
 let container;
 let sidebarWrapper; // Kontener dla main-nav-icons i sidebar
 let mainNavIcons;
@@ -50,6 +63,7 @@ let textMessageInput; // ID: textMessageInput
 
 // WAŻNE: Deklaracja chatFooter tutaj, aby była dostępna globalnie/w zasięgu pliku
 let chatFooter;
+let sendButton; // Deklaracja sendButton
 
 // Kontener na wiadomości customowe (np. błędy, powiadomienia)
 let customMessageContainer;
@@ -424,7 +438,7 @@ async function getLastMessageForRoom(roomId) {
  * @returns {Promise<Array<Object>>} An array of message objects, sorted oldest to newest.
  */
 async function fetchMessageHistory(roomId) {
-    console.log(`[fetchMessageHistory] Fetching history for room: ${roomId}`);
+    console.log(`[fetchMessageHistory] Fetched history for room: ${roomId}`);
     try {
         // Assume a maximum limit for history to prevent excessive data transfer
         const limit = 50;
@@ -1239,7 +1253,7 @@ function initWebSocket() {
                     // Zaproszenie zaakceptowane
                     showCustomMessage(`Użytkownik ${data.acceptedByEmail} zaakceptował Twoje zaproszenie!`, "success");
                     // Odśwież listy konwersacji i znajomych
-                    loadAllConversations(); // Ta funkcja nie istnieje, powinna być loadContacts
+                    loadContacts(); // Ta funkcja nie istnieje, powinna być loadContacts
                     updateNotificationCount();
                     break;
                 case 'friendRequestRejected':
@@ -1350,7 +1364,7 @@ function displayActiveUsers(activeUsersData) {
                     `;
 
                 divMobile.addEventListener('click', async () => {
-                    const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(userId));
+                    const userProfile = (await loadAllProfiles()).find(p => String(p.id) === String(user.id)); // Corrected user.id here
                     if (userProfile) {
                         const mockConvoItem = document.createElement('li');
                         mockConvoItem.dataset.convoId = userProfile.id;
@@ -1707,14 +1721,18 @@ function showFriendRequestModal(sectionToShow) {
         const sendSection = document.getElementById('sendFriendRequestSection');
         const pendingSection = document.getElementById('pendingRequestsSection');
 
-        if (sectionToShow === 'send') {
-            sendSection.classList.remove('hidden');
-            pendingSection.classList.add('hidden');
-            sendRequestStatus.textContent = ''; // Clear status message
-        } else if (sectionToShow === 'pending') {
-            sendSection.classList.add('hidden');
-            pendingSection.classList.remove('hidden');
-            loadPendingFriendRequests(); // Load requests when modal opens
+        if (sendSection && pendingSection) {
+            if (sectionToShow === 'send') {
+                sendSection.classList.remove('hidden');
+                pendingSection.classList.add('hidden');
+                if (sendRequestStatus) sendRequestStatus.textContent = ''; // Clear status message
+            } else if (sectionToShow === 'pending') {
+                sendSection.classList.add('hidden');
+                pendingSection.classList.remove('hidden');
+                loadPendingFriendRequests(); // Load requests when modal opens
+            }
+        } else {
+            console.warn("sendFriendRequestSection or pendingRequestsSection not found.");
         }
     }
 }
@@ -1734,7 +1752,7 @@ function hideFriendRequestModal() {
  * Ładuje oczekujące zaproszenia do znajomych dla bieżącego użytkownika.
  */
 async function loadPendingFriendRequests() {
-    if (!currentUser) return;
+    if (!currentUser || !pendingRequestsList || !noPendingRequestsText) return;
 
     try {
         const { data, error } = await supabase
@@ -1796,6 +1814,8 @@ async function loadPendingFriendRequests() {
  * @param {string} status - 'accepted' or 'rejected'.
  */
 async function handleFriendRequestResponse(requestId, fromUserId, status) {
+    if (!currentUser || !socket) return;
+
     try {
         const { error } = await supabase
             .from('friend_requests')
@@ -1869,6 +1889,8 @@ async function handleFriendRequestResponse(requestId, fromUserId, status) {
  * Handles sending a new friend request.
  */
 async function handleSendFriendRequest() {
+    if (!friendEmailInput || !sendRequestStatus || !currentUser) return;
+
     const friendEmail = friendEmailInput.value.trim();
 
     if (!friendEmail) {
@@ -1956,12 +1978,17 @@ async function handleSendFriendRequest() {
         friendEmailInput.value = ''; // Clear input
 
         // Send WebSocket notification to the target user
-        socket.send(JSON.stringify({ // Używamy globalnego obiektu socket
-            type: 'friendRequest',
-            toUserId: toUserId,
-            fromEmail: currentUser.email,
-            fromUserId: currentUser.id
-        }));
+        if (socket) { // Ensure socket is not null
+            socket.send(JSON.stringify({ // Używamy globalnego obiektu socket
+                type: 'friendRequest',
+                toUserId: toUserId,
+                fromEmail: currentUser.email,
+                fromUserId: currentUser.id
+            }));
+        } else {
+            console.warn("[handleSendFriendRequest] WebSocket is null, cannot send friendRequest notification.");
+        }
+
 
     } catch (error) {
         console.error('Error sending friend request:', error.message);
@@ -1974,7 +2001,7 @@ async function handleSendFriendRequest() {
  * Aktualizuje licznik powiadomień wyświetlany na ikonie dzwonka.
  */
 async function updateNotificationCount() {
-    if (!currentUser) return;
+    if (!currentUser || !notificationCount) return;
 
     try {
         const { count, error } = await supabase
@@ -1985,13 +2012,11 @@ async function updateNotificationCount() {
 
         if (error) throw error;
 
-        if (notificationCount) {
-            if (count > 0) {
-                notificationCount.textContent = count;
-                notificationCount.classList.remove('hidden');
-            } else {
-                notificationCount.classList.add('hidden');
-            }
+        if (count > 0) {
+            notificationCount.textContent = count;
+            notificationCount.classList.remove('hidden');
+        } else {
+            notificationCount.classList.add('hidden');
         }
     } catch (error) {
         console.error('Error fetching notification count:', error.message);
@@ -2388,7 +2413,9 @@ async function initializeApp() {
                 if (rightSidebarWrapper) {
                     rightSidebarWrapper.style.display = 'none';
                     console.log("[handleMediaQueryChange] Mobile: rightSidebarWrapper hidden.");
-                } else { console.warn("[handleMediaQueryChange] Mobile: rightSidebarWrapper not found in mq change."); }
+                } else { console.warn("[handleMediaQueryChange] Mobile: rightSidebarWrapper not found."); }
+
+
             } else { // Widok desktopowy/tabletowy (min-width: 769px)
                 console.log("[handleMediaQueryChange] Desktop/Tablet view activated. Adjusting initial visibility for desktop.");
                 if (sidebarWrapper) {
