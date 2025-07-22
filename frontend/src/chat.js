@@ -1817,10 +1817,7 @@ async function sendFriendRequest() {
         const { data: existingRelation, error: relationError } = await supabase
             .from('friends')
             .select('id, status, user_id, friend_id')
-            .or([ // Zmieniono na tablicę obiektów dla OR
-                { user_id: currentUser.id, friend_id: recipientId },
-                { user_id: recipientId, friend_id: currentUser.id }
-            ])
+            .or(`user_id.eq.${currentUser.id}.and.friend_id.eq.${recipientId},user_id.eq.${recipientId}.and.friend_id.eq.${currentUser.id}`)
             .single();
 
         if (relationError && relationError.code !== 'PGRST116') { // PGRST116 means "no rows found" which is expected if no relation exists
