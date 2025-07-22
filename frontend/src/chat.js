@@ -48,15 +48,17 @@ let typingStatusHeader; // ID: typingStatus, Klasa: typing-status (status w nag�
 let typingIndicatorMessages; // ID: typingIndicator (animowane kropki w obszarze wiadomości)
 
 let messageContainer;
-let messageListEl; // ID: messageList
 let messageInput; // ID: messageInput
 let sendMessageButton; // ID: sendMessageButton
 let emojiButton; // ID: emojiButton
 let fileAttachButton; // ID: fileAttachButton
 
 let rightSidebarWrapper; // Kontener dla chat-info i media-info
+let rightSidebar; // Dodałem 'let' tutaj
 let chatInfo; // ID: chatInfo
 let mediaInfo; // ID: mediaInfo
+let activeUsersListEl; // Element listy aktywnych użytkowników
+let noActiveUsersText; // Tekst, gdy brak aktywnych użytkowników
 
 let messageEditor; // ID: messageEditor
 let textMessageInput; // ID: textMessageInput
