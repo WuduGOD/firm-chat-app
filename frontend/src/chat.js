@@ -12,7 +12,7 @@ let logoutButton;
 // NOWE ZMIENNE DLA FUNKCJI ZNAJOMYCH
 let addFriendButton;
 let notificationButton;
-let notificationBadge;
+let notificationBadge; // Zmieniono z notificationCount na notificationBadge
 let friendRequestModal;
 let closeFriendRequestModal;
 let sendFriendRequestSection;
@@ -28,11 +28,12 @@ let container;
 let sidebarWrapper; // Kontener dla main-nav-icons i sidebar
 let mainNavIcons;
 let navIcons;
+let addNewButton; // Nowy przycisk "Dodaj nowy kontakt/grupę"
 
 let onlineUsersMobile; // NOWA ZMIENNA: Kontener dla aktywnych użytkowników na mobile
 
 let sidebarEl; // ID: sidebar, Klasa: conversations-list
-let searchInput;
+let sidebarSearchInput; // Zmieniono z searchInput na sidebarSearchInput
 let contactsListEl; // ID: contactsList
 
 let chatAreaWrapper; // Kontener dla logo-screen i chat-area
@@ -140,12 +141,14 @@ function showCustomMessage(message, type = 'info') {
     messageBox.className = `custom-message-box ${type}`; // Ustaw klasę typu
     messageBox.classList.remove('hidden'); // Pokaż komunikat
     messageBox.style.opacity = '1'; // Ensure it's fully visible
+    messageBox.style.display = 'block'; // Ensure it's displayed
 
     // Ukryj komunikat po 3 sekundach
     setTimeout(() => {
         messageBox.style.opacity = '0'; // Start fade out
         setTimeout(() => {
             messageBox.classList.add('hidden'); // Fully hide after fade
+            messageBox.style.display = 'none'; // Hide completely
         }, 500); // Match CSS transition duration
     }, 3000);
 }
@@ -565,7 +568,6 @@ async function loadContacts() {
                 <div class="contact-meta">
                     <span class="message-time">${timeText}</span>
                     <span class="unread-count hidden"></span>
-                    <span class="status-dot ${onlineUsers.get(String(user.id))?.isOnline ? 'online' : ''}"></span>
                 </div>
             `;
 
@@ -1125,14 +1127,17 @@ function updateUserStatusIndicator(userId, isOnline, lastSeenTimestamp = null) {
         // Update status dots in the main contacts list (unchanged - only dot, no timestamp)
         const contactConvoItem = contactsListEl.querySelector(`.contact[data-convo-id="${userId}"]`);
         if (contactConvoItem) {
-            const statusDot = contactConvoItem.querySelector('.status-dot');
-            if (statusDot) {
-                if (isOnline) {
-                    statusDot.classList.add('online');
-                } else {
-                    statusDot.classList.remove('online');
-                }
-            }
+            // The HTML provided does not have a status-dot in the contact list item.
+            // If it were present, the logic would be:
+            // const statusDot = contactConvoItem.querySelector('.status-dot');
+            // if (statusDot) {
+            //     if (isOnline) {
+            //         statusDot.classList.add('online');
+            //     } else {
+            //         statusDot.classList.remove('online');
+            //     }
+            // }
+            console.log(`[Status Update Debug] Contact list item for ${userId} found, but no status dot to update.`);
         }
 
     } catch (e) {
@@ -1448,9 +1453,9 @@ function setupChatSettingsDropdown() {
                 option.classList.add('active'); 
                 const colorTheme = option.dataset.color;
                 if (messageContainer) {
-                    messageContainer.classList.remove('default-theme', 'blue-theme', 'green-theme', 'red-theme');
+                    messageContainer.classList.remove('default-color', 'blue-color', 'green-color', 'red-color'); // Updated class names
                     if (colorTheme !== 'default') {
-                        messageContainer.classList.add(`${colorTheme}-theme`); 
+                        messageContainer.classList.add(`${colorTheme}-color`); // Updated class names
                     }
                 }
                 console.log('[setupChatSettingsDropdown] Message theme changed to:', colorTheme);
@@ -1583,36 +1588,16 @@ async function updateUnreadMessageCountInSupabase(roomId, senderId) {
             .upsert({
                 user_id: currentUser.id,
                 room_id: roomId,
-                count: 1, // Zawsze dodaj 1, a `onConflict` obsłuży inkrementację
+                count: (unreadConversationsInfo.get(roomId)?.unreadCount || 0) + 1, // Inkrementuj
                 last_sender_id: senderId,
                 updated_at: new Date().toISOString()
             }, {
-                onConflict: 'user_id, room_id', // Jeśli konflikt, zaktualizuj
-                ignoreDuplicates: false // Ważne: to musi być false, aby konflikt był wykryty
+                onConflict: 'user_id, room_id', 
+                ignoreDuplicates: false 
             });
 
         if (error) {
-            // Jeśli wystąpił konflikt (rekord już istnieje), spróbuj go zaktualizować poprzez inkrementację
-            if (error.code === '23505' || error.message.includes('duplicate key')) { // PostgreSQL unique violation code
-                console.log(`[Supabase] Record for room ${roomId} already exists, attempting to increment.`);
-                const { data: updateData, error: updateError } = await supabase
-                    .from('unread_messages')
-                    .update({
-                        count: (unreadConversationsInfo.get(roomId)?.unreadCount || 0) + 1, // Pobierz obecny licznik z mapy i inkrementuj
-                        last_sender_id: senderId,
-                        updated_at: new Date().toISOString()
-                    })
-                    .eq('user_id', currentUser.id)
-                    .eq('room_id', roomId);
-
-                if (updateError) {
-                    console.error("[Supabase] Error incrementing unread message count:", updateError);
-                } else {
-                    console.log(`[Supabase] Unread count for room ${roomId} incremented for user ${currentUser.id}.`);
-                }
-            } else {
-                console.error("[Supabase] Error inserting/upserting unread message count:", error);
-            }
+            console.error("[Supabase] Error upserting unread message count:", error);
         } else {
             console.log(`[Supabase] Unread count for room ${roomId} updated (upsert) for user ${currentUser.id}.`);
         }
@@ -1886,16 +1871,18 @@ async function renderPendingFriendRequests(requests) {
             listItem.dataset.senderId = request.sender_id;
 
             listItem.innerHTML = `
-                <span>Zaproszenie od: <strong>${senderName}</strong></span>
-                <div class="actions">
-                    <button class="accept-request-btn">Akceptuj</button>
-                    <button class="decline-request-btn">Odrzuć</button>
+                <div class="request-info">
+                    Zaproszenie od: <span class="sender-name">${senderName}</span>
+                </div>
+                <div class="request-actions">
+                    <button class="accept-button">Akceptuj</button>
+                    <button class="reject-button">Odrzuć</button>
                 </div>
             `;
             pendingFriendRequestsList.appendChild(listItem);
 
-            listItem.querySelector('.accept-request-btn').addEventListener('click', () => acceptFriendRequest(request.id, request.sender_id));
-            listItem.querySelector('.decline-request-btn').addEventListener('click', () => declineFriendRequest(request.id));
+            listItem.querySelector('.accept-button').addEventListener('click', () => acceptFriendRequest(request.id, request.sender_id));
+            listItem.querySelector('.reject-button').addEventListener('click', () => declineFriendRequest(request.id));
         });
     }
 }
@@ -1954,11 +1941,12 @@ async function acceptFriendRequest(requestId, senderId) {
         // Zamknij modal po akceptacji
         if (friendRequestModal) {
             friendRequestModal.classList.add('hidden');
+            friendRequestModal.classList.remove('visible'); // Ensure visibility class is removed
         }
 
     } catch (e) {
         console.error("[Friends] Caught error in acceptFriendRequest:", e);
-        showCustomMessage("Wystąpił nieoczekiwany błąd podczas akceptacji zaproszenia.", "error");
+        showCustomMessage("Wystąpił nieoczekiwany błąd podczas akceptowania zaproszenia.", "error");
     }
 }
 
@@ -1993,6 +1981,7 @@ async function declineFriendRequest(requestId) {
         // Zamknij modal po odrzuceniu
         if (friendRequestModal) {
             friendRequestModal.classList.add('hidden');
+            friendRequestModal.classList.remove('visible'); // Ensure visibility class is removed
         }
 
     } catch (e) {
@@ -2046,6 +2035,7 @@ async function handleNewFriendRequestNotification(senderId) {
         window.focus();
         if (friendRequestModal) {
             friendRequestModal.classList.remove('hidden'); // Otwórz modal zaproszeń
+            friendRequestModal.classList.add('visible'); // Ensure visibility class is added
             loadFriendsAndRequests(); // Odśwież modal
         }
         console.log("[Notifications] Friend request notification clicked. Focusing window and opening modal.");
@@ -2066,7 +2056,7 @@ async function initializeApp() {
 
     try {
         // 1. Get DOM element references
-        mainHeader = document.querySelector('.main-header'); console.log(`UI Element: mainHeader found: ${!!mainHeader}`);
+        mainHeader = document.getElementById('mainHeader'); console.log(`UI Element: mainHeader found: ${!!mainHeader}`);
         menuButton = document.getElementById('menuButton'); console.log(`UI Element: menuButton found: ${!!menuButton}`);
         dropdownMenu = document.getElementById('dropdownMenu'); console.log(`UI Element: dropdownMenu found: ${!!dropdownMenu}`);
         themeToggle = document.getElementById('themeToggle'); console.log(`UI Element: themeToggle found: ${!!themeToggle}`);
@@ -2075,7 +2065,8 @@ async function initializeApp() {
         // NOWE ELEMENTY DLA ZNAJOMYCH
         addFriendButton = document.getElementById('addFriendButton'); console.log(`UI Element: addFriendButton found: ${!!addFriendButton}`);
         notificationButton = document.getElementById('notificationButton'); console.log(`UI Element: notificationButton found: ${!!notificationButton}`);
-        notificationBadge = document.getElementById('notificationBadge'); console.log(`UI Element: notificationBadge found: ${!!notificationBadge}`);
+        notificationBadge = document.getElementById('notificationCount'); // ZMIENIONO ID
+        console.log(`UI Element: notificationBadge found: ${!!notificationBadge}`);
         friendRequestModal = document.getElementById('friendRequestModal'); console.log(`UI Element: friendRequestModal found: ${!!friendRequestModal}`);
         closeFriendRequestModal = document.getElementById('closeFriendRequestModal'); console.log(`UI Element: closeFriendRequestModal found: ${!!closeFriendRequestModal}`);
         sendFriendRequestSection = document.getElementById('sendFriendRequestSection'); console.log(`UI Element: sendFriendRequestSection found: ${!!sendFriendRequestSection}`);
@@ -2095,11 +2086,14 @@ async function initializeApp() {
         sidebarWrapper = document.querySelector('.sidebar-wrapper'); console.log(`UI Element: sidebarWrapper found: ${!!sidebarWrapper}`);
         mainNavIcons = document.querySelector('.main-nav-icons'); console.log(`UI Element: mainNavIcons found: ${!!mainNavIcons}`);
         navIcons = document.querySelectorAll('.nav-icon'); console.log(`UI Element: navIcons found: ${navIcons.length > 0}`);
+        addNewButton = document.querySelector('.nav-icon.add-new-button'); console.log(`UI Element: addNewButton found: ${!!addNewButton}`);
+
 
         onlineUsersMobile = document.getElementById('onlineUsersMobile'); console.log(`UI Element: onlineUsersMobile found: ${!!onlineUsersMobile}`);
 
         sidebarEl = document.getElementById('sidebar'); console.log(`UI Element: sidebarEl found: ${!!sidebarEl}`);
-        searchInput = sidebarEl ? sidebarEl.querySelector('.search-bar input[type="text"]') : null; console.log(`UI Element: searchInput found: ${!!searchInput}`);
+        sidebarSearchInput = document.getElementById('sidebarSearchInput'); // ZMIENIONO ID
+        console.log(`UI Element: sidebarSearchInput found: ${!!sidebarSearchInput}`);
         contactsListEl = document.getElementById('contactsList'); console.log(`UI Element: contactsListEl found: ${!!contactsListEl}`);
 
         chatAreaWrapper = document.querySelector('.chat-area-wrapper'); console.log(`UI Element: chatAreaWrapper found: ${!!chatAreaWrapper}`);
@@ -2137,7 +2131,7 @@ async function initializeApp() {
             sendFriendRequestSection, friendEmailInput, sendFriendRequestButton, sendRequestStatus,
             pendingRequestsSection, pendingFriendRequestsList, noPendingRequestsText,
             container, sidebarWrapper, mainNavIcons, onlineUsersMobile,
-            sidebarEl, searchInput, contactsListEl,
+            sidebarEl, sidebarSearchInput, contactsListEl, // Zmieniono searchInput na sidebarSearchInput
             chatAreaWrapper, logoScreen, chatArea,
             chatHeader, backButton, chatUserName, userStatusSpan,
             chatHeaderActions, chatSettingsButton, chatSettingsDropdown,
@@ -2323,7 +2317,8 @@ async function initializeApp() {
                 console.log("[initializeApp] Main dropdown hidden due to outside click.");
             }
             // Zamknij modal zaproszeń, jeśli kliknięto poza nim
-            if (friendRequestModal && !friendRequestModal.classList.contains('hidden') && !friendRequestModal.contains(event.target) && event.target !== addFriendButton && event.target !== notificationButton) {
+            if (friendRequestModal && friendRequestModal.classList.contains('visible') && !friendRequestModal.contains(event.target) && event.target !== addFriendButton && event.target !== notificationButton && event.target !== addNewButton) {
+                friendRequestModal.classList.remove('visible');
                 friendRequestModal.classList.add('hidden');
                 sendRequestStatus.textContent = ''; // Clear status message on close
                 friendEmailInput.value = ''; // Clear input on close
@@ -2393,6 +2388,24 @@ async function initializeApp() {
             });
         }
 
+        // Event listener for the new "Add New" button
+        if (addNewButton) {
+            addNewButton.addEventListener('click', (event) => {
+                event.stopPropagation();
+                if (friendRequestModal) {
+                    friendRequestModal.classList.remove('hidden');
+                    friendRequestModal.classList.add('visible'); // Show modal
+                    sendRequestStatus.textContent = ''; // Clear status message
+                    friendEmailInput.value = ''; // Clear input
+                    pendingRequestsSection.classList.remove('empty'); // Ensure section is not marked empty initially
+                    noPendingRequestsText.classList.add('hidden'); // Hide "No pending" text initially
+                    loadFriendsAndRequests(); // Load fresh data
+                    console.log("[Friends] Add New button clicked. Modal shown.");
+                }
+            });
+        }
+
+
         setupChatSettingsDropdown();
 
         // Listener dla nowego przycisku włączającego dźwięki
@@ -2412,6 +2425,7 @@ async function initializeApp() {
                 event.stopPropagation();
                 if (friendRequestModal) {
                     friendRequestModal.classList.remove('hidden');
+                    friendRequestModal.classList.add('visible'); // Show modal
                     sendRequestStatus.textContent = ''; // Clear status message
                     friendEmailInput.value = ''; // Clear input
                     pendingRequestsSection.classList.remove('empty'); // Upewnij się, że sekcja nie jest oznaczona jako pusta na starcie
@@ -2427,6 +2441,7 @@ async function initializeApp() {
                 event.stopPropagation();
                 if (friendRequestModal) {
                     friendRequestModal.classList.remove('hidden');
+                    friendRequestModal.classList.add('visible'); // Show modal
                     sendRequestStatus.textContent = ''; // Clear status message
                     friendEmailInput.value = ''; // Clear input
                     pendingRequestsSection.classList.remove('empty'); // Upewnij się, że sekcja nie jest oznaczona jako pusta na starcie
@@ -2441,6 +2456,7 @@ async function initializeApp() {
             closeFriendRequestModal.addEventListener('click', () => {
                 if (friendRequestModal) {
                     friendRequestModal.classList.add('hidden');
+                    friendRequestModal.classList.remove('visible'); // Hide modal
                     sendRequestStatus.textContent = ''; // Clear status message on close
                     friendEmailInput.value = ''; // Clear input on close
                     console.log("[Friends] Friend Request Modal closed.");
