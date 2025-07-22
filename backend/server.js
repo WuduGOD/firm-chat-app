@@ -2,6 +2,7 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import pkg from 'pg';
 import dotenv from 'dotenv';
+import { createClient } from '@supabase/supabase-js'; // NOWY IMPORT: Supabase
 
 dotenv.config();
 
@@ -18,6 +19,20 @@ const pool = new Pool({
     connectionTimeoutMillis: 5000,
     keepAlive: true
 });
+
+// NOWA KONFIGURACJA: Klient Supabase dla Realtime
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // Użyj Service Role Key dla operacji serwerowych
+
+if (!supabaseUrl || !supabaseServiceRoleKey) {
+    console.error("SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not defined in .env. Supabase Realtime will not function.");
+    // Możesz zdecydować, czy aplikacja ma się zakończyć, czy kontynuować bez Realtime
+    // process.exit(1); 
+}
+
+const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+console.log("Supabase client initialized for server-side Realtime.");
+
 
 // Testuj połączenie z bazą danych na starcie i zresetuj statusy
 pool.connect()
@@ -248,6 +263,67 @@ wss.on('connection', (ws) => {
         // Ważne: błąd często prowadzi do zamknięcia połączenia, więc onclose też zadziała
     });
 });
+
+// ---------------------- Supabase Realtime Listeners --------------------------
+
+// Nasłuchiwanie na nowe zaproszenia do znajomych (INSERT)
+supabase
+    .channel('friend_requests_insert_channel')
+    .on(
+        'postgres_changes',
+        {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'friend_requests',
+            // Możesz dodać filtr, np. `filter: 'receiver_id=eq.' + userId` jeśli chcesz,
+            // aby serwer nasłuchiwał tylko dla konkretnego użytkownika,
+            // ale dla serwera lepiej jest nasłuchiwać globalnie i filtrować w kodzie.
+        },
+        (payload) => {
+            console.log('[Supabase Realtime - INSERT] New friend request received:', payload.new);
+            const newRequest = payload.new;
+            // Wysyłamy powiadomienie do odbiorcy zaproszenia
+            if (newRequest.status === 'pending') {
+                broadcastToUser(newRequest.receiver_id, JSON.stringify({
+                    type: 'new_friend_request',
+                    sender_id: newRequest.sender_id,
+                    request_id: newRequest.id
+                }));
+                console.log(`[Supabase Realtime] Sent new_friend_request notification to ${newRequest.receiver_id} from ${newRequest.sender_id}.`);
+            }
+        }
+    )
+    .subscribe();
+console.log("[Supabase Realtime] Subscribed to 'friend_requests_insert_channel'.");
+
+// Nasłuchiwanie na aktualizacje statusu zaproszeń do znajomych (UPDATE)
+supabase
+    .channel('friend_requests_update_channel')
+    .on(
+        'postgres_changes',
+        {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'friend_requests',
+        },
+        (payload) => {
+            console.log('[Supabase Realtime - UPDATE] Friend request status updated:', payload.new);
+            const updatedRequest = payload.new;
+            // Wysyłamy powiadomienie do nadawcy zaproszenia o zmianie statusu
+            if (updatedRequest.status === 'accepted' || updatedRequest.status === 'declined') {
+                broadcastToUser(updatedRequest.sender_id, JSON.stringify({
+                    type: 'friend_request_status_update',
+                    request_id: updatedRequest.id,
+                    receiver_id: updatedRequest.receiver_id,
+                    status: updatedRequest.status
+                }));
+                console.log(`[Supabase Realtime] Sent friend_request_status_update notification to ${updatedRequest.sender_id} for request ${updatedRequest.id} (status: ${updatedRequest.status}).`);
+            }
+        }
+    )
+    .subscribe();
+console.log("[Supabase Realtime] Subscribed to 'friend_requests_update_channel'.");
+
 
 // ---------------------- Helper functions --------------------------
 
