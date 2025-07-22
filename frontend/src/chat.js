@@ -555,7 +555,8 @@ async function loadContacts() {
                 <div class="contact-meta">
                     <span class="message-time">${timeText}</span>
                     <span class="unread-count hidden">0</span>
-                    <span class="status-dot ${onlineUsers.get(String(user.id)) ? 'online' : ''}"></span> </div>
+                    <span class="status-dot ${onlineUsers.get(String(user.id)) ? 'online' : ''}"></span> <!-- Added status dot -->
+                </div>
             `;
 
             convoItem.addEventListener('click', () => {
@@ -1381,6 +1382,20 @@ function displayActiveUsers(activeUsersData) {
             });
         }
         console.log("[Status Update Debug] onlineUsers map after displayActiveUsers:", onlineUsers);
+
+        // NOWY KOD: Aktualizacja kropek statusu w głównej liście kontaktów
+        contactsListEl.querySelectorAll('.contact').forEach(convoItem => {
+            const userId = convoItem.dataset.convoId;
+            const statusDot = convoItem.querySelector('.status-dot');
+            if (statusDot) {
+                if (onlineUsers.has(String(userId))) {
+                    statusDot.classList.add('online');
+                } else {
+                    statusDot.classList.remove('online');
+                }
+            }
+        });
+
     } finally {
         console.log("Wykonano operacje czyszczące w bloku finally.");
     }
@@ -1857,25 +1872,33 @@ async function handleFriendRequestResponse(requestId, fromUserId, status) {
             }
 
             // Notify sender via WebSocket that request was accepted and new conversation created
-            socket.send(JSON.stringify({ // Używamy globalnego obiektu socket
-                type: 'friendRequestAccepted',
-                fromUserId: currentUser.id,
-                acceptedByEmail: currentUser.email, // Or username
-                newRoomId: newRoom.id,
-                otherUserId: fromUserId
-            }));
-            // Also notify that a new conversation has been created
-            socket.send(JSON.stringify({ // Używamy globalnego obiektu socket
-                type: 'newConversation',
-                userId: fromUserId // Notify the other user to reload conversations
-            }));
+            if (socket && socket.readyState === WebSocket.OPEN) { // Dodano sprawdzenie stanu socket
+                socket.send(JSON.stringify({
+                    type: 'friendRequestAccepted',
+                    fromUserId: currentUser.id,
+                    acceptedByEmail: currentUser.email, // Or username
+                    newRoomId: newRoom.id,
+                    otherUserId: fromUserId
+                }));
+                // Also notify that a new conversation has been created
+                socket.send(JSON.stringify({
+                    type: 'newConversation',
+                    userId: fromUserId // Notify the other user to reload conversations
+                }));
+            } else {
+                console.warn("[handleFriendRequestResponse] WebSocket not open, cannot send friendRequestAccepted/newConversation notification.");
+            }
         } else if (status === 'rejected') {
-             socket.send(JSON.stringify({ // Używamy globalnego obiektu socket
-                type: 'friendRequestRejected',
-                fromUserId: currentUser.id, // The current user rejected
-                rejectedByEmail: currentUser.email,
-                toUserId: fromUserId // The user who sent the request
-            }));
+            if (socket && socket.readyState === WebSocket.OPEN) { // Dodano sprawdzenie stanu socket
+                socket.send(JSON.stringify({
+                    type: 'friendRequestRejected',
+                    fromUserId: currentUser.id, // The current user rejected
+                    rejectedByEmail: currentUser.email,
+                    toUserId: fromUserId // The user who sent the request
+                }));
+            } else {
+                console.warn("[handleFriendRequestResponse] WebSocket not open, cannot send friendRequestRejected notification.");
+            }
         }
 
         loadPendingFriendRequests(); // Refresh the list
@@ -1980,15 +2003,17 @@ async function handleSendFriendRequest() {
         friendEmailInput.value = ''; // Clear input
 
         // Send WebSocket notification to the target user
-        if (socket) { // Ensure socket is not null
-            socket.send(JSON.stringify({ // Używamy globalnego obiektu socket
+        if (socket && socket.readyState === WebSocket.OPEN) { // Dodano sprawdzenie stanu socket
+            socket.send(JSON.stringify({
                 type: 'friendRequest',
                 toUserId: toUserId,
                 fromEmail: currentUser.email,
                 fromUserId: currentUser.id
             }));
         } else {
-            console.warn("[handleSendFriendRequest] WebSocket is null, cannot send friendRequest notification.");
+            console.warn("[handleSendFriendRequest] WebSocket not open, cannot send friendRequest notification.");
+            sendRequestStatus.textContent = "Połączenie z serwerem nie jest aktywne. Spróbuj ponownie za chwilę.";
+            sendRequestStatus.style.color = 'orange';
         }
 
 
