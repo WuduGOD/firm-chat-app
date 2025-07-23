@@ -1475,6 +1475,14 @@ function setupChatSettingsDropdown() {
                 dropdownMenu.classList.add('hidden');
                 console.log("[initializeApp] Main dropdown hidden due to outside click.");
             }
+            // Zamknij modal zaproszeń, jeśli kliknięto poza nim
+            if (friendRequestModal && friendRequestModal.classList.contains('visible') && !friendRequestModal.contains(event.target) && event.target !== addFriendButton && event.target !== notificationButton && event.target !== addNewButton) {
+                friendRequestModal.classList.remove('visible');
+                friendRequestModal.classList.add('hidden');
+                sendRequestStatus.textContent = ''; // Clear status message on close
+                friendEmailInput.value = ''; // Clear input on close
+                console.log("[initializeApp] Friend Request Modal hidden due to outside click.");
+            }
         });
 
         const colorOptions = chatSettingsDropdown.querySelectorAll('.color-box');
@@ -1801,7 +1809,7 @@ async function sendFriendRequest() {
         // 1. Znajdź ID odbiorcy po adresie e-mail
         const { data: recipientProfile, error: recipientError } = await supabase
             .from('profiles')
-            .select('id')
+            .select('id, email, username') // Dodano username do logowania
             .eq('email', friendEmail)
             .single();
 
@@ -1817,6 +1825,8 @@ async function sendFriendRequest() {
         // DEBUG: Sprawdź typy i wartości ID przed zapytaniem
         console.log('DEBUG: currentUser.id:', currentUser.id, ' (Typ:', typeof currentUser.id, ')');
         console.log('DEBUG: recipientId:', recipientId, ' (Typ:', typeof recipientId, ')');
+        console.log('DEBUG: Recipient Profile:', recipientProfile);
+
 
         // 2. Sprawdź, czy zaproszenie już istnieje w tabeli 'friends'
         // POPRAWKA: Zmiana formatowania klauzuli .or()
@@ -1834,6 +1844,7 @@ async function sendFriendRequest() {
         }
 
         if (existingRelation) {
+            console.log('[Friends] Existing relation found:', existingRelation);
             if (existingRelation.status === 'pending') {
                 // Check if it's a pending request sent by this user or received by this user
                 if (existingRelation.user_id === currentUser.id) {
@@ -1943,8 +1954,9 @@ async function acceptFriendRequest(requestId, senderId) {
         return;
     }
     try {
+        console.log(`[Friends] Attempting to accept request: requestId=${requestId}, senderId=${senderId}, currentUser.id=${currentUser.id}`);
         // Zaktualizuj status zaproszenia na 'accepted' w tabeli 'friends'
-        const { error: updateError } = await supabase
+        const { data: updateData, error: updateError } = await supabase
             .from('friends') // Changed from 'friend_requests' to 'friends'
             .update({ status: 'accepted', updated_at: new Date().toISOString() })
             .eq('id', requestId)
@@ -1956,6 +1968,8 @@ async function acceptFriendRequest(requestId, senderId) {
             showCustomMessage(`Błąd akceptacji zaproszenia: ${updateError.message}`, "error");
             return;
         }
+        console.log('[Friends] Supabase update result (accept):', updateData);
+
 
         showCustomMessage('Zaproszenie zaakceptowane! Jesteście teraz znajomymi.', 'success');
         console.log(`[Friends] Friend request ${requestId} accepted. Friendship established between ${currentUser.id} and ${senderId}.`);
@@ -1984,8 +1998,9 @@ async function declineFriendRequest(requestId) {
         return;
     }
     try {
+        console.log(`[Friends] Attempting to decline request: requestId=${requestId}, currentUser.id=${currentUser.id}`);
         // Zaktualizuj status zaproszenia na 'declined' w tabeli 'friends'
-        const { error } = await supabase
+        const { data: updateData, error } = await supabase
             .from('friends') // Changed from 'friend_requests' to 'friends'
             .update({ status: 'declined', updated_at: new Date().toISOString() })
             .eq('id', requestId)
@@ -1996,6 +2011,7 @@ async function declineFriendRequest(requestId) {
             showCustomMessage(`Błąd odrzucenia zaproszenia: ${error.message}`, "error");
             return;
         }
+        console.log('[Friends] Supabase update result (decline):', updateData);
 
         showCustomMessage('Zaproszenie odrzucone.', 'info');
         console.log(`[Friends] Friend request ${requestId} declined.`);

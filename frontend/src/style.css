@@ -599,8 +599,8 @@ body {
 /* Licznik powiadomień */
 .notification-count {
     position: absolute;
-    top: 0px; /* Dostosuj pozycję */
-    right: 0px; /* Dostosuj pozycję */
+    top: -8px; /* Dostosuj pozycję */
+    right: -8px; /* Dostosuj pozycję */
     background-color: var(--color-notification-badge);
     color: white;
     font-size: 0.7rem;
