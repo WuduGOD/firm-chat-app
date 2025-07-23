@@ -1506,6 +1506,7 @@ function setupChatSettingsDropdown() {
             if (friendRequestModal && friendRequestModal.classList.contains('visible') && !friendRequestModal.contains(event.target) && event.target !== addFriendButton && event.target !== notificationButton && event.target !== addNewButton) {
                 friendRequestModal.classList.remove('visible');
                 friendRequestModal.classList.add('hidden');
+                friendRequestModal.style.display = 'none'; // Explicitly hide modal
                 sendRequestStatus.textContent = ''; // Clear status message on close
                 friendEmailInput.value = ''; // Clear input on close
                 console.log("[initializeApp] Friend Request Modal hidden due to outside click.");
@@ -2007,6 +2008,7 @@ async function acceptFriendRequest(requestId, senderId) {
         if (friendRequestModal) {
             friendRequestModal.classList.add('hidden');
             friendRequestModal.classList.remove('visible'); // Ensure visibility class is removed
+            friendRequestModal.style.display = 'none'; // Explicitly hide modal
         }
 
     } catch (e) {
@@ -2049,6 +2051,7 @@ async function declineFriendRequest(requestId) {
         if (friendRequestModal) {
             friendRequestModal.classList.add('hidden');
             friendRequestModal.classList.remove('visible'); // Ensure visibility class is removed
+            friendRequestModal.style.display = 'none'; // Explicitly hide modal
         }
 
     } catch (e) {
@@ -2122,18 +2125,22 @@ function openFriendRequestModal(showSendSection, showPendingSection) {
 
     friendRequestModal.classList.remove('hidden');
     friendRequestModal.classList.add('visible'); // Show modal
+    friendRequestModal.style.display = 'block'; // Ensure modal is visible
 
     sendRequestStatus.textContent = ''; // Clear status message
     friendEmailInput.value = ''; // Clear input
 
     if (showSendSection) {
         sendFriendRequestSection.classList.remove('hidden');
+        sendFriendRequestSection.style.display = 'block'; // Ensure it's displayed
     } else {
         sendFriendRequestSection.classList.add('hidden');
+        sendFriendRequestSection.style.display = 'none'; // Ensure it's hidden
     }
 
     if (showPendingSection) {
         pendingRequestsSection.classList.remove('hidden');
+        pendingRequestsSection.style.display = 'block'; // Ensure it's displayed
         // Zapewnij, że tekst "Brak oczekujących zaproszeń" jest domyślnie ukryty,
         // a jego widoczność będzie kontrolowana przez renderPendingFriendRequests
         noPendingRequestsText.classList.add('hidden');
@@ -2141,6 +2148,7 @@ function openFriendRequestModal(showSendSection, showPendingSection) {
         loadFriendsAndRequests(); // Załaduj świeże dane dla oczekujących zaproszeń
     } else {
         pendingRequestsSection.classList.add('hidden');
+        pendingRequestsSection.style.display = 'none'; // Ensure it's hidden
     }
 
     console.log(`[openFriendRequestModal] Modal opened. Send section visible: ${showSendSection}, Pending section visible: ${showPendingSection}`);
@@ -2436,6 +2444,7 @@ async function initializeApp() {
             if (friendRequestModal && friendRequestModal.classList.contains('visible') && !friendRequestModal.contains(event.target) && event.target !== addFriendButton && event.target !== notificationButton && event.target !== addNewButton) {
                 friendRequestModal.classList.remove('visible');
                 friendRequestModal.classList.add('hidden');
+                friendRequestModal.style.display = 'none'; // Explicitly hide modal
                 sendRequestStatus.textContent = ''; // Clear status message on close
                 friendEmailInput.value = ''; // Clear input on close
                 console.log("[initializeApp] Friend Request Modal hidden due to outside click.");
@@ -2550,6 +2559,7 @@ async function initializeApp() {
                 if (friendRequestModal) {
                     friendRequestModal.classList.add('hidden');
                     friendRequestModal.classList.remove('visible'); // Hide modal
+                    friendRequestModal.style.display = 'none'; // Explicitly hide modal
                     sendRequestStatus.textContent = ''; // Clear status message on close
                     friendEmailInput.value = ''; // Clear input on close
                     console.log("[Friends] Friend Request Modal closed.");
