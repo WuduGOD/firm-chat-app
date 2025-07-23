@@ -1327,12 +1327,13 @@ function initWebSocket() {
                         break;
                     case 'friend_request_status_update': // NOWY TYP: Powiadomienie o zmianie statusu zaproszenia
                         console.log('[WS MESSAGE] Received friend request status update:', data);
-                        if (data.status === 'accepted') {
-                            showCustomMessage(`Twoje zaproszenie do ${getUserLabelById(data.receiver_id) || data.receiver_id} zostało zaakceptowane!`, 'success');
-                        } else if (data.status === 'declined') {
-                            showCustomMessage(`Twoje zaproszenie do ${getUserLabelById(data.receiver_id) || data.receiver_id} zostało odrzucone.`, 'info');
+                        if (payload.new.status === 'accepted') {
+                            showCustomMessage(`Twoje zaproszenie do ${getUserLabelById(payload.new.friend_id) || payload.new.friend_id} zostało zaakceptowane!`, 'success'); // Changed receiver_id to friend_id
+                            loadFriendsAndRequests(); // Refresh UI, to add new friend
+                        } else if (payload.new.status === 'declined') {
+                            showCustomMessage(`Twoje zaproszenie do ${getUserLabelById(payload.new.friend_id) || payload.new.friend_id} zostało odrzucone.`, 'info'); // Changed receiver_id to friend_id
+                            loadFriendsAndRequests(); // Refresh UI (e.g., remove request from sent list if displayed)
                         }
-                        loadFriendsAndRequests(); // Odśwież listę znajomych po zmianie statusu
                         break;
                     default:
                         console.warn("[WS MESSAGE] Unknown WS message type:", data.type, data);
@@ -1455,7 +1456,7 @@ function displayActiveUsers(activeUsersData) {
                         mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(user.id));
                         handleConversationClick(userProfile, mockConvoItem);
                     } else {
-                        console.warn(`[displayActiveUsers] Clicked mobile active user ${user.id} is not in current user's friends list. Cannot open chat.`);
+                        console.warn(`[updateUserStatusIndicator] Clicked mobile active user ${user.id} is not in current user's friends list. Cannot open chat.`);
                         showCustomMessage(`Nie możesz rozmawiać z ${getUserLabelById(user.id)}, dopóki nie zostaniecie znajomymi.`, 'info');
                     }
                 });
@@ -2101,6 +2102,9 @@ async function handleNewFriendRequestNotification(senderId) {
         if (friendRequestModal) {
             friendRequestModal.classList.remove('hidden'); // Otwórz modal zaproszeń
             friendRequestModal.classList.add('visible'); // Ensure visibility class is added
+            // ZMIANA: Pokaż tylko sekcję oczekujących zaproszeń
+            if (sendFriendRequestSection) sendFriendRequestSection.classList.add('hidden');
+            if (pendingRequestsSection) pendingRequestsSection.classList.remove('hidden');
             loadFriendsAndRequests(); // Odśwież modal
         }
         console.log("[Notifications] Friend request notification clicked. Focusing window and opening modal.");
@@ -2469,21 +2473,22 @@ async function initializeApp() {
         }
 
         // Event listener for the new "Add New" button
-        if (addNewButton) {
-            addNewButton.addEventListener('click', (event) => {
-                event.stopPropagation();
-                if (friendRequestModal) {
-                    friendRequestModal.classList.remove('hidden');
-                    friendRequestModal.classList.add('visible'); // Show modal
-                    sendRequestStatus.textContent = ''; // Clear status message
-                    friendEmailInput.value = ''; // Clear input
-                    pendingRequestsSection.classList.remove('empty'); // Ensure section is not marked empty initially
-                    noPendingRequestsText.classList.add('hidden'); // Hide "No pending" text initially
-                    loadFriendsAndRequests(); // Load fresh data
-                    console.log("[Friends] Add New button clicked. Modal shown.");
-                }
-            });
-        }
+        // ZMIANA: Usunięto funkcjonalność otwierania modalu dla addNewButton
+        // if (addNewButton) {
+        //     addNewButton.addEventListener('click', (event) => {
+        //         event.stopPropagation();
+        //         if (friendRequestModal) {
+        //             friendRequestModal.classList.remove('hidden');
+        //             friendRequestModal.classList.add('visible'); // Show modal
+        //             sendRequestStatus.textContent = ''; // Clear status message
+        //             friendEmailInput.value = ''; // Clear input
+        //             pendingRequestsSection.classList.remove('empty'); // Ensure section is not marked empty initially
+        //             noPendingRequestsText.classList.add('hidden'); // Hide "No pending" text initially
+        //             loadFriendsAndRequests(); // Load fresh data
+        //             console.log("[Friends] Add New button clicked. Modal shown.");
+        //         }
+        //     });
+        // }
 
 
         setupChatSettingsDropdown();
@@ -2506,12 +2511,14 @@ async function initializeApp() {
                 if (friendRequestModal) {
                     friendRequestModal.classList.remove('hidden');
                     friendRequestModal.classList.add('visible'); // Show modal
+                    // ZMIANA: Pokaż tylko sekcję wysyłania zaproszeń
+                    if (sendFriendRequestSection) sendFriendRequestSection.classList.remove('hidden');
+                    if (pendingRequestsSection) pendingRequestsSection.classList.add('hidden');
+
                     sendRequestStatus.textContent = ''; // Clear status message
                     friendEmailInput.value = ''; // Clear input
-                    pendingRequestsSection.classList.remove('empty'); // Upewnij się, że sekcja nie jest oznaczona jako pusta na starcie
-                    noPendingRequestsText.classList.add('hidden'); // Ukryj tekst "Brak oczekujących" na starcie
-                    loadFriendsAndRequests(); // Załaduj świeże dane
-                    console.log("[Friends] Add Friend button clicked. Modal shown.");
+                    // Nie ładujemy loadFriendsAndRequests() tutaj, aby nie odświeżać sekcji oczekujących, która jest ukryta
+                    console.log("[Friends] Add Friend button clicked. Showing send request section.");
                 }
             });
         }
@@ -2522,12 +2529,14 @@ async function initializeApp() {
                 if (friendRequestModal) {
                     friendRequestModal.classList.remove('hidden');
                     friendRequestModal.classList.add('visible'); // Show modal
+                    // ZMIANA: Pokaż tylko sekcję oczekujących zaproszeń
+                    if (sendFriendRequestSection) sendFriendRequestSection.classList.add('hidden');
+                    if (pendingRequestsSection) pendingRequestsSection.classList.remove('hidden');
+
                     sendRequestStatus.textContent = ''; // Clear status message
                     friendEmailInput.value = ''; // Clear input
-                    pendingRequestsSection.classList.remove('empty'); // Upewnij się, że sekcja nie jest oznaczona jako pusta na starcie
-                    noPendingRequestsText.classList.add('hidden'); // Ukryj tekst "Brak oczekujących" na starcie
-                    loadFriendsAndRequests(); // Załaduj świeże dane
-                    console.log("[Notifications] Notification button clicked. Modal shown.");
+                    loadFriendsAndRequests(); // Załaduj świeże dane dla oczekujących zaproszeń
+                    console.log("[Notifications] Notification button clicked. Showing pending requests section.");
                 }
             });
         }
