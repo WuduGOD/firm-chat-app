@@ -1179,7 +1179,12 @@ body {
 }
 
 .modal-content {
-    background-color: var(--bg-color-modal-content);
+    position: fixed; /* Pozycjonuje element względem okna przeglądarki */
+    top: 50%; /* Przesuwa górną krawędź elementu do połowy wysokości okna */
+    left: 50%; /* Przesuwa lewą krawędź elementu do połowy szerokości okna */
+    transform: translate(-50%, -50%); /* Koryguje pozycję, przesuwając element o połowę jego własnej szerokości i wysokości, aby jego środek był dokładnie na środku okna */
+    z-index: 1000; /* Zapewnia, że modal jest na wierzchu innych elementów */
+	background-color: var(--bg-color-modal-content);
     padding: 25px;
     border-radius: 12px;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
@@ -1189,8 +1194,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 20px;
-    transform: translateY(-20px); /* Początkowe przesunięcie dla animacji */
-    transition: transform 0.3s ease-in-out;
+    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out; /* Płynne przejście */
 }
 
 .modal.visible .modal-content {
