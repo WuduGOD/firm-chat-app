@@ -481,7 +481,8 @@ async function loadContacts() {
         const { data: friendsData, error: friendsError } = await supabase
             .from('friends')
             .select('user_id, friend_id, status')
-            .or(`user_id.eq.${currentUser.id},friend_id.eq.${currentUser.id}`)
+            // Poprawiona klauzula .or() z jawną konwersją na String()
+            .or(`user_id.eq.${String(currentUser.id)},friend_id.eq.${String(currentUser.id)}`)
             .eq('status', 'accepted'); // Only accepted relations are friends
 
         if (friendsError) {
@@ -693,7 +694,7 @@ async function handleConversationClick(user, clickedConvoItemElement) {
 
             // ZMIANA: Pobierz status z mapy onlineUsers, która teraz przechowuje obiekty
             const userStatus = onlineUsers.get(String(user.id));
-            const isUserOnline = userStatus ? userStatus.status : false; // Changed to userStatus.status
+            const isUserOnline = userStatus ? userStatus.isOnline : false; // Changed to userStatus.isOnline
             userStatusSpan.classList.toggle('online', isUserOnline);
             userStatusSpan.classList.toggle('offline', !isUserOnline);
 
@@ -1812,15 +1813,20 @@ async function sendFriendRequest() {
         }
 
         const recipientId = recipientProfile.id;
-		
-		console.log('currentUser.id:', currentUser.id, 'Typ:', typeof currentUser.id);
-		console.log('recipientId:', recipientId, 'Typ:', typeof recipientId);
+
+        // DEBUG: Sprawdź typy i wartości ID przed zapytaniem
+        console.log('DEBUG: currentUser.id:', currentUser.id, ' (Typ:', typeof currentUser.id, ')');
+        console.log('DEBUG: recipientId:', recipientId, ' (Typ:', typeof recipientId, ')');
 
         // 2. Sprawdź, czy zaproszenie już istnieje w tabeli 'friends'
+        // Poprawiona klauzula .or() z jawną konwersją na String()
         const { data: existingRelation, error: relationError } = await supabase
             .from('friends')
             .select('id, status, user_id, friend_id')
-            .or(`user_id.eq.${currentUser.id}.and.friend_id.eq.${recipientId},user_id.eq.${recipientId}.and.friend_id.eq.${currentUser.id}`)
+            .or([
+                { user_id: String(currentUser.id), friend_id: String(recipientId) },
+                { user_id: String(recipientId), friend_id: String(currentUser.id) }
+            ])
             .single();
 
         if (relationError && relationError.code !== 'PGRST116') { // PGRST116 means "no rows found" which is expected if no relation exists
