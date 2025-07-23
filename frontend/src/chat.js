@@ -739,7 +739,7 @@ async function handleConversationClick(user, clickedConvoItemElement) {
             console.log(`[handleConversationClick] Sent JOIN message to WebSocket for room: ${currentRoom}`);
         } else {
             console.warn("[handleConversationClick] WebSocket not open. Attempting to re-initialize and join on open.");
-            initWebSocket(); // Re-initialize WebSocket if not open, join on 'open' event
+            // Usunięto initWebSocket() stąd, ponieważ jest wywoływane w initializeApp
         }
 
         // KROK 3: Ładowanie historii wiadomości po ustawieniu pokoju
@@ -1020,9 +1020,7 @@ function updateUserStatusIndicator(userId, isOnline, lastSeenTimestamp = null) {
                     if (lastSeenInfo && lastSeenInfo.lastSeen) {
                         const date = new Date(lastSeenInfo.lastSeen);
                         if (!isNaN(date.getTime())) {
-                            lastSeenText = `Offline (ostatnio widziany ${formatTimeAgo(date)})`;
-                        } else {
-                            lastSeenText = `Offline`; // Fallback if date is invalid
+                             lastSeenText = `Offline (ostatnio widziany ${formatTimeAgo(date)})`;
                         }
                     }
                     userStatusSpan.textContent = lastSeenText;
@@ -1218,128 +1216,148 @@ function showTypingIndicator(usernameId) {
 function initWebSocket() {
     const wsUrl = import.meta.env.VITE_CHAT_WS_URL || "wss://firm-chat-app-backend.onrender.com";
 
+    // Sprawdź, czy połączenie już istnieje lub jest w trakcie nawiązywania
     if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
         console.log("[initWebSocket] WebSocket connection already open or connecting. Skipping new connection attempt.");
-        return;
+        return; // Nie twórz nowego połączenia, jeśli już istnieje
     }
 
     socket = new WebSocket(wsUrl);
     console.log(`[initWebSocket] Attempting to connect to WebSocket at: ${wsUrl}`);
 
-    socket.onopen = async () => { // Make onopen async
-        console.log('[initWebSocket] WebSocket connected successfully.');
-        reconnectAttempts = 0;
-        if (currentUser) {
-            // ZAWSZE dołączamy do "global" pokoju po otwarciu WS
-            socket.send(JSON.stringify({
-                type: 'join',
-                name: currentUser.id,
-                room: 'global', // Dołącz do globalnego pokoju dla statusów i ogólnego bycia "online"
-            }));
-            console.log(`[initWebSocket] Sent global JOIN message for user: ${currentUser.id}`);
-
-            // Wyślij status "online" po podłączeniu
-            socket.send(JSON.stringify({
-                type: 'status',
-                user: currentUser.id,
-                online: true,
-                last_seen: null // Online, więc last_seen jest null
-            }));
-            console.log(`[initWebSocket] Sent 'online' status for user ${currentUser.id}`);
-
-            // Jeśli użytkownik był w trakcie czatu i WebSocket się rozłączył/ponownie połączył, dołącz ponownie do ostatniego pokoju
-            if (currentRoom && currentRoom !== 'global') {
+    return new Promise((resolve, reject) => { // Zwróć Promise, aby initializeApp mogła na to czekać
+        socket.onopen = async () => {
+            console.log('[initWebSocket] WebSocket connected successfully.');
+            reconnectAttempts = 0;
+            if (currentUser) {
+                // ZAWSZE dołączamy do "global" pokoju po otwarciu WS
                 socket.send(JSON.stringify({
                     type: 'join',
                     name: currentUser.id,
-                    room: currentRoom
+                    room: 'global', // Dołącz do globalnego pokoju dla statusów i ogólnego bycia "online"
                 }));
-                console.log(`[initWebSocket] Re-joining previous room (${currentRoom}) after reconnection.`);
+                console.log(`[initWebSocket] Sent global JOIN message for user: ${currentUser.id}`);
+
+                // Wyślij status "online" po podłączeniu
+                socket.send(JSON.stringify({
+                    type: 'status',
+                    user: currentUser.id,
+                    online: true,
+                    last_seen: null // Online, więc last_seen jest null
+                }));
+                console.log(`[initWebSocket] Sent 'online' status for user ${currentUser.id}`);
+
+                // Jeśli użytkownik był w trakcie czatu i WebSocket się rozłączył/ponownie połączył, dołącz ponownie do ostatniego pokoju
+                if (currentRoom && currentRoom !== 'global') {
+                    socket.send(JSON.stringify({
+                        type: 'join',
+                        name: currentUser.id,
+                        room: currentRoom
+                    }));
+                    console.log(`[initWebSocket] Re-joining previous room (${currentRoom}) after reconnection.`);
+                }
+
+                // USUNIĘTO: loadAllProfiles(), loadContacts(), loadActiveUsers() z onopen
+                // Te funkcje będą wywoływane w initializeApp po await initWebSocket()
+                console.log("[initWebSocket] WebSocket onopen handler finished. Resolving Promise.");
+                resolve(); // Rozwiąż Promise po wykonaniu początkowych operacji
+            } else {
+                console.warn("[initWebSocket] WebSocket opened but currentUser is not set. Cannot join room yet. Rejecting Promise.");
+                reject(new Error("currentUser not set after WebSocket open."));
             }
+        };
 
-            // NOWE MIEJSCE DLA loadContacts() i loadActiveUsers()
-            // Te funkcje wymagają otwartego połączenia WebSocket
-            console.log("[initWebSocket] Loading user profiles and contacts (after WS open)...");
-            await loadAllProfiles(); // Ensure profiles are loaded before contacts
-            await loadContacts();
-            console.log("[initWebSocket] User profiles and contacts loaded.");
+        socket.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                console.log(`[WS MESSAGE] Incoming message: type=${data.type}, room=${data.room}. Current client room (currentRoom global var): ${currentRoom}`);
 
-            // Request active users list after successful connection
-            loadActiveUsers(); // This is already here, keep it.
-        } else {
-            console.warn("[initWebSocket] WebSocket opened but currentUser is not set. Cannot join room yet.");
-        }
-    };
-
-    socket.onmessage = (event) => {
-        try {
-            const data = JSON.parse(event.data);
-            console.log(`[WS MESSAGE] Incoming message: type=${data.type}, room=${data.room}. Current client room (currentRoom global var): ${currentRoom}`);
-
-            switch (data.type) {
-                case 'message':
-                    addMessageToChat({
-                        username: data.username,
-                        text: data.text,
-                        inserted_at: data.inserted_at,
-                        room: data.room,
-                    });
-                    // Przenieś konwersację na górę tylko dla nowo otrzymanych wiadomości
-                    if (String(data.username) !== String(currentUser.id)) { // Tylko jeśli wiadomość nie jest od nas samych
-                        const convoItemToMove = contactsListEl.querySelector(`.contact[data-room-id="${data.room}"]`);
-                        if (convoItemToMove && contactsListEl.firstChild !== convoItemToMove) {
-                            contactsListEl.prepend(convoItemToMove);
-                            console.log(`[Reorder] Moved conversation for room ${data.room} to top due to new received message.`);
+                switch (data.type) {
+                    case 'message':
+                        addMessageToChat({
+                            username: data.username,
+                            text: data.text,
+                            inserted_at: data.inserted_at,
+                            room: data.room,
+                        });
+                        // Przenieś konwersację na górę tylko dla nowo otrzymanych wiadomości
+                        if (String(data.username) !== String(currentUser.id)) { // Tylko jeśli wiadomość nie jest od nas samych
+                            const convoItemToMove = contactsListEl.querySelector(`.contact[data-room-id="${data.room}"]`);
+                            if (convoItemToMove && contactsListEl.firstChild !== convoItemToMove) {
+                                contactsListEl.prepend(convoItemToMove);
+                                console.log(`[Reorder] Moved conversation for room ${data.room} to top due to new received message.`);
+                            }
                         }
-                    }
-                    break;
-                case 'typing':
-                    console.log(`[WS MESSAGE] Received typing from ${data.username} in room ${data.room}.`);
-                    showTypingIndicator(data.username);
-                    break;
-                case 'history':
-                    console.log(`[WS MESSAGE] Received message history for room: ${data.room}. Global currentRoom: ${currentRoom}`);
-                    // Historia jest ładowana bezpośrednio przez handleConversationClick
-                    // Ta sekcja jest głównie do celów debugowania lub jeśli historia byłaby ładowana w inny sposób
-                    break;
-                case 'status':
-                    console.log(`[WS MESSAGE] Received status update for user ${data.user}: ${data.online ? 'online' : 'offline'}. Last seen: ${data.last_seen || 'N/A'}`);
-                    // ZMIANA: Przekaż last_seen timestamp do funkcji
-                    updateUserStatusIndicator(data.user, data.last_seen ? data.online : false, data.last_seen || null); // Ensure offline if last_seen is provided
-                    break;
-                case 'active_users':
-                    console.log('[WS MESSAGE] Received initial active users list:', data.users);
-                    displayActiveUsers(data.users);
-                    break;
-                // NOWY CASE: Obsługa ostatnich wiadomości dla pokoi użytkownika
-                case 'last_messages_for_user_rooms':
-                    console.log('[WS MESSAGE] Received last messages for user rooms:', data.messages);
-                    // Ta wiadomość jest obsługiwana w loadContacts() poprzez Promise,
-                    // więc nie potrzebujemy tu dodatkowej logiki, chyba że chcemy odświeżyć UI
-                    // w inny sposób po otrzymaniu tych danych.
-                    break;
-                default:
-                    console.warn("[WS MESSAGE] Unknown WS message type:", data.type, data);
+                        break;
+                    case 'typing':
+                        console.log(`[WS MESSAGE] Received typing from ${data.username} in room ${data.room}.`);
+                        showTypingIndicator(data.username);
+                        break;
+                    case 'history':
+                        console.log(`[WS MESSAGE] Received message history for room: ${data.room}. Global currentRoom: ${currentRoom}`);
+                        // Historia jest ładowana bezpośrednio przez handleConversationClick
+                        // Ta sekcja jest głównie do celów debugowania lub jeśli historia byłaby ładowana w inny sposób
+                        break;
+                    case 'status':
+                        console.log(`[WS MESSAGE] Received status update for user ${data.user}: ${data.online ? 'online' : 'offline'}. Last seen: ${data.last_seen || 'N/A'}`);
+                        // ZMIANA: Przekaż last_seen timestamp do funkcji
+                        updateUserStatusIndicator(data.user, data.last_seen ? data.online : false, data.last_seen || null); // Ensure offline if last_seen is provided
+                        break;
+                    case 'active_users':
+                        console.log('[WS MESSAGE] Received initial active users list:', data.users);
+                        displayActiveUsers(data.users);
+                        break;
+                    // NOWY CASE: Obsługa ostatnich wiadomości dla pokoi użytkownika
+                    case 'last_messages_for_user_rooms':
+                        console.log('[WS MESSAGE] Received last messages for user rooms:', data.messages);
+                        // Ta wiadomość jest obsługiwana w loadContacts() poprzez Promise,
+                        // więc nie potrzebujemy tu dodatkowej logiki, chyba że chcemy odświeżyć UI
+                        // w inny sposób po otrzymaniu tych danych.
+                        break;
+                    case 'new_friend_request': // NOWY TYP: Powiadomienie o nowym zaproszeniu
+                        console.log('[WS MESSAGE] Received new friend request notification:', data);
+                        handleNewFriendRequestNotification(data.sender_id);
+                        break;
+                    case 'friend_request_status_update': // NOWY TYP: Powiadomienie o zmianie statusu zaproszenia
+                        console.log('[WS MESSAGE] Received friend request status update:', data);
+                        if (data.status === 'accepted') {
+                            showCustomMessage(`Twoje zaproszenie do ${getUserLabelById(data.receiver_id) || data.receiver_id} zostało zaakceptowane!`, 'success');
+                        } else if (data.status === 'declined') {
+                            showCustomMessage(`Twoje zaproszenie do ${getUserLabelById(data.receiver_id) || data.receiver_id} zostało odrzucone.`, 'info');
+                        }
+                        loadFriendsAndRequests(); // Odśwież listę znajomych po zmianie statusu
+                        break;
+                    default:
+                        console.warn("[WS MESSAGE] Unknown WS message type:", data.type, data);
+                }
+            } catch (e) {
+                console.error("Error parsing or handling WebSocket message:", e, "Raw data:", event.data);
             }
-        } catch (e) {
-            console.error("Error parsing or handling WebSocket message:", e, "Raw data:", event.data);
-        }
-    };
+        };
 
-    socket.onclose = (event) => {
-        console.log(`[initWebSocket] WebSocket disconnected. Code: ${event.code}, Reason: ${event.reason}`);
-        if (event.code !== 1000) {
-            console.log('[initWebSocket] Attempting to reconnect...');
-            setTimeout(initWebSocket, Math.min(1000 * ++reconnectAttempts, 10000));
-        }
-    };
+        socket.onclose = (event) => {
+            console.log(`[initWebSocket] WebSocket disconnected. Code: ${event.code}, Reason: ${event.reason}`);
+            // Jeśli połączenie nie zostało zamknięte celowo (np. przez odświeżenie strony), spróbuj ponownie
+            if (event.code !== 1000) { // Kod 1000 to normalne zamknięcie
+                console.log('[initWebSocket] Attempting to reconnect...');
+                setTimeout(() => initWebSocket().then(resolve).catch(reject), Math.min(1000 * ++reconnectAttempts, 10000));
+            } else {
+                // Jeśli normalne zamknięcie, nie próbuj ponownie łączyć, ale odrzuć Promise, jeśli był otwarty
+                // To jest ważne, jeśli initializeApp czekało na to połączenie
+                if (reconnectAttempts === 0) { // Tylko jeśli to było pierwsze zamknięcie
+                    reject(new Error("WebSocket closed normally."));
+                }
+            }
+        };
 
-    socket.onerror = (error) => {
-        console.error('[initWebSocket] WebSocket Error:', error);
-        if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTing) {
-            socket.close();
-        }
-    };
+        socket.onerror = (error) => {
+            console.error('[initWebSocket] WebSocket Error:', error);
+            if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
+                socket.close();
+            }
+            reject(error); // Odrzuć Promise w przypadku błędu
+        };
+    });
 }
 
 /**
@@ -1357,7 +1375,7 @@ async function loadActiveUsers() {
             socket.send(JSON.stringify({ type: 'get_active_users' }));
             console.log("[loadActiveUsers] Requested active users list from WebSocket server.");
         } else {
-            console.warn("[loadActiveUsers] WebSocket not open, cannot request active users.");
+            console.warn("[loadActiveUsers] WebSocket not open, cannot request active users. This should not happen if called after initWebSocket is awaited.");
         }
     } catch (e) {
         console.error("Caught error in loadActiveUsers:", e);
@@ -2245,15 +2263,29 @@ async function initializeApp() {
         await loadAllProfiles(); // Keep this here as it's a prerequisite for getUserLabelById etc.
         console.log("[initializeApp] User profiles loaded.");
 
-        // 5. Initialize WebSocket connection (this will now trigger loadContacts on open)
-        console.log("[initializeApp] Initializing WebSocket connection...");
-        initWebSocket();
+        // 5. Initialize WebSocket connection and WAIT for it to be open
+        console.log("[initializeApp] Initializing WebSocket connection and waiting for it to open...");
+        try {
+            await initWebSocket(); // Await the Promise returned by initWebSocket
+            console.log("[initializeApp] WebSocket connection established. Proceeding with data loading.");
+        } catch (wsError) {
+            console.error("[initializeApp] Failed to establish WebSocket connection:", wsError);
+            showCustomMessage("Nie udało się nawiązać połączenia z serwerem czatu. Spróbuj odświeżyć stronę.", "error");
+            return; // Abort further initialization if WS fails
+        }
 
-        // 6. Set up message sending functionality
+        // 6. Load friends and requests and active users AFTER WebSocket is open
+        console.log("[initializeApp] Loading friends, requests, and active users after WS connection...");
+        await loadFriendsAndRequests(); // This calls loadContacts internally
+        await loadActiveUsers(); // Request active users list after successful connection
+        console.log("[initializeApp] Friends, requests, and active users loaded.");
+
+
+        // 7. Set up message sending functionality
         console.log("[initializeApp] Setting up message sending functionality...");
         setupSendMessage();
 
-        // 7. Set default UI state on load
+        // 8. Set default UI state on load
         console.log("[initializeApp] Setting default UI state...");
         // This is important: initially hide chatArea and show logoScreen on desktop
         // On mobile, chatArea will be active only when a conversation is clicked.
@@ -2271,7 +2303,7 @@ async function initializeApp() {
         if (messageInput) messageInput.disabled = true;
         if (sendButton) sendButton.disabled = true;
 
-        // 8. Add general event listeners for the application UI
+        // 9. Add general event listeners for the application UI
         console.log("[initializeApp] Attaching general UI event listeners...");
         backButton.addEventListener('click', () => {
             console.log('[backButton] Back button clicked (UI)');
@@ -2653,9 +2685,6 @@ async function initializeApp() {
 
         // Tytuł zakładki będzie aktualizowany po załadowaniu nieprzeczytanych wiadomości z Supabase
         updateDocumentTitle(); // Ustawienie początkowego tytułu na "Komunikator"
-
-        // Initial load of friends and requests
-        await loadFriendsAndRequests();
 
         console.log("[initializeApp] Komunikator application initialized successfully.");
     } catch (e) {
