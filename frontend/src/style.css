@@ -1338,38 +1338,33 @@ body {
     background-color: #d32f2f;
 }
 
-/* Reset dla html i body - kluczowe dla centrowania */
-html, body {
-    height: 100%; /* Zapewnia, że body zajmuje całą wysokość widocznego obszaru */
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
 /* Style pozycjonowania dla kontenera modala */
 #friendRequestModal {
-    position: fixed; /* Ustawia modal względem okna przeglądarki */
-    top: 50%; /* Przesuwa górną krawędź na środek pionowy */
-    left: 50%; /* Przesuwa lewą krawędź na środek poziomy */
-    transform: translate(-50%, -50%); /* Koryguje pozycję, aby środek elementu był na środku ekranu */
+    position: fixed; /* Pozycjonuje element względem okna przeglądarki */
+    top: 50%; /* Przesuwa górną krawędź elementu do połowy wysokości okna */
+    left: 50%; /* Przesuwa lewą krawędź elementu do połowy szerokości okna */
+    transform: translate(-50%, -50%); /* Koryguje pozycję, przesuwając element o połowę jego własnej szerokości i wysokości, aby jego środek był dokładnie na środku okna */
+    z-index: 1000; /* Zapewnia, że modal jest na wierzchu innych elementów */
+
+    /* Poniższe style kontrolują widoczność i przejścia, jeśli są używane w JS */
+    opacity: 0; /* Początkowo niewidoczny */
+    visibility: hidden; /* Początkowo ukryty */
+    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out; /* Płynne przejście */
 }
 
-/* Pamiętaj, że aby modal był widoczny, musisz kontrolować jego 'display' lub 'visibility' / 'opacity'
-   za pomocą JavaScript, np. poprzez dodawanie/usuwanie klas.
-   Jeśli chcesz, aby był domyślnie niewidoczny, dodaj:
-   display: none;
-   lub
-   opacity: 0;
-   visibility: hidden;
-*/
-
-/* Jeśli chcesz, aby sekcje w modalu były ukryte, gdy mają klasę hidden (jak w Twoim JS) */
-#friendRequestModal .modal-section.hidden {
-    display: none;
+/* Styl dla aktywnego/widocznego modala (kontrolowany przez JS) */
+#friendRequestModal.visible {
+    opacity: 1;
+    visibility: visible;
 }
+
+/* Pamiętaj, że wszelkie inne style wizualne (tło, padding, border, box-shadow, width, max-width, border-radius)
+   musisz dodać osobno, jeśli chcesz, aby modal miał określony wygląd.
+   Te style dotyczą wyłącznie pozycjonowania. */
 
 /* Jeśli masz inne elementy w HTML, które mogą tworzyć niechciane tło (np. stary .modal-backdrop),
    musisz je usunąć bezpośrednio z pliku chat.html. */
+
 
 /* Dark mode overrides */
 body.dark-mode {
