@@ -1,12 +1,9 @@
 /* Reset */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
 html, body { /* Dodano wysokość dla html i body */
     height: 100%;
+	margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
 :root {
@@ -1357,10 +1354,6 @@ body {
     opacity: 1;
     visibility: visible;
 }
-
-/* Pamiętaj, że wszelkie inne style wizualne (tło, padding, border, box-shadow, width, max-width, border-radius)
-   musisz dodać osobno, jeśli chcesz, aby modal miał określony wygląd.
-   Te style dotyczą wyłącznie pozycjonowania. */
 
 /* Jeśli masz inne elementy w HTML, które mogą tworzyć niechciane tło (np. stary .modal-backdrop),
    musisz je usunąć bezpośrednio z pliku chat.html. */
