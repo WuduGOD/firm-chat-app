@@ -1819,14 +1819,11 @@ async function sendFriendRequest() {
         console.log('DEBUG: recipientId:', recipientId, ' (Typ:', typeof recipientId, ')');
 
         // 2. Sprawdź, czy zaproszenie już istnieje w tabeli 'friends'
-        // Poprawiona klauzula .or() z jawną konwersją na String()
+        // POPRAWKA: Zmiana formatowania klauzuli .or()
         const { data: existingRelation, error: relationError } = await supabase
             .from('friends')
             .select('id, status, user_id, friend_id')
-            .or([
-                { user_id: String(currentUser.id), friend_id: String(recipientId) },
-                { user_id: String(recipientId), friend_id: String(currentUser.id) }
-            ])
+            .or(`and(user_id.eq.${String(currentUser.id)},friend_id.eq.${String(recipientId)}),and(user_id.eq.${String(recipientId)},friend_id.eq.${String(currentUser.id)})`)
             .single();
 
         if (relationError && relationError.code !== 'PGRST116') { // PGRST116 means "no rows found" which is expected if no relation exists
