@@ -117,8 +117,13 @@ wss.on('connection', (ws) => {
                 const targetRoom = data.room; 
                 console.log(`Processing MESSAGE type for room: ${targetRoom} from user: ${userData.userId}. Data:`, data);
 
-                // Zapisz wiadomość w bazie danych (używamy sender_id, room_id, content)
-                const created_at = await saveMessage(userData.userId, targetRoom, data.text); // text z frontendu to content
+                // WYODRĘBNIANIE participant1_id i participant2_id z room_id
+                const participants = targetRoom.split('_').sort(); // Zakładamy, że room_id to 'id1_id2' posortowane alfabetycznie
+                const participant1Id = participants[0];
+                const participant2Id = participants[1];
+
+                // Zapisz wiadomość w bazie danych (używamy sender_id, room_id, content, participant1_id, participant2_id)
+                const created_at = await saveMessage(userData.userId, targetRoom, data.text, participant1Id, participant2Id); // Dodano nowe parametry
                 const msgObj = {
                     type: 'message',
                     username: userData.userId, // To będzie sender_id
@@ -268,13 +273,13 @@ wss.on('connection', (ws) => {
 
 // Nasłuchiwanie na nowe zaproszenia do znajomych (INSERT)
 supabase
-    .channel('friend_requests_insert_channel')
+    .channel('friend_requests_channel') // Nazwa kanału
     .on(
         'postgres_changes',
         {
-            event: 'INSERT',
+            event: 'INSERT', // Interesują nas tylko nowe wpisy
             schema: 'public',
-            table: 'friends', // ZMIANA: Zmieniono z 'friend_requests' na 'friends'
+            table: 'friends', // Zmieniono z 'friend_requests' na 'friends'
             // Możesz dodać filtr, np. `filter: 'receiver_id=eq.' + userId` jeśli chcesz,
             // aby serwer nasłuchiwał tylko dla konkretnego użytkownika,
             // ale dla serwera lepiej jest nasłuchiwać globalnie i filtrować w kodzie.
@@ -283,47 +288,46 @@ supabase
             console.log('[Supabase Realtime - INSERT] New friend request received:', payload.new);
             const newRequest = payload.new;
             // Wysyłamy powiadomienie do odbiorcy zaproszenia
-            // Sprawdzamy, czy to zaproszenie jest dla kogoś, kto ma aktywne połączenie WebSocket
             if (newRequest.status === 'pending') {
-                broadcastToUser(newRequest.friend_id, JSON.stringify({ // ZMIANA: Użyto newRequest.friend_id (odbiorca)
+                broadcastToUser(newRequest.friend_id, JSON.stringify({ // Zmieniono receiver_id na friend_id
                     type: 'new_friend_request',
-                    sender_id: newRequest.user_id, // ZMIANA: Użyto newRequest.user_id (nadawca)
+                    sender_id: newRequest.user_id, // Zmieniono sender_id na user_id
                     request_id: newRequest.id
                 }));
-                console.log(`[Supabase Realtime] Sent new_friend_request notification to ${newRequest.friend_id} from ${newRequest.user_id}.`);
+                console.log(`[Supabase Realtime] Sent new_friend_request notification to ${newRequest.friend_id} from ${newRequest.user_id}.`); // Zmieniono receiver_id na friend_id, sender_id na user_id
             }
         }
     )
     .subscribe();
-console.log("[Supabase Realtime] Subscribed to 'friend_requests_insert_channel'.");
+console.log("[Supabase Realtime] Subscribed to 'friend_requests_channel'.");
 
 // Nasłuchiwanie na aktualizacje statusu zaproszeń do znajomych (UPDATE)
 supabase
-    .channel('friend_requests_update_channel')
+    .channel('friend_requests_status_channel')
     .on(
         'postgres_changes',
         {
             event: 'UPDATE',
             schema: 'public',
-            table: 'friends', // ZMIANA: Zmieniono z 'friend_requests' na 'friends'
+            table: 'friends', // Zmieniono z 'friend_requests' na 'friends'
         },
         (payload) => {
             console.log('[Supabase Realtime - UPDATE] Friend request status updated:', payload.new);
             const updatedRequest = payload.new;
             // Wysyłamy powiadomienie do nadawcy zaproszenia o zmianie statusu
             if (updatedRequest.status === 'accepted' || updatedRequest.status === 'declined') {
-                broadcastToUser(updatedRequest.user_id, JSON.stringify({ // ZMIANA: Użyto updatedRequest.user_id (nadawca)
+                broadcastToUser(updatedRequest.user_id, JSON.stringify({ // Zmieniono sender_id na user_id
                     type: 'friend_request_status_update',
                     request_id: updatedRequest.id,
-                    receiver_id: updatedRequest.friend_id, // ZMIANA: Użyto updatedRequest.friend_id (odbiorca)
+                    receiver_id: updatedRequest.friend_id, // Zmieniono receiver_id na friend_id
                     status: updatedRequest.status
                 }));
-                console.log(`[Supabase Realtime] Sent friend_request_status_update notification to ${updatedRequest.user_id} for request ${updatedRequest.id} (status: ${updatedRequest.status}).`);
+                console.log(`[Supabase Realtime] Sent friend_request_status_update notification to ${updatedRequest.user_id} for request ${updatedRequest.id} (status: ${updatedRequest.status}).`); // Zmieniono sender_id na user_id
             }
         }
     )
     .subscribe();
-console.log("[Supabase Realtime] Subscribed to 'friend_requests_update_channel'.");
+console.log("[Supabase Realtime] Subscribed to 'friend_requests_status_channel'.");
 
 
 // ---------------------- Helper functions --------------------------
@@ -390,11 +394,10 @@ async function getOnlineStatusesFromDb() {
  * @returns {Promise<Object>} Obiekt, gdzie kluczem jest room_id, a wartością jest obiekt ostatniej wiadomości.
  */
 async function getLastMessagesForUserRooms(userId) {
-    console.log(`[getLastMessagesForUserRooms] Attempting to fetch last messages for user ${userId}'s rooms.`);
     const client = await pool.connect();
     try {
         // Używamy CTE (Common Table Expression) z ROW_NUMBER() do znalezienia najnowszej wiadomości dla każdego pokoju.
-        // Zakładamy, że room_id zawiera userId (np. 'user1_user2').
+        // Zmieniono klauzulę WHERE, aby używać nowych kolumn participant1_id i participant2_id.
         const query = `
             WITH RankedMessages AS (
                 SELECT
@@ -406,7 +409,7 @@ async function getLastMessagesForUserRooms(userId) {
                 FROM
                     messages m
                 WHERE
-                    m.room_id LIKE '%' || $1 || '%' -- Filtrujemy pokoje, które zawierają ID użytkownika
+                    m.participant1_id = $1 OR m.participant2_id = $1 -- Zoptymalizowane zapytanie
             )
             SELECT
                 room_id,
@@ -419,7 +422,7 @@ async function getLastMessagesForUserRooms(userId) {
                 rn = 1;
         `;
         const res = await client.query(query, [userId]);
-        console.log(`[getLastMessagesForUserRooms] DB: Fetched ${res.rows.length} last messages for user ${userId}'s rooms.`);
+        console.log(`DB: Fetched ${res.rows.length} last messages for user ${userId}'s rooms.`);
 
         const lastMessagesMap = {};
         res.rows.forEach(row => {
@@ -430,10 +433,9 @@ async function getLastMessagesForUserRooms(userId) {
                 room: row.room_id
             };
         });
-        console.log(`[getLastMessagesForUserRooms] Returning map with ${Object.keys(lastMessagesMap).length} rooms.`);
         return lastMessagesMap;
     } catch (err) {
-        console.error(`[getLastMessagesForUserRooms] DB Error: Failed to get last messages for user rooms for ${userId}:`, err);
+        console.error(`DB Error: Failed to get last messages for user rooms for ${userId}:`, err);
         return {};
     } finally {
         client.release();
@@ -571,14 +573,16 @@ function broadcastToUser(userId, msg) {
  * @param {string} senderId - The ID of the user sending the message.
  * @param {string} roomId - The ID of the room the message belongs to.
  * @param {string} content - The text content of the message.
+ * @param {string} participant1Id - The ID of the first participant in the room.
+ * @param {string} participant2Id - The ID of the second participant in the room.
  * @returns {Promise<string>} The 'created_at' timestamp of the inserted message.
  */
-async function saveMessage(senderId, roomId, content) {
+async function saveMessage(senderId, roomId, content, participant1Id, participant2Id) {
     // Zaktualizowane kolumny zgodnie ze schematem bazy danych
-    const query = 'INSERT INTO messages (sender_id, room_id, content) VALUES ($1, $2, $3) RETURNING created_at';
+    const query = 'INSERT INTO messages (sender_id, room_id, content, participant1_id, participant2_id) VALUES ($1, $2, $3, $4, $5) RETURNING created_at';
     try {
-        const res = await pool.query(query, [senderId, roomId, content]);
-        console.log(`DB: Message saved for user ${senderId} in room ${roomId}.`);
+        const res = await pool.query(query, [senderId, roomId, content, participant1Id, participant2Id]);
+        console.log(`DB: Message saved for user ${senderId} in room ${roomId} with participants ${participant1Id} and ${participant2Id}.`);
         return res.rows[0].created_at; // Zwracamy created_at
     } catch (err) {
         console.error('DB Error: Failed to save message:', err);
