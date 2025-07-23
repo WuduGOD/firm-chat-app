@@ -1308,7 +1308,7 @@ function initWebSocket() {
                     case 'status':
                         console.log(`[WS MESSAGE] Received status update for user ${data.user}: ${data.online ? 'online' : 'offline'}. Last seen: ${data.last_seen || 'N/A'}`);
                         // ZMIANA: Przekaż last_seen timestamp do funkcji
-                        updateUserStatusIndicator(data.user, data.last_seen ? data.online : false, data.last_seen || null); // Ensure offline if last_seen is provided
+                        updateUserStatusIndicator(data.user, data.online, data.last_seen || null); // Użyj bezpośrednio data.online
                         break;
                     case 'active_users':
                         console.log('[WS MESSAGE] Received initial active users list:', data.users);
