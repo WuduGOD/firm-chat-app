@@ -1327,11 +1327,12 @@ function initWebSocket() {
                         break;
                     case 'friend_request_status_update': // NOWY TYP: Powiadomienie o zmianie statusu zaproszenia
                         console.log('[WS MESSAGE] Received friend request status update:', data);
+                        // Upewnij się, że używasz payload.new.friend_id zamiast payload.new.receiver_id
                         if (payload.new.status === 'accepted') {
-                            showCustomMessage(`Twoje zaproszenie do ${getUserLabelById(payload.new.friend_id) || payload.new.friend_id} zostało zaakceptowane!`, 'success'); // Changed receiver_id to friend_id
+                            showCustomMessage(`Twoje zaproszenie do ${getUserLabelById(payload.new.friend_id) || payload.new.friend_id} zostało zaakceptowane!`, 'success');
                             loadFriendsAndRequests(); // Refresh UI, to add new friend
                         } else if (payload.new.status === 'declined') {
-                            showCustomMessage(`Twoje zaproszenie do ${getUserLabelById(payload.new.friend_id) || payload.new.friend_id} zostało odrzucone.`, 'info'); // Changed receiver_id to friend_id
+                            showCustomMessage(`Twoje zaproszenie do ${getUserLabelById(payload.new.friend_id) || payload.new.friend_id} zostało odrzucone.`, 'info');
                             loadFriendsAndRequests(); // Refresh UI (e.g., remove request from sent list if displayed)
                         }
                         break;
@@ -2099,19 +2100,50 @@ async function handleNewFriendRequestNotification(senderId) {
 
     notification.onclick = function() {
         window.focus();
-        if (friendRequestModal) {
-            friendRequestModal.classList.remove('hidden'); // Otwórz modal zaproszeń
-            friendRequestModal.classList.add('visible'); // Ensure visibility class is added
-            // ZMIANA: Pokaż tylko sekcję oczekujących zaproszeń
-            if (sendFriendRequestSection) sendFriendRequestSection.classList.add('hidden');
-            if (pendingRequestsSection) pendingRequestsSection.classList.remove('hidden');
-            loadFriendsAndRequests(); // Odśwież modal
-        }
+        // ZMIANA: Użyj nowej funkcji openFriendRequestModal
+        openFriendRequestModal(false, true); // Pokaż tylko sekcję oczekujących zaproszeń
         console.log("[Notifications] Friend request notification clicked. Focusing window and opening modal.");
     };
 
     playNotificationSound(); // Odtwórz dźwięk
     await loadFriendsAndRequests(); // Odśwież badge po otrzymaniu nowego zaproszenia
+}
+
+/**
+ * Opens the friend request modal and controls visibility of its sections.
+ * @param {boolean} showSendSection - If true, shows the 'send friend request' section.
+ * @param {boolean} showPendingSection - If true, shows the 'pending requests' section.
+ */
+function openFriendRequestModal(showSendSection, showPendingSection) {
+    if (!friendRequestModal || !sendFriendRequestSection || !pendingRequestsSection || !sendRequestStatus || !friendEmailInput || !noPendingRequestsText) {
+        console.error("[openFriendRequestModal] Missing modal elements. Cannot open.");
+        return;
+    }
+
+    friendRequestModal.classList.remove('hidden');
+    friendRequestModal.classList.add('visible'); // Show modal
+
+    sendRequestStatus.textContent = ''; // Clear status message
+    friendEmailInput.value = ''; // Clear input
+
+    if (showSendSection) {
+        sendFriendRequestSection.classList.remove('hidden');
+    } else {
+        sendFriendRequestSection.classList.add('hidden');
+    }
+
+    if (showPendingSection) {
+        pendingRequestsSection.classList.remove('hidden');
+        // Zapewnij, że tekst "Brak oczekujących zaproszeń" jest domyślnie ukryty,
+        // a jego widoczność będzie kontrolowana przez renderPendingFriendRequests
+        noPendingRequestsText.classList.add('hidden');
+        pendingRequestsSection.classList.remove('empty'); // Upewnij się, że nie jest oznaczona jako pusta
+        loadFriendsAndRequests(); // Załaduj świeże dane dla oczekujących zaproszeń
+    } else {
+        pendingRequestsSection.classList.add('hidden');
+    }
+
+    console.log(`[openFriendRequestModal] Modal opened. Send section visible: ${showSendSection}, Pending section visible: ${showPendingSection}`);
 }
 
 
@@ -2474,21 +2506,13 @@ async function initializeApp() {
 
         // Event listener for the new "Add New" button
         // ZMIANA: Usunięto funkcjonalność otwierania modalu dla addNewButton
-        // if (addNewButton) {
-        //     addNewButton.addEventListener('click', (event) => {
-        //         event.stopPropagation();
-        //         if (friendRequestModal) {
-        //             friendRequestModal.classList.remove('hidden');
-        //             friendRequestModal.classList.add('visible'); // Show modal
-        //             sendRequestStatus.textContent = ''; // Clear status message
-        //             friendEmailInput.value = ''; // Clear input
-        //             pendingRequestsSection.classList.remove('empty'); // Ensure section is not marked empty initially
-        //             noPendingRequestsText.classList.add('hidden'); // Hide "No pending" text initially
-        //             loadFriendsAndRequests(); // Load fresh data
-        //             console.log("[Friends] Add New button clicked. Modal shown.");
-        //         }
-        //     });
-        // }
+        if (addNewButton) {
+            addNewButton.addEventListener('click', (event) => {
+                event.stopPropagation();
+                console.log("[Friends] Add New button clicked. Currently does nothing.");
+                // Ta funkcja jest celowo pusta, zgodnie z prośbą użytkownika.
+            });
+        }
 
 
         setupChatSettingsDropdown();
@@ -2508,36 +2532,16 @@ async function initializeApp() {
         if (addFriendButton) {
             addFriendButton.addEventListener('click', (event) => {
                 event.stopPropagation();
-                if (friendRequestModal) {
-                    friendRequestModal.classList.remove('hidden');
-                    friendRequestModal.classList.add('visible'); // Show modal
-                    // ZMIANA: Pokaż tylko sekcję wysyłania zaproszeń
-                    if (sendFriendRequestSection) sendFriendRequestSection.classList.remove('hidden');
-                    if (pendingRequestsSection) pendingRequestsSection.classList.add('hidden');
-
-                    sendRequestStatus.textContent = ''; // Clear status message
-                    friendEmailInput.value = ''; // Clear input
-                    // Nie ładujemy loadFriendsAndRequests() tutaj, aby nie odświeżać sekcji oczekujących, która jest ukryta
-                    console.log("[Friends] Add Friend button clicked. Showing send request section.");
-                }
+                openFriendRequestModal(true, false); // Pokaż tylko sekcję wysyłania zaproszeń
+                console.log("[Friends] Add Friend button clicked. Showing send request section.");
             });
         }
 
         if (notificationButton) {
             notificationButton.addEventListener('click', (event) => {
                 event.stopPropagation();
-                if (friendRequestModal) {
-                    friendRequestModal.classList.remove('hidden');
-                    friendRequestModal.classList.add('visible'); // Show modal
-                    // ZMIANA: Pokaż tylko sekcję oczekujących zaproszeń
-                    if (sendFriendRequestSection) sendFriendRequestSection.classList.add('hidden');
-                    if (pendingRequestsSection) pendingRequestsSection.classList.remove('hidden');
-
-                    sendRequestStatus.textContent = ''; // Clear status message
-                    friendEmailInput.value = ''; // Clear input
-                    loadFriendsAndRequests(); // Załaduj świeże dane dla oczekujących zaproszeń
-                    console.log("[Notifications] Notification button clicked. Showing pending requests section.");
-                }
+                openFriendRequestModal(false, true); // Pokaż tylko sekcję oczekujących zaproszeń
+                console.log("[Notifications] Notification button clicked. Showing pending requests section.");
             });
         }
 
