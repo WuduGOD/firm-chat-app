@@ -1150,21 +1150,6 @@ body {
 }
 
 /* Modale */
-.modal {
-    position: fixed;
-    z-index: 10000; /* Bardzo wysoki z-index, aby był zawsze na wierzchu */
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: var(--bg-color-modal-overlay);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
-}
 
 .modal.hidden {
     opacity: 0;
@@ -1349,6 +1334,15 @@ body {
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+	
+	display: none;
+}
+
+/* Styl dla aktywnego/widocznego modala (kontrolowany przez JS) */
+#friendRequestModal.visible {
+    opacity: 1;
+    visibility: visible;
+    display: block; /* KLUCZOWE: Ustawia display na block, aby modal był widoczny. Możesz użyć 'flex' jeśli chcesz, aby jego zawartość była układana za pomocą flexboxa. */
 }
 
 /* Dark mode overrides */
