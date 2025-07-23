@@ -156,15 +156,15 @@ function showCustomMessage(message, type = 'info') {
 /**
  * Zapewnia, że AudioContext jest aktywny. Jeśli nie, tworzy go
  * i wznawia (co wymaga gestu użytkownika).
+ * ZMIANA: Tworzy AudioContext tylko jeśli jest null, a następnie próbuje go wznowić.
  */
 function ensureAudioContext() {
     if (!audioContext) {
+        console.log("[AudioContext] Creating new AudioContext due to user gesture.");
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        console.log("[AudioContext] New AudioContext created.");
     }
 
     // Sprawdź stan AudioContext. Jeśli jest zawieszony, spróbuj go wznowić.
-    // Wznowienie może wymagać gestu użytkownika.
     if (audioContext.state === 'suspended') {
         audioContext.resume().then(() => {
             console.log('[AudioContext] AudioContext resumed successfully.');
@@ -241,6 +241,7 @@ function playNotificationSound() {
 /**
  * Próbuje odtworzyć cichy dźwięk, aby sprawdzić i ewentualnie odblokować politykę Autoplay.
  * Jeśli się nie powiedzie, pokaże przycisk `enableSoundButton`.
+ * ZMIANA: Nie tworzy AudioContext od razu, tylko sprawdza jego stan.
  */
 function checkAudioAutoplay() {
     console.log("[Autoplay Check] Attempting to check autoplay policy...");
@@ -252,36 +253,33 @@ function checkAudioAutoplay() {
             enableSoundButton.classList.add('hidden');
             audioContextInitiated = true; // Ustaw flagę na true, bo przeglądarka pamięta odblokowanie
         }
-        ensureAudioContext(); // Spróbuj wznowić AudioContext prewencyjnie
+        // Spróbuj wznowić AudioContext prewencyjnie, ale nie twórz go tutaj
+        if (audioContext && audioContext.state === 'suspended') {
+            audioContext.resume().then(() => {
+                console.log('[Autoplay Check] AudioContext resumed successfully from localStorage check.');
+            }).catch(e => {
+                console.error('[Autoplay Check] Failed to resume AudioContext from localStorage check:', e);
+            });
+        }
         return;
     }
 
-    try {
-        ensureAudioContext(); // Upewnij się, że AudioContext istnieje i jest w stanie suspended/running
-
-        if (audioContext && audioContext.state === 'suspended') {
-            // Jeśli AudioContext jest zawieszony, oznacza to, że potrzebny jest gest użytkownika.
-            // Pokaż przycisk do włączenia dźwięków.
-            console.warn("[Autoplay Check] AudioContext is suspended. Showing 'Enable Sound' button.");
-            if (enableSoundButton) {
-                enableSoundButton.classList.remove('hidden');
-                showCustomMessage("Przeglądarka zablokowała dźwięki. Kliknij 'Włącz dźwięki' u góry, aby je aktywować.", "info");
-            }
-        } else if (audioContext && audioContext.state === 'running') {
-            console.log('[Autoplay Check] AudioContext is already running. Autoplay is likely allowed.');
-            audioContextInitiated = true;
-            localStorage.setItem('autoplayUnlocked', 'true');
-            if (enableSoundButton) {
-                enableSoundButton.classList.add('hidden');
-            }
-        } else {
-            console.log(`[Autoplay Check] AudioContext state: ${audioContext ? audioContext.state : 'null'}. No immediate action.`);
-        }
-    } catch (e) {
-        console.error("Error during autoplay check:", e);
+    // Jeśli AudioContext jeszcze nie istnieje lub jest zawieszony, pokaż przycisk
+    if (!audioContext || audioContext.state === 'suspended') {
+        console.warn("[Autoplay Check] AudioContext is not initialized or is suspended. Showing 'Enable Sound' button.");
         if (enableSoundButton) {
             enableSoundButton.classList.remove('hidden');
+            showCustomMessage("Przeglądarka zablokowała dźwięki. Kliknij 'Włącz dźwięki' u góry, aby je aktywować.", "info");
         }
+    } else if (audioContext.state === 'running') {
+        console.log('[Autoplay Check] AudioContext is already running. Autoplay is likely allowed.');
+        audioContextInitiated = true;
+        localStorage.setItem('autoplayUnlocked', 'true');
+        if (enableSoundButton) {
+            enableSoundButton.classList.add('hidden');
+        }
+    } else {
+        console.log(`[Autoplay Check] AudioContext state: ${audioContext ? audioContext.state : 'null'}. No immediate action.`);
     }
 }
 
@@ -1020,7 +1018,9 @@ function updateUserStatusIndicator(userId, isOnline, lastSeenTimestamp = null) {
                     if (lastSeenInfo && lastSeenInfo.lastSeen) {
                         const date = new Date(lastSeenInfo.lastSeen);
                         if (!isNaN(date.getTime())) {
-                             lastSeenText = `Offline (ostatnio widziany ${formatTimeAgo(date)})`;
+                            lastSeenText = `Offline (ostatnio widziany ${formatTimeAgo(date)})`;
+                        } else {
+                            lastSeenText = `Offline`; // Fallback if date is invalid
                         }
                     }
                     userStatusSpan.textContent = lastSeenText;
@@ -1219,7 +1219,7 @@ function initWebSocket() {
     // Sprawdź, czy połączenie już istnieje lub jest w trakcie nawiązywania
     if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
         console.log("[initWebSocket] WebSocket connection already open or connecting. Skipping new connection attempt.");
-        return; // Nie twórz nowego połączenia, jeśli już istnieje
+        return new Promise(resolve => resolve()); // Rozwiąż od razu, jeśli już połączono
     }
 
     socket = new WebSocket(wsUrl);
@@ -2685,6 +2685,8 @@ async function initializeApp() {
 
         // Tytuł zakładki będzie aktualizowany po załadowaniu nieprzeczytanych wiadomości z Supabase
         updateDocumentTitle(); // Ustawienie początkowego tytułu na "Komunikator"
+
+        // USUNIĘTO: await loadFriendsAndRequests(); // <-- USUNIĘTO DUPLIKAT!
 
         console.log("[initializeApp] Komunikator application initialized successfully.");
     } catch (e) {
