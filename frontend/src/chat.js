@@ -1812,6 +1812,9 @@ async function sendFriendRequest() {
         }
 
         const recipientId = recipientProfile.id;
+		
+		console.log('currentUser.id:', currentUser.id, 'Typ:', typeof currentUser.id);
+		console.log('recipientId:', recipientId, 'Typ:', typeof recipientId);
 
         // 2. Sprawdź, czy zaproszenie już istnieje w tabeli 'friends'
         const { data: existingRelation, error: relationError } = await supabase
