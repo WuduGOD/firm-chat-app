@@ -527,9 +527,11 @@ async function loadContacts() {
             lastMessagesMap = await new Promise(resolve => {
                 const tempHandler = (event) => {
                     const data = JSON.parse(event.data);
+                    console.log(`[loadContacts - tempHandler] Received WS message. Type: ${data.type}`); // Dodatkowe logowanie
                     if (data.type === 'last_messages_for_user_rooms') {
                         console.log("[loadContacts] Received 'last_messages_for_user_rooms' response.");
                         socket.removeEventListener('message', tempHandler);
+                        clearTimeout(timeoutId); // WAŻNE: Wyczyść timeout po otrzymaniu odpowiedzi
                         resolve(data.messages);
                     }
                 };
@@ -1066,9 +1068,9 @@ function updateUserStatusIndicator(userId, isOnline, lastSeenTimestamp = null) {
                         const userProfile = allFriends.find(p => String(p.id) === String(userId)); // ZMIANA: Szukaj tylko wśród znajomych
                         if (userProfile) {
                             const mockConvoItem = document.createElement('li');
-                            mockConvoItem.dataset.convoId = userProfile.id;
+                            mockConvoItem.dataset.convoId = user.id;
                             mockConvoItem.dataset.email = userProfile.email;
-                            mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(userProfile.id));
+                            mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(user.id));
                             handleConversationClick(userProfile, mockConvoItem);
                         } else {
                             console.warn(`[updateUserStatusIndicator] Clicked active user ${userId} is not in current user's friends list. Cannot open chat.`);
@@ -1124,7 +1126,7 @@ function updateUserStatusIndicator(userId, isOnline, lastSeenTimestamp = null) {
 
                     // Add click listener for mobile item
                     div.addEventListener('click', async () => {
-                        const userProfile = allFriends.find(p => String(p.id) === String(userId)); // ZMIANA: Szukaj tylko wśród znajomych
+                        const userProfile = allFriends.find(p => String(p.id) === String(user.id)); // ZMIANA: Szukaj tylko wśród znajomych
                         if (userProfile) {
                             const mockConvoItem = document.createElement('li');
                             mockConvoItem.dataset.convoId = user.id;
@@ -1847,7 +1849,7 @@ async function sendFriendRequest() {
 
 
         // 2. Sprawdź, czy zaproszenie już istnieje w tabeli 'friends'
-        // POPRAWKA: Zmiana formatowania klauzuli .or()
+        // POPRAWKA: Zmiana formatowania klauzeli .or()
         const { data: existingRelation, error: relationError } = await supabase
             .from('friends')
             .select('id, status, user_id, friend_id')
@@ -2308,7 +2310,7 @@ async function initializeApp() {
         backButton.addEventListener('click', () => {
             console.log('[backButton] Back button clicked (UI)');
 
-            // Wysyłamy wiadomość 'leave' do serwera, informując go, że opuszczamy obecny pokój czatu
+            // Wysyłamy wiadomość 'leave' dla poprzedniego pokoju, jeśli istnieje i jest różny od nowego
             if (socket && socket.readyState === WebSocket.OPEN && currentRoom && currentRoom !== 'global') {
                 socket.send(JSON.stringify({
                     type: 'leave',
