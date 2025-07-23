@@ -581,10 +581,12 @@ async function loadContacts() {
                 }
             }
 
+            // ZMIANA: Dodano span z klasą status-dot i początkowym statusem 'offline'
             convoItem.innerHTML = `
                 <img src="${avatarSrc}" alt="Avatar" class="avatar">
                 <div class="contact-info">
                     <span class="contact-name">${getUserLabelById(user.id) || user.email || 'Nieznany'}</span>
+                    <span class="status-dot offline"></span> <!-- Dodano kropkę statusu -->
                     <span class="last-message">${previewText}</span>
                 </div>
                 <div class="contact-meta">
@@ -765,7 +767,7 @@ async function handleConversationClick(user, clickedConvoItemElement) {
                 messageContainer.scrollTop = messageContainer.scrollHeight; // Scroll to bottom
                 console.log(`[handleConversationClick] Displayed ${history.length} historical messages.`);
             } else {
-                console.error("[handleConversationClick] messageContainer is null when trying to load history.");
+                console.error("[handleConversationClick] messageContainer is null when trying to add message to active chat.");
             }
         } catch (e) {
             console.error("[handleConversationClick] Error loading message history:", e);
@@ -1148,20 +1150,23 @@ function updateUserStatusIndicator(userId, isOnline, lastSeenTimestamp = null) {
             }
         }
 
-        // Update status dots in the main contacts list (unchanged - only dot, no timestamp)
+        // Update status dots in the main contacts list
         const contactConvoItem = contactsListEl.querySelector(`.contact[data-convo-id="${userId}"]`);
         if (contactConvoItem) {
-            // The HTML provided does not have a status-dot in the contact list item.
-            // If it were present, the logic would be:
-            // const statusDot = contactConvoItem.querySelector('.status-dot');
-            // if (statusDot) {
-            //     if (isOnline) {
-            //         statusDot.classList.add('online');
-            //     } else {
-            //         statusDot.classList.remove('online');
-            //     }
-            // }
-            console.log(`[Status Update Debug] Contact list item for ${userId} found, but no status dot to update.`);
+            const statusDot = contactConvoItem.querySelector('.status-dot');
+            if (statusDot) {
+                if (isOnline) {
+                    statusDot.classList.add('online');
+                    statusDot.classList.remove('offline');
+                } else {
+                    statusDot.classList.remove('online');
+                    statusDot.classList.add('offline');
+                }
+                console.log(`[Status Update Debug] Contact list item for ${userId} status dot updated to ${isOnline ? 'online' : 'offline'}.`);
+            } else {
+                // Ta linia powinna być teraz rzadko widoczna, jeśli HTML jest poprawnie generowany
+                console.warn(`[Status Update Debug] Contact list item for ${userId} found, but no status dot element to update.`);
+            }
         }
 
     } catch (e) {
@@ -1849,7 +1854,7 @@ async function sendFriendRequest() {
 
 
         // 2. Sprawdź, czy zaproszenie już istnieje w tabeli 'friends'
-        // POPRAWKA: Zmiana formatowania klauzeli .or()
+        // POPRAWKA: Zmiana formatowania klauzuli .or()
         const { data: existingRelation, error: relationError } = await supabase
             .from('friends')
             .select('id, status, user_id, friend_id')
