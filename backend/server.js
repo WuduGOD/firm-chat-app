@@ -274,7 +274,7 @@ supabase
         {
             event: 'INSERT',
             schema: 'public',
-            table: 'friend_requests',
+            table: 'friends', // ZMIANA: Zmieniono z 'friend_requests' na 'friends'
             // Możesz dodać filtr, np. `filter: 'receiver_id=eq.' + userId` jeśli chcesz,
             // aby serwer nasłuchiwał tylko dla konkretnego użytkownika,
             // ale dla serwera lepiej jest nasłuchiwać globalnie i filtrować w kodzie.
@@ -283,13 +283,14 @@ supabase
             console.log('[Supabase Realtime - INSERT] New friend request received:', payload.new);
             const newRequest = payload.new;
             // Wysyłamy powiadomienie do odbiorcy zaproszenia
+            // Sprawdzamy, czy to zaproszenie jest dla kogoś, kto ma aktywne połączenie WebSocket
             if (newRequest.status === 'pending') {
-                broadcastToUser(newRequest.receiver_id, JSON.stringify({
+                broadcastToUser(newRequest.friend_id, JSON.stringify({ // ZMIANA: Użyto newRequest.friend_id (odbiorca)
                     type: 'new_friend_request',
-                    sender_id: newRequest.sender_id,
+                    sender_id: newRequest.user_id, // ZMIANA: Użyto newRequest.user_id (nadawca)
                     request_id: newRequest.id
                 }));
-                console.log(`[Supabase Realtime] Sent new_friend_request notification to ${newRequest.receiver_id} from ${newRequest.sender_id}.`);
+                console.log(`[Supabase Realtime] Sent new_friend_request notification to ${newRequest.friend_id} from ${newRequest.user_id}.`);
             }
         }
     )
@@ -304,20 +305,20 @@ supabase
         {
             event: 'UPDATE',
             schema: 'public',
-            table: 'friend_requests',
+            table: 'friends', // ZMIANA: Zmieniono z 'friend_requests' na 'friends'
         },
         (payload) => {
             console.log('[Supabase Realtime - UPDATE] Friend request status updated:', payload.new);
             const updatedRequest = payload.new;
             // Wysyłamy powiadomienie do nadawcy zaproszenia o zmianie statusu
             if (updatedRequest.status === 'accepted' || updatedRequest.status === 'declined') {
-                broadcastToUser(updatedRequest.sender_id, JSON.stringify({
+                broadcastToUser(updatedRequest.user_id, JSON.stringify({ // ZMIANA: Użyto updatedRequest.user_id (nadawca)
                     type: 'friend_request_status_update',
                     request_id: updatedRequest.id,
-                    receiver_id: updatedRequest.receiver_id,
+                    receiver_id: updatedRequest.friend_id, // ZMIANA: Użyto updatedRequest.friend_id (odbiorca)
                     status: updatedRequest.status
                 }));
-                console.log(`[Supabase Realtime] Sent friend_request_status_update notification to ${updatedRequest.sender_id} for request ${updatedRequest.id} (status: ${updatedRequest.status}).`);
+                console.log(`[Supabase Realtime] Sent friend_request_status_update notification to ${updatedRequest.user_id} for request ${updatedRequest.id} (status: ${updatedRequest.status}).`);
             }
         }
     )
@@ -389,6 +390,7 @@ async function getOnlineStatusesFromDb() {
  * @returns {Promise<Object>} Obiekt, gdzie kluczem jest room_id, a wartością jest obiekt ostatniej wiadomości.
  */
 async function getLastMessagesForUserRooms(userId) {
+    console.log(`[getLastMessagesForUserRooms] Attempting to fetch last messages for user ${userId}'s rooms.`);
     const client = await pool.connect();
     try {
         // Używamy CTE (Common Table Expression) z ROW_NUMBER() do znalezienia najnowszej wiadomości dla każdego pokoju.
@@ -417,7 +419,7 @@ async function getLastMessagesForUserRooms(userId) {
                 rn = 1;
         `;
         const res = await client.query(query, [userId]);
-        console.log(`DB: Fetched ${res.rows.length} last messages for user ${userId}'s rooms.`);
+        console.log(`[getLastMessagesForUserRooms] DB: Fetched ${res.rows.length} last messages for user ${userId}'s rooms.`);
 
         const lastMessagesMap = {};
         res.rows.forEach(row => {
@@ -428,9 +430,10 @@ async function getLastMessagesForUserRooms(userId) {
                 room: row.room_id
             };
         });
+        console.log(`[getLastMessagesForUserRooms] Returning map with ${Object.keys(lastMessagesMap).length} rooms.`);
         return lastMessagesMap;
     } catch (err) {
-        console.error(`DB Error: Failed to get last messages for user rooms for ${userId}:`, err);
+        console.error(`[getLastMessagesForUserRooms] DB Error: Failed to get last messages for user rooms for ${userId}:`, err);
         return {};
     } finally {
         client.release();
