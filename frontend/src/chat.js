@@ -538,7 +538,7 @@ async function loadContacts() {
                     console.warn("[loadContacts] Timeout waiting for 'last_messages_for_user_rooms' response.");
                     socket.removeEventListener('message', tempHandler);
                     resolve({}); // Rozwiąż z pustym obiektem w przypadku timeoutu
-                }, 5000); // 5 sekund timeout
+                }, 10000); // Zwiększono timeout do 10 sekund
                 socket.addEventListener('message', tempHandler);
             });
         } else {
