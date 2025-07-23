@@ -1338,6 +1338,15 @@ body {
     background-color: #d32f2f;
 }
 
+/* Reset */
+/* Upewnij się, że te style są na początku Twojego style.css */
+html, body {
+    height: 100%; /* Kluczowe dla prawidłowego centrowania pionowego modala */
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
 /* Styl dla kontenera modala */
 #friendRequestModal {
     position: fixed; /* Ustawia modal względem okna przeglądarki */
@@ -1397,9 +1406,6 @@ body {
     display: none; /* Ukrywa sekcję, gdy ma klasę hidden */
 }
 
-/* Usunięto styl dla .modal-backdrop, zgodnie z prośbą "bez zadnego tla itp" */
-/* Jeśli element .modal-backdrop nadal istnieje w HTML, należy go usunąć */
-
 /* Responsywność dla mniejszych ekranów (opcjonalnie, jeśli potrzebujesz konkretnych dostosowań) */
 @media (max-width: 768px) {
     #friendRequestModal {
@@ -1407,6 +1413,7 @@ body {
         padding: 20px;
     }
 }
+
 
 
 /* Dark mode overrides */
