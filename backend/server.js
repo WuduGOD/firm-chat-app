@@ -182,13 +182,19 @@ wss.on('connection', (ws) => {
             }
             // NOWY TYP WIADOMOŚCI: Żądanie ostatnich wiadomości dla pokoi użytkownika
             else if (data.type === 'get_last_messages_for_user_rooms' && userData.userId) {
+                console.time(`getLastMessagesForUserRooms_total_time_${userData.userId}`); // Start total timer
                 console.log(`Received request for last messages for user rooms from ${userData.userId}.`);
                 const lastMessages = await getLastMessagesForUserRooms(userData.userId);
-                ws.send(JSON.stringify({
-                    type: 'last_messages_for_user_rooms',
-                    messages: lastMessages
-                }));
-                console.log(`Sent last messages for user ${userData.userId} rooms. Count: ${Object.keys(lastMessages).length}`);
+                try {
+                    ws.send(JSON.stringify({
+                        type: 'last_messages_for_user_rooms',
+                        messages: lastMessages
+                    }));
+                    console.log(`Sent last messages for user ${userData.userId} rooms. Count: ${Object.keys(lastMessages).length}`);
+                } catch (sendError) {
+                    console.error(`Error sending 'last_messages_for_user_rooms' to ${userData.userId}:`, sendError);
+                }
+                console.timeEnd(`getLastMessagesForUserRooms_total_time_${userData.userId}`); // End total timer
             }
             else if (data.type === 'status') { // Ten typ wiadomości służy do aktualizacji globalnego statusu
                 const userId = data.user;
@@ -396,6 +402,7 @@ async function getOnlineStatusesFromDb() {
 async function getLastMessagesForUserRooms(userId) {
     const client = await pool.connect();
     try {
+        console.time(`getLastMessagesForUserRooms_db_query_${userId}`); // Start DB query timer
         // Używamy CTE (Common Table Expression) z ROW_NUMBER() do znalezienia najnowszej wiadomości dla każdego pokoju.
         // Zmieniono klauzulę WHERE, aby używać nowych kolumn participant1_id i participant2_id.
         const query = `
@@ -422,6 +429,7 @@ async function getLastMessagesForUserRooms(userId) {
                 rn = 1;
         `;
         const res = await client.query(query, [userId]);
+        console.timeEnd(`getLastMessagesForUserRooms_db_query_${userId}`); // End DB query timer
         console.log(`DB: Fetched ${res.rows.length} last messages for user ${userId}'s rooms.`);
 
         const lastMessagesMap = {};
