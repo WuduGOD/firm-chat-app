@@ -1185,7 +1185,6 @@ body {
 }
 
 .modal.visible .modal-content {
-    transform: translateY(0); /* Animacja wjeżdżania */
 }
 
 .modal-content h2 {
