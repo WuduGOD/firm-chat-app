@@ -1342,7 +1342,198 @@ body {
 #friendRequestModal.visible {
     opacity: 1;
     visibility: visible;
-    display: block; /* KLUCZOWE: Ustawia display na block, aby modal był widoczny. Możesz użyć 'flex' jeśli chcesz, aby jego zawartość była układana za pomocą flexboxa. */
+    display: block;
+}
+
+/* Style dla sekcji tworzenia grupy w modalu */
+#createGroupSection {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding-top: 20px;
+}
+
+/* Styl listy członków */
+.group-members-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 200px; /* Ogranicz wysokość, aby była przewijana */
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--bg-color-light);
+}
+
+.group-members-list li {
+    padding: 10px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.group-members-list li:hover {
+    background-color: var(--bg-color-sidebar-wrapper);
+}
+
+.group-members-list li:last-child {
+    border-bottom: none;
+}
+
+.group-members-list input[type="checkbox"] {
+    margin-right: 10px;
+    cursor: pointer;
+}
+
+/* Styl dla przycisku utwórz grupę */
+#createGroupSubmitButton {
+    padding: 12px 20px;
+    background-color: var(--primary-color);
+    color: var(--text-color-light);
+    border: none;
+    border-radius: 8px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+#createGroupSubmitButton:hover {
+    background-color: var(--primary-color-dark);
+    transform: translateY(-1px);
+}
+#createGroupSubmitButton:active {
+    transform: translateY(1px);
+}
+/* Style dla pola wyszukiwania */
+.search-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1em;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: border-color 0.2s;
+}
+.search-input:focus {
+    border-color: var(--primary-color);
+    outline: none;
+}
+
+/* Nowe style dla modalów */
+.app-modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.app-modal-content {
+    background-color: var(--bg-color-modal);
+    padding: 25px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.app-modal-content h2,
+.app-modal-content h3 {
+    text-align: center;
+    color: var(--text-color-primary);
+    margin-bottom: 15px;
+}
+
+.app-modal-close {
+    color: var(--text-color-light);
+    font-size: 28px;
+    font-weight: bold;
+    position: absolute;
+    right: 15px;
+    top: 10px;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.app-modal-close:hover,
+.app-modal-close:focus {
+    color: var(--primary-color);
+}
+
+.app-modal-hidden {
+    display: none;
+}
+
+/* Style dla sekcji w modalach */
+.app-modal-section {
+    margin-bottom: 20px;
+}
+
+.app-modal-section label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: var(--text-color-medium);
+}
+
+.app-modal-section input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--bg-color-input);
+    color: var(--text-color-primary);
+}
+
+.app-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+.app-modal-footer button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    background-color: var(--primary-color);
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.app-modal-footer button:hover {
+    background-color: var(--primary-color-dark);
+}
+
+/* Style dla listy znajomych w modalu */
+.friends-list-new {
+    list-style: none;
+    padding: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+.friends-list-new li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 15px;
+    border-bottom: 1px solid var(--border-color-light);
+}
+
+.friends-list-new li:last-child {
+    border-bottom: none;
 }
 
 /* Dark mode overrides */

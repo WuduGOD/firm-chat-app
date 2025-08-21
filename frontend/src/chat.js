@@ -8,6 +8,11 @@ let menuButton;
 let dropdownMenu;
 let themeToggle;
 let logoutButton;
+let createGroupModalNew; // NOWA ZMIENNA DLA MODALU GRUP
+let closeCreateGroupModalNew; // NOWA ZMIENNA
+let createGroupButtonNew; // NOWA ZMIENNA
+let friendsListNew; // NOWA ZMIENNA
+let groupNameInputNew; // NOWA ZMIENNA
 
 // NOWE ZMIENNE DLA FUNKCJI ZNAJOMYCH
 let addFriendButton;
@@ -2154,6 +2159,69 @@ function openFriendRequestModal(showSendSection, showPendingSection) {
     console.log(`[openFriendRequestModal] Modal opened. Send section visible: ${showSendSection}, Pending section visible: ${showPendingSection}`);
 }
 
+// ====== Funkcje obsługujące modal tworzenia grupy ======
+function showCreateGroupModalNew() {
+  createGroupModalNew.classList.remove('app-modal-hidden');
+  // Ładujemy listę znajomych po otwarciu modalu
+  loadFriendsListNew();
+}
+
+function hideCreateGroupModalNew() {
+  createGroupModalNew.classList.add('app-modal-hidden');
+  // Resetujemy wartości po zamknięciu
+  groupNameInputNew.value = '';
+  friendsListNew.innerHTML = '';
+}
+
+// Zamykanie modalu przyciskiem X
+if (closeCreateGroupModalNew) {
+    closeCreateGroupModalNew.addEventListener('click', () => {
+        hideCreateGroupModalNew();
+    });
+}
+
+// Zamykanie modalu po kliknięciu poza oknem
+window.addEventListener('click', (event) => {
+    if (event.target === createGroupModalNew) {
+        hideCreateGroupModalNew();
+    }
+});
+
+// ====== Funkcja do ładowania listy znajomych z Supabase ======
+async function loadFriendsListNew() {
+    friendsListNew.innerHTML = ''; // Wyczyść listę przed załadowaniem
+    
+    // Pobieramy listę znajomych z tabeli "profiles" w Supabase
+    // Zmieniamy na "async", aby czekać na dane z bazy
+    try {
+        // Zakładamy, że masz już zdefiniowany obiekt 'supabase'
+        const { data: profiles, error } = await supabase
+            .from('profiles') // Załóżmy, że Twoja tabela ze znajomymi nazywa się "profiles"
+            .select('id, name'); // Wybieramy tylko potrzebne kolumny
+            
+        if (error) {
+            console.error('Błąd podczas ładowania listy znajomych:', error.message);
+            return;
+        }
+
+        // Sprawdzamy, czy dane zostały poprawnie pobrane
+        if (profiles) {
+            profiles.forEach(profile => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <span>${profile.name}</span>
+                    <button class="add-to-group-button" data-friend-id="${profile.id}">Dodaj</button>
+                `;
+                friendsListNew.appendChild(li);
+            });
+            // Po załadowaniu listy, dodaj nasłuchiwanie na przyciski
+            addFriendSelectionListeners();
+        }
+
+    } catch (err) {
+        console.error('Wystąpił nieoczekiwany błąd:', err.message);
+    }
+}
 
 // --- Główna inicjalizacja aplikacji ---
 /**
@@ -2185,6 +2253,13 @@ async function initializeApp() {
         pendingRequestsSection = document.getElementById('pendingRequestsSection'); console.log(`UI Element: pendingRequestsSection found: ${!!pendingRequestsSection}`);
         pendingFriendRequestsList = document.getElementById('pendingFriendRequestsList'); console.log(`UI Element: pendingFriendRequestsList found: ${!!pendingFriendRequestsList}`);
         noPendingRequestsText = document.getElementById('noPendingRequestsText'); console.log(`UI Element: noPendingRequestsText found: ${!!noPendingRequestsText}`);
+		
+		// Zmienne dla modalu tworzenia grupy
+		createGroupModalNew = document.getElementById('createGroupModalNew');
+		closeCreateGroupModalNew = document.getElementById('closeCreateGroupModalNew');
+		createGroupButtonNew = document.getElementById('createGroupButtonNew');
+		friendsListNew = document.getElementById('friendsListNew');
+		groupNameInputNew = document.getElementById('groupNameInputNew');
 
 
         // NOWY ELEMENT: Przycisk do włączania dźwięków
@@ -2308,6 +2383,14 @@ async function initializeApp() {
             }
         });
         console.log("[initializeApp] 'beforeunload' listener attached for WebSocket leave signal.");
+		
+		// Obsługa przycisku do dodawania nowego kontaktu/grupy
+		const addNewButton = document.querySelector('.add-new-button');
+		if (addNewButton) {
+			addNewButton.addEventListener('click', () => {
+				showCreateGroupModalNew();
+			});
+		}
 
         // 4. Load profiles (loadContacts will be called after WS connection)
         console.log("[initializeApp] Loading user profiles (before WS init)...");
