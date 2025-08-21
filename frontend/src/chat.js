@@ -2096,70 +2096,6 @@ function openFriendRequestModal(showSendSection, showPendingSection) {
     console.log(`[openFriendRequestModal] Modal opened. Send section visible: ${showSendSection}, Pending section visible: ${showPendingSection}`);
 }
 
-// ====== Funkcje obsługujące modal tworzenia grupy ======
-function showCreateGroupModalNew() {
-  createGroupModalNew.classList.remove('app-modal-hidden');
-  // Ładujemy listę znajomych po otwarciu modalu
-  loadFriendsListNew();
-}
-
-function hideCreateGroupModalNew() {
-  createGroupModalNew.classList.add('app-modal-hidden');
-  // Resetujemy wartości po zamknięciu
-  groupNameInputNew.value = '';
-  friendsListNew.innerHTML = '';
-}
-
-// Zamykanie modalu przyciskiem X
-if (closeCreateGroupModalNew) {
-    closeCreateGroupModalNew.addEventListener('click', () => {
-        hideCreateGroupModalNew();
-    });
-}
-
-// Zamykanie modalu po kliknięciu poza oknem
-window.addEventListener('click', (event) => {
-    if (event.target === createGroupModalNew) {
-        hideCreateGroupModalNew();
-    }
-});
-
-// ====== Funkcja do ładowania listy znajomych z Supabase ======
-async function loadFriendsListNew() {
-    friendsListNew.innerHTML = ''; // Wyczyść listę przed załadowaniem
-    
-    // Pobieramy listę znajomych z tabeli "profiles" w Supabase
-    // Zmieniamy na "async", aby czekać na dane z bazy
-    try {
-        // Zakładamy, że masz już zdefiniowany obiekt 'supabase'
-        const { data: profiles, error } = await supabase
-            .from('profiles') // Załóżmy, że Twoja tabela ze znajomymi nazywa się "profiles"
-            .select('id, name'); // Wybieramy tylko potrzebne kolumny
-            
-        if (error) {
-            console.error('Błąd podczas ładowania listy znajomych:', error.message);
-            return;
-        }
-
-        // Sprawdzamy, czy dane zostały poprawnie pobrane
-        if (profiles) {
-            profiles.forEach(profile => {
-                const li = document.createElement('li');
-                li.innerHTML = `
-                    <span>${profile.name}</span>
-                    <button class="add-to-group-button" data-friend-id="${profile.id}">Dodaj</button>
-                `;
-                friendsListNew.appendChild(li);
-            });
-            // Po załadowaniu listy, dodaj nasłuchiwanie na przyciski
-            addFriendSelectionListeners();
-        }
-
-    } catch (err) {
-        console.error('Wystąpił nieoczekiwany błąd:', err.message);
-    }
-}
-
 // --- Główna inicjalizacja aplikacji ---
 /**
  * Main function to initialize the entire application.
@@ -2721,6 +2657,103 @@ async function initializeApp() {
                 } else { console.warn("[handleMediaQueryChange] Desktop: backButton not found in mq change."); }
             }
         }
+		
+		    // ====== Funkcje obsługujące modal tworzenia grupy ======
+		function hideCreateGroupModalNew() {
+			if (createGroupModalNew) {
+				createGroupModalNew.classList.add('app-modal-hidden');
+				if (groupNameInputNew) groupNameInputNew.value = '';
+				if (friendsListNew) friendsListNew.innerHTML = '';
+			}
+		}	
+
+		if (closeCreateGroupModalNew) {
+			closeCreateGroupModalNew.addEventListener('click', () => {
+            hideCreateGroupModalNew();
+			});
+		}
+
+		window.addEventListener('click', (event) => {
+			if (event.target === createGroupModalNew) {
+            hideCreateGroupModalNew();
+			}
+		});
+
+		// ====== Funkcja do ładowania listy znajomych z Supabase ======
+		async function loadFriendsListNew(friendsListElement) {
+			friendsListElement.innerHTML = '';
+			try {
+				const { data: profiles, error } = await supabase.from('profiles').select('id, name');
+				if (error) {
+					console.error('Błąd podczas ładowania listy znajomych:', error.message);
+					return;
+				}
+
+				if (profiles) {
+					profiles.forEach(profile => {
+						const li = document.createElement('li');
+						li.innerHTML = `
+							<span>${profile.name}</span>
+							<button class="add-to-group-button" data-friend-id="${profile.id}">Dodaj</button>
+						`;
+						friendsListElement.appendChild(li);
+					});
+					addFriendSelectionListeners(friendsListElement);
+				}
+			} catch (err) {
+				console.error('Wystąpił nieoczekiwany błąd:', err.message);
+			}
+		}
+
+		// ====== Obsługa dodawania/usuwania znajomych z listy ======
+		function addFriendSelectionListeners(listElement) {
+			const addToGroupButtons = listElement.querySelectorAll('.add-to-group-button');
+			addToGroupButtons.forEach(button => {
+				button.addEventListener('click', () => {
+					button.classList.toggle('selected');
+					if (button.classList.contains('selected')) {
+						button.textContent = 'Dodano';
+						button.style.backgroundColor = '#4CAF50';
+					} else {
+						button.textContent = 'Dodaj';
+						button.style.backgroundColor = '';
+					}
+				});
+			});
+		}
+
+		// ====== Obsługa przycisku "Stwórz grupę" ======
+		if (createGroupButtonNew) {
+			createGroupButtonNew.addEventListener('click', async () => {
+				const groupName = groupNameInputNew.value.trim();
+				const selectedFriendButtons = document.querySelectorAll('.add-to-group-button.selected');
+				const selectedFriendIds = Array.from(selectedFriendButtons).map(btn => btn.dataset.friendId);
+
+				if (groupName === '') {
+					alert('Wprowadź nazwę grupy.');
+					return;
+				}
+				if (selectedFriendIds.length === 0) {
+					alert('Wybierz co najmniej jednego znajomego.');
+					return;
+				}
+
+				console.log(`Tworzę grupę o nazwie: "${groupName}" z przyjaciółmi o ID: ${selectedFriendIds.join(', ')}`);
+
+				try {
+					// const { data, error } = await supabase.from('groups').insert([{ name: groupName, members: selectedFriendIds }]);
+					// if (error) throw error;
+					alert('Grupa została pomyślnie utworzona!');
+					hideCreateGroupModalNew();
+				} catch (error) {
+					console.error('Błąd podczas tworzenia grupy:', error.message);
+					alert('Wystąpił błąd podczas tworzenia grupy.');
+				}
+			});
+		}
+
+		console.log("[initializeApp] Komunikator application initialized successfully.");
+	}
 
         // Attach media query listener and call handler initially
         const mq = window.matchMedia('(max-width: 768px)');
