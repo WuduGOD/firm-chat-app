@@ -8,11 +8,7 @@ let menuButton;
 let dropdownMenu;
 let themeToggle;
 let logoutButton;
-let createGroupModalNew; // NOWA ZMIENNA DLA MODALU GRUP
-let closeCreateGroupModalNew; // NOWA ZMIENNA
-let createGroupButtonNew; // NOWA ZMIENNA
-let friendsListNew; // NOWA ZMIENNA
-let groupNameInputNew; // NOWA ZMIENNA
+let createGroupModalNew, closeCreateGroupModalNew, createGroupButtonNew, friendsListNew, groupNameInputNew;
 
 // NOWE ZMIENNE DLA FUNKCJI ZNAJOMYCH
 let addFriendButton;
