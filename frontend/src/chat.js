@@ -2,95 +2,36 @@
 import { loadAllProfiles, getUserLabelById } from './profiles.js';
 import { supabase } from './supabaseClient.js'; // Używamy istniejącego obiektu supabase
 
-// Globalne zmienne UI i czatu
-let mainHeader;
-let menuButton;
-let dropdownMenu;
-let themeToggle;
-let logoutButton;
+// ====== Globalne zmienne UI i czatu ======
+let mainHeader, menuButton, dropdownMenu, themeToggle, logoutButton;
+let container, sidebarWrapper, mainNavIcons, navIcons, addNewButton;
+let onlineUsersMobile;
+let sidebarEl, sidebarSearchInput, contactsListEl;
+let chatAreaWrapper, logoScreen, chatArea;
+let chatHeader, backButton, chatUserName, userStatusSpan, chatHeaderActions, chatSettingsButton, chatSettingsDropdown, typingStatusHeader, typingIndicatorMessages;
+let messageContainer;
+let chatFooter, attachButton, messageInput, emojiButton, sendButton;
+let rightSidebarWrapper, rightSidebar, activeUsersListEl, noActiveUsersText;
+
+// NOWE ZMIENNE DLA FUNKCJI ZNAJOMYCH I GRUP
+let addFriendButton, notificationButton, notificationBadge, friendRequestModal, closeFriendRequestModal, sendFriendRequestSection, friendEmailInput, sendFriendRequestButton, sendRequestStatus, pendingRequestsSection, pendingFriendRequestsList, noPendingRequestsText, allFriends = [];
 let createGroupModalNew, closeCreateGroupModalNew, createGroupButtonNew, friendsListNew, groupNameInputNew;
 
-// NOWE ZMIENNE DLA FUNKCJI ZNAJOMYCH
-let addFriendButton;
-let notificationButton;
-let notificationBadge; // Zmieniono z notificationCount na notificationBadge
-let friendRequestModal;
-let closeFriendRequestModal;
-let sendFriendRequestSection;
-let friendEmailInput;
-let sendFriendRequestButton;
-let sendRequestStatus;
-let pendingRequestsSection;
-let pendingFriendRequestsList;
-let noPendingRequestsText;
-let allFriends = []; // Nowa zmienna do przechowywania listy znajomych
-
-let container;
-let sidebarWrapper; // Kontener dla main-nav-icons i sidebar
-let mainNavIcons;
-let navIcons; // Deklaracja przeniesiona wyżej
-let addNewButton; // Nowy przycisk "Dodaj nowy kontakt/grupę"
-
-let onlineUsersMobile; // NOWA ZMIENNA: Kontener dla aktywnych użytkowników na mobile
-
-let sidebarEl; // ID: sidebar, Klasa: conversations-list
-let sidebarSearchInput; // Zmieniono z searchInput na sidebarSearchInput
-let contactsListEl; // ID: contactsList
-
-let chatAreaWrapper; // Kontener dla logo-screen i chat-area
-let logoScreen; // ID: logoScreen
-let chatArea; // ID: chatArea
-
-let chatHeader; // Klasa: chat-header
-let backButton;
-let chatUserName; // ID: chatUserName
-let userStatusSpan; // ID: userStatus, Klasa: status
-let chatHeaderActions;
-let chatSettingsButton;
-let chatSettingsDropdown; // ID: chatSettingsDropdown, Klasa: dropdown chat-settings-dropdown
-let typingStatusHeader; // ID: typingStatus, Klasa: typing-status (status w nagłówku czatu)
-let typingIndicatorMessages; // ID: typingIndicator (animowane kropki w obszarze wiadomości)
-
-let messageContainer;
-
-let chatFooter;
-let attachButton;
-let messageInput;
-let emojiButton;
-let sendButton;
-
-let rightSidebarWrapper;
-let rightSidebar;
-let activeUsersListEl;
-let noActiveUsersText;
-
-// Zmienne stanu czatu
+// ====== Zmienne stanu czatu ======
 let allConversations = [];
 let currentUser = null;
 let currentChatUser = null;
-let currentRoom = null; // Nazwa pokoju czatu, w którym klient aktualnie "słucha"
+let currentRoom = null;
 let socket = null;
 let reconnectAttempts = 0;
 let typingTimeout;
 let currentActiveConvoItem = null;
-
-// ZMIANA: onlineUsers będzie teraz przechowywać obiekt z isOnline i lastSeen
-let onlineUsers = new Map(); // userID -> { isOnline: boolean, lastSeen: string | null }
-
-// Stan uprawnień do powiadomień
+let onlineUsers = new Map();
 let notificationPermissionGranted = false;
-
-// Przycisk do włączania dźwięków (obsługa Autoplay Policy)
 let enableSoundButton;
-
-// NOWE ZMIENNE DLA DŹWIEKU (Web Audio API)
 let audioContext = null;
-let audioContextInitiated = false; // Flaga do śledzenia, czy AudioContext został zainicjowany przez interakcję użytkownika
-
-// NOWE ZMIENNE DLA TYTUŁU ZAKŁADKI PRZEGLĄDARKI
+let audioContextInitiated = false;
 let baseDocumentTitle = "Komunikator";
-// Mapa przechowująca nieprzeczytane wiadomości dla każdej konwersacji
-// Klucz: roomId, Wartość: { unreadCount: number, lastSenderId: string }
 let unreadConversationsInfo = new Map();
 
 // --- Funkcje pomocnicze ---
