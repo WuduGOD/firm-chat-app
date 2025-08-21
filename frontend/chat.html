@@ -15,7 +15,7 @@
     <button id="enableSoundButton" class="hidden enable-sound-button">
         <i class="fas fa-volume-up"></i> Włącz dźwięki
     </button>
-  
+	
     <div class="user-menu">
       <!-- NOWY PRZYCISK: Dodaj znajomego -->
       <button id="addFriendButton" class="icon-button" title="Dodaj znajomego">
@@ -24,7 +24,7 @@
       <!-- NOWY PRZYCISK: Powiadomienia o zaproszeniach -->
       <button id="notificationButton" class="icon-button" title="Powiadomienia">
           <i class="fas fa-bell"></i>
-          <span id="notificationBadge" class="notification-badge hidden"></span>
+          <span id="notificationCount" class="notification-count hidden">0</span>
       </button>
       <button id="menuButton" aria-haspopup="true" aria-expanded="false">
         <i class="fas fa-bars"></i>
@@ -40,8 +40,7 @@
 
   <div class="container">
     <aside class="sidebar-wrapper">
-      <!-- PASEK ZAKŁADEK z atrybutami data-tooltip -->
-      <div class="main-nav-icons" id="mainNavIcons">
+      <div class="main-nav-icons">
         <button class="nav-icon active" data-tooltip="Rozmowy" title="Rozmowy"><i class="fas fa-comments"></i></button>
         <button class="nav-icon" data-tooltip="Grupy" title="Grupy"><i class="fas fa-users"></i></button>
         <button class="nav-icon" data-tooltip="Praca" title="Praca"><i class="fa fa-suitcase" aria-hidden="true"></i></button>
@@ -52,24 +51,16 @@
         <!-- Aktywni użytkownicy będą ładowani tutaj dynamicznie na mobile -->
       </div>
       
-      <!-- KONTENERY NA LISTY KONWERSACJI DLA RÓŻNYCH ZAKŁADEK, zarządzane przez JavaScript -->
-      <div id="sidebar" class="conversations-list-container">
+      <div id="sidebar" class="conversations-list">
+        <h2>Konwersacje</h2>
         <div class="search-bar">
             <input type="text" id="sidebarSearchInput" placeholder="Szukaj..." />
             <i class="fas fa-search search-icon"></i>
         </div>
-        
-        <!-- Poniżej są wszystkie listy konwersacji. Będą przełączane za pomocą JS. -->
-        <ul id="contactsList" class="conversations-list">
+
+        <ul id="contactsList">
           <!-- Konwersacje będą ładowane tutaj dynamicznie -->
         </ul>
-        <ul id="groupsList" class="conversations-list hidden">
-          <!-- Grupy będą tutaj -->
-        </ul>
-        <ul id="workList" class="conversations-list hidden">
-          <!-- Kontakty z zakładki 'Praca' będą tutaj -->
-        </ul>
-        
       </div>
     </aside>
 
@@ -172,10 +163,7 @@
       </div>
     </div>
   </div>
-  
-  <div id="backdrop" class="modal-backdrop hidden"></div>
 
-  <!-- Skrypty JS -->
   <script type="module" src="./src/supabaseClient.js"></script>
   <script type="module" src="./src/profiles.js"></script>
   <script type="module" src="./src/chat.js"></script>
