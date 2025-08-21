@@ -2,36 +2,94 @@
 import { loadAllProfiles, getUserLabelById } from './profiles.js';
 import { supabase } from './supabaseClient.js'; // Używamy istniejącego obiektu supabase
 
-// ====== Globalne zmienne UI i czatu ======
-let mainHeader, menuButton, dropdownMenu, themeToggle, logoutButton;
-let container, sidebarWrapper, mainNavIcons, navIcons, addNewButton;
-let onlineUsersMobile;
-let sidebarEl, sidebarSearchInput, contactsListEl;
-let chatAreaWrapper, logoScreen, chatArea;
-let chatHeader, backButton, chatUserName, userStatusSpan, chatHeaderActions, chatSettingsButton, chatSettingsDropdown, typingStatusHeader, typingIndicatorMessages;
+// Globalne zmienne UI i czatu
+let mainHeader;
+let menuButton;
+let dropdownMenu;
+let themeToggle;
+let logoutButton;
+
+// NOWE ZMIENNE DLA FUNKCJI ZNAJOMYCH
+let addFriendButton;
+let notificationButton;
+let notificationBadge; // Zmieniono z notificationCount na notificationBadge
+let friendRequestModal;
+let closeFriendRequestModal;
+let sendFriendRequestSection;
+let friendEmailInput;
+let sendFriendRequestButton;
+let sendRequestStatus;
+let pendingRequestsSection;
+let pendingFriendRequestsList;
+let noPendingRequestsText;
+let allFriends = []; // Nowa zmienna do przechowywania listy znajomych
+
+let container;
+let sidebarWrapper; // Kontener dla main-nav-icons i sidebar
+let mainNavIcons;
+let navIcons; // Deklaracja przeniesiona wyżej
+let addNewButton; // Nowy przycisk "Dodaj nowy kontakt/grupę"
+
+let onlineUsersMobile; // NOWA ZMIENNA: Kontener dla aktywnych użytkowników na mobile
+
+let sidebarEl; // ID: sidebar, Klasa: conversations-list
+let sidebarSearchInput; // Zmieniono z searchInput na sidebarSearchInput
+let contactsListEl; // ID: contactsList
+
+let chatAreaWrapper; // Kontener dla logo-screen i chat-area
+let logoScreen; // ID: logoScreen
+let chatArea; // ID: chatArea
+
+let chatHeader; // Klasa: chat-header
+let backButton;
+let chatUserName; // ID: chatUserName
+let userStatusSpan; // ID: userStatus, Klasa: status
+let chatHeaderActions;
+let chatSettingsButton;
+let chatSettingsDropdown; // ID: chatSettingsDropdown, Klasa: dropdown chat-settings-dropdown
+let typingStatusHeader; // ID: typingStatus, Klasa: typing-status (status w nagłówku czatu)
+let typingIndicatorMessages; // ID: typingIndicator (animowane kropki w obszarze wiadomości)
+
 let messageContainer;
-let chatFooter, attachButton, messageInput, emojiButton, sendButton;
-let rightSidebarWrapper, rightSidebar, activeUsersListEl, noActiveUsersText;
 
-// NOWE ZMIENNE DLA FUNKCJI ZNAJOMYCH I GRUP
-let addFriendButton, notificationButton, notificationBadge, friendRequestModal, closeFriendRequestModal, sendFriendRequestSection, friendEmailInput, sendFriendRequestButton, sendRequestStatus, pendingRequestsSection, pendingFriendRequestsList, noPendingRequestsText, allFriends = [];
-let createGroupModalNew, closeCreateGroupModalNew, createGroupButtonNew, friendsListNew, groupNameInputNew;
+let chatFooter;
+let attachButton;
+let messageInput;
+let emojiButton;
+let sendButton;
 
-// ====== Zmienne stanu czatu ======
+let rightSidebarWrapper;
+let rightSidebar;
+let activeUsersListEl;
+let noActiveUsersText;
+
+// Zmienne stanu czatu
 let allConversations = [];
 let currentUser = null;
 let currentChatUser = null;
-let currentRoom = null;
+let currentRoom = null; // Nazwa pokoju czatu, w którym klient aktualnie "słucha"
 let socket = null;
 let reconnectAttempts = 0;
 let typingTimeout;
 let currentActiveConvoItem = null;
-let onlineUsers = new Map();
+
+// ZMIANA: onlineUsers będzie teraz przechowywać obiekt z isOnline i lastSeen
+let onlineUsers = new Map(); // userID -> { isOnline: boolean, lastSeen: string | null }
+
+// Stan uprawnień do powiadomień
 let notificationPermissionGranted = false;
+
+// Przycisk do włączania dźwięków (obsługa Autoplay Policy)
 let enableSoundButton;
+
+// NOWE ZMIENNE DLA DŹWIEKU (Web Audio API)
 let audioContext = null;
-let audioContextInitiated = false;
+let audioContextInitiated = false; // Flaga do śledzenia, czy AudioContext został zainicjowany przez interakcję użytkownika
+
+// NOWE ZMIENNE DLA TYTUŁU ZAKŁADKI PRZEGLĄDARKI
 let baseDocumentTitle = "Komunikator";
+// Mapa przechowująca nieprzeczytane wiadomości dla każdej konwersacji
+// Klucz: roomId, Wartość: { unreadCount: number, lastSenderId: string }
 let unreadConversationsInfo = new Map();
 
 // --- Funkcje pomocnicze ---
@@ -2096,6 +2154,7 @@ function openFriendRequestModal(showSendSection, showPendingSection) {
     console.log(`[openFriendRequestModal] Modal opened. Send section visible: ${showSendSection}, Pending section visible: ${showPendingSection}`);
 }
 
+
 // --- Główna inicjalizacja aplikacji ---
 /**
  * Main function to initialize the entire application.
@@ -2126,13 +2185,6 @@ async function initializeApp() {
         pendingRequestsSection = document.getElementById('pendingRequestsSection'); console.log(`UI Element: pendingRequestsSection found: ${!!pendingRequestsSection}`);
         pendingFriendRequestsList = document.getElementById('pendingFriendRequestsList'); console.log(`UI Element: pendingFriendRequestsList found: ${!!pendingFriendRequestsList}`);
         noPendingRequestsText = document.getElementById('noPendingRequestsText'); console.log(`UI Element: noPendingRequestsText found: ${!!noPendingRequestsText}`);
-		
-		// Zmienne dla modalu tworzenia grupy
-		createGroupModalNew = document.getElementById('createGroupModalNew');
-		closeCreateGroupModalNew = document.getElementById('closeCreateGroupModalNew');
-		createGroupButtonNew = document.getElementById('createGroupButtonNew');
-		friendsListNew = document.getElementById('friendsListNew');
-		groupNameInputNew = document.getElementById('groupNameInputNew');
 
 
         // NOWY ELEMENT: Przycisk do włączania dźwięków
@@ -2256,14 +2308,6 @@ async function initializeApp() {
             }
         });
         console.log("[initializeApp] 'beforeunload' listener attached for WebSocket leave signal.");
-		
-		// Obsługa przycisku do dodawania nowego kontaktu/grupy
-		const addNewButton = document.querySelector('.add-new-button');
-		if (addNewButton) {
-			addNewButton.addEventListener('click', () => {
-				showCreateGroupModalNew();
-			});
-		}
 
         // 4. Load profiles (loadContacts will be called after WS connection)
         console.log("[initializeApp] Loading user profiles (before WS init)...");
@@ -2657,103 +2701,6 @@ async function initializeApp() {
                 } else { console.warn("[handleMediaQueryChange] Desktop: backButton not found in mq change."); }
             }
         }
-		
-		    // ====== Funkcje obsługujące modal tworzenia grupy ======
-		function hideCreateGroupModalNew() {
-			if (createGroupModalNew) {
-				createGroupModalNew.classList.add('app-modal-hidden');
-				if (groupNameInputNew) groupNameInputNew.value = '';
-				if (friendsListNew) friendsListNew.innerHTML = '';
-			}
-		}	
-
-		if (closeCreateGroupModalNew) {
-			closeCreateGroupModalNew.addEventListener('click', () => {
-            hideCreateGroupModalNew();
-			});
-		}
-
-		window.addEventListener('click', (event) => {
-			if (event.target === createGroupModalNew) {
-            hideCreateGroupModalNew();
-			}
-		});
-
-		// ====== Funkcja do ładowania listy znajomych z Supabase ======
-		async function loadFriendsListNew(friendsListElement) {
-			friendsListElement.innerHTML = '';
-			try {
-				const { data: profiles, error } = await supabase.from('profiles').select('id, name');
-				if (error) {
-					console.error('Błąd podczas ładowania listy znajomych:', error.message);
-					return;
-				}
-
-				if (profiles) {
-					profiles.forEach(profile => {
-						const li = document.createElement('li');
-						li.innerHTML = `
-							<span>${profile.name}</span>
-							<button class="add-to-group-button" data-friend-id="${profile.id}">Dodaj</button>
-						`;
-						friendsListElement.appendChild(li);
-					});
-					addFriendSelectionListeners(friendsListElement);
-				}
-			} catch (err) {
-				console.error('Wystąpił nieoczekiwany błąd:', err.message);
-			}
-		}
-
-		// ====== Obsługa dodawania/usuwania znajomych z listy ======
-		function addFriendSelectionListeners(listElement) {
-			const addToGroupButtons = listElement.querySelectorAll('.add-to-group-button');
-			addToGroupButtons.forEach(button => {
-				button.addEventListener('click', () => {
-					button.classList.toggle('selected');
-					if (button.classList.contains('selected')) {
-						button.textContent = 'Dodano';
-						button.style.backgroundColor = '#4CAF50';
-					} else {
-						button.textContent = 'Dodaj';
-						button.style.backgroundColor = '';
-					}
-				});
-			});
-		}
-
-		// ====== Obsługa przycisku "Stwórz grupę" ======
-		if (createGroupButtonNew) {
-			createGroupButtonNew.addEventListener('click', async () => {
-				const groupName = groupNameInputNew.value.trim();
-				const selectedFriendButtons = document.querySelectorAll('.add-to-group-button.selected');
-				const selectedFriendIds = Array.from(selectedFriendButtons).map(btn => btn.dataset.friendId);
-
-				if (groupName === '') {
-					alert('Wprowadź nazwę grupy.');
-					return;
-				}
-				if (selectedFriendIds.length === 0) {
-					alert('Wybierz co najmniej jednego znajomego.');
-					return;
-				}
-
-				console.log(`Tworzę grupę o nazwie: "${groupName}" z przyjaciółmi o ID: ${selectedFriendIds.join(', ')}`);
-
-				try {
-					// const { data, error } = await supabase.from('groups').insert([{ name: groupName, members: selectedFriendIds }]);
-					// if (error) throw error;
-					alert('Grupa została pomyślnie utworzona!');
-					hideCreateGroupModalNew();
-				} catch (error) {
-					console.error('Błąd podczas tworzenia grupy:', error.message);
-					alert('Wystąpił błąd podczas tworzenia grupy.');
-				}
-			});
-		}
-
-		console.log("[initializeApp] Komunikator application initialized successfully.");
-	}
 
         // Attach media query listener and call handler initially
         const mq = window.matchMedia('(max-width: 768px)');
