@@ -78,7 +78,7 @@ export function ensureAudioContext() {
     if (audioContext.state === 'suspended') {
         audioContext.resume().then(() => {
             console.log('[AudioContext] AudioContext resumed successfully.');
-            audioContextInitiated = true;
+            setAudioContextInitiated(true);
             localStorage.setItem('autoplayUnlocked', 'true'); // Zapisz, że autoplay jest odblokowany
             if (enableSoundButton) {
                 enableSoundButton.classList.add('hidden'); // Ukryj przycisk
@@ -91,7 +91,7 @@ export function ensureAudioContext() {
         });
     } else if (audioContext.state === 'running') {
         console.log('[AudioContext] AudioContext is already running.');
-        audioContextInitiated = true;
+        setAudioContextInitiated(true);
         localStorage.setItem('autoplayUnlocked', 'true');
         if (enableSoundButton) {
             enableSoundButton.classList.add('hidden');
@@ -207,7 +207,7 @@ export async function requestNotificationPermission() {
         console.log("[Notifications] Notification permission already granted.");
         return;
     } else if (Notification.permission === "denied") {
-        notificationPermissionGranted = false;
+        setNotificationPermission(false);
         console.warn("[Notifications] Notification permission previously denied.");
         showCustomMessage("Powiadomienia zostały zablokowane. Aby je włączyć, zmień ustawienia przeglądarki.", "info");
         return;
@@ -221,7 +221,7 @@ export async function requestNotificationPermission() {
             console.log("[Notifications] Notification permission granted by user.");
             showCustomMessage("Powiadomienia włączone!", "success");
         } else if (permission === "denied") {
-            notificationPermissionGranted = false;
+            setNotificationPermission(false);
             console.warn("[Notifications] Notification permission denied by user.");
             showCustomMessage("Powiadomienia zostały zablokowane. Nie będziesz otrzymywać alertów o nowych wiadomościach.", "error");
         } else { // 'default'
@@ -230,7 +230,7 @@ export async function requestNotificationPermission() {
         }
     } catch (error) {
         console.error("[Notifications] Error requesting notification permission:", error);
-        notificationPermissionGranted = false;
+        setNotificationPermission(false);
         showCustomMessage("Wystąpił błąd podczas próby włączenia powiadomień.", "error");
     }
 }
