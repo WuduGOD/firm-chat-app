@@ -260,57 +260,59 @@ export async function handleConversationClick(user, clickedConvoItemElement) {
  */
 export async function addMessageToChat(msg) {
     console.log(`[addMessageToChat] Przetwarzanie wiadomości dla pokoju: ${msg.room}`);
-
     try {
         let convoItem = elements.contactsListEl.querySelector(`.contact[data-room-id="${msg.room}"]`);
-
-        // Jeśli konwersacja nie istnieje na liście (np. nowy czat), przeładuj kontakty
         if (!convoItem) {
-            console.warn(`Nie znaleziono konwersacji dla pokoju ${msg.room}. Przeładowuję kontakty.`);
             await loadContacts();
-            convoItem = contactsListEl.querySelector(`.contact[data-room-id="${msg.room}"]`);
+            convoItem = elements.contactsListEl.querySelector(`.contact[data-room-id="${msg.room}"]`);
             if (!convoItem) {
-                console.error(`Błąd krytyczny: Konwersacja dla pokoju ${msg.room} nadal nie istnieje po przeładowaniu.`);
+                console.error(`Błąd krytyczny: Konwersacja dla pokoju ${msg.room} nie istnieje.`);
                 return;
             }
         }
-
-        // Zaktualizuj podgląd wiadomości na liście kontaktów
         updateConversationPreview(msg.room, msg);
 
         const isMessageFromOtherUser = String(msg.username) !== String(currentUser.id);
         const isForInactiveChat = msg.room !== currentRoom;
 
-        // Logika dla nieprzeczytanych wiadomości i powiadomień
         if (isMessageFromOtherUser && isForInactiveChat) {
-            // Zwiększ licznik nieprzeczytanych w bazie danych
             await updateUnreadMessageCountInSupabase(msg.room, msg.username);
-            
-            // Pokaż powiadomienie przeglądarki i odtwórz dźwięk
-            if (notificationPermissionGranted && (document.hidden || isForInactiveChat)) {
-                const senderLabel = getUserLabelById(msg.username) || 'Ktoś';
-                new Notification(`Nowa wiadomość od ${senderLabel}`, {
-                    body: msg.text,
-                    icon: 'https://placehold.co/48x48/000000/FFFFFF?text=💬',
-                    silent: true
-                }).onclick = () => window.focus();
-                playNotificationSound();
-            }
         } else {
-             // Wyczyść licznik nieprzeczytanych, jeśli wiadomość jest dla aktywnego czatu
-             await clearUnreadMessageCountInSupabase(msg.room);
+            await clearUnreadMessageCountInSupabase(msg.room);
         }
 
-        // Wyświetl wiadomość w oknie czatu, TYLKO jeśli jest to aktywna konwersacja
+        // --- BLOK DIAGNOSTYCZNY POWIADOMIEŃ ---
+        const shouldNotify = notificationPermissionGranted && isMessageFromOtherUser && (document.hidden || isForInactiveChat);
+
+        console.log('%c--- DIAGNOSTYKA POWIADOMIENIA ---', 'color: purple; font-weight: bold;');
+        console.log('Czy mam pozwolenie? (notificationPermissionGranted):', notificationPermissionGranted);
+        console.log('Czy wiadomość od kogoś innego? (isMessageFromOtherUser):', isMessageFromOtherUser);
+        console.log('Czy karta jest ukryta? (document.hidden):', document.hidden);
+        console.log('Czy to inny czat? (isForInactiveChat):', isForInactiveChat);
+        console.log('Czy powinienem pokazać powiadomienie? (shouldNotify):', shouldNotify);
+
+        if (shouldNotify) {
+            console.log('%c--- Warunki spełnione, TWORZĘ POWIADOMIENIE ---', 'color: green;');
+            const senderLabel = getUserLabelById(msg.username) || 'Ktoś';
+            new Notification(`Nowa wiadomość od ${senderLabel}`, {
+                body: msg.text,
+                icon: 'https://placehold.co/48x48/000000/FFFFFF?text=💬',
+                silent: true
+            }).onclick = () => window.focus();
+            playNotificationSound();
+        } else {
+            console.log('%c--- Warunki NIESPEŁNIONE, nie pokazuję powiadomienia. ---', 'color: gray;');
+        }
+        // --- KONIEC BLOKU DIAGNOSTYCZNEGO ---
+
         if (msg.room === currentRoom) {
             const div = document.createElement('div');
             div.classList.add('message', String(msg.username) === String(currentUser.id) ? 'sent' : 'received');
             const timeString = new Date(msg.inserted_at).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
             div.innerHTML = `<p>${msg.text}</p><span class="timestamp">${timeString}</span>`;
-            
             if (elements.messageContainer) {
                 elements.messageContainer.appendChild(div);
-                elements.messageContainer.scrollTop = messageContainer.scrollHeight; // Przewiń na dół
+                elements.messageContainer.scrollTop = elements.messageContainer.scrollHeight;
             }
         }
     } catch (e) {
