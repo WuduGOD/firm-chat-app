@@ -218,6 +218,7 @@ export function setupChatSettingsDropdown() {
  * Podpina główne event listenery interfejsu.
  */
 function setupEventListeners() {
+	console.log('%c--- Uruchomiono setupEventListeners ---', 'color: orange; font-weight: bold;');
     elements.menuButton.addEventListener('click', (event) => {
 		event.stopPropagation();
         elements.dropdownMenu.classList.toggle('hidden');
@@ -250,9 +251,12 @@ function setupEventListeners() {
         }
     });
     // --- KONIEC UZUPEŁNIONEJ LOGIKI ---
+	
+	console.log('%c--- Podpinanie listenera do addFriendButton... ---', 'color: blue;', elements.addFriendButton);
     
     // Listenery dla modalu znajomych
     elements.addFriendButton.addEventListener('click', () => friendsService.openFriendRequestModal(true, false));
+	console.log('%c--- Kliknięto addFriendButton! Uruchamiam openFriendRequestModal... ---', 'color: green; font-weight: bold;');
     elements.notificationButton.addEventListener('click', () => friendsService.openFriendRequestModal(false, true));
     elements.closeFriendRequestModal.addEventListener('click', () => {
         elements.friendRequestModal.classList.remove('visible');
