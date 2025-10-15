@@ -218,7 +218,12 @@ export function setupChatSettingsDropdown() {
  * Podpina główne event listenery interfejsu.
  */
 function setupEventListeners() {
-    elements.logoutButton.addEventListener('click', async () => {
+    elements.menuButton.addEventListener('click', (event) => {
+		event.stopPropagation();
+        elements.dropdownMenu.classList.toggle('hidden');
+    });
+
+	elements.logoutButton.addEventListener('click', async () => {
         await supabase.auth.signOut();
         window.location.href = 'login.html';
     });
