@@ -6,7 +6,7 @@ import * as chatState from '../chat.js';
 import { getUserLabelById } from '../profiles.js';
 import { formatTimeAgo, showCustomMessage, playNotificationSound, updateDocumentTitle } from '../ui/helpers.js';
 import { loadContacts, updateConversationPreview } from './friendsService.js';
-import { onlineUsers, currentChatUser, allFriends, currentUser, unreadConversationsInfo, currentActiveConvoItem, setCurrentActiveConvoItem, setCurrentChatUser, setCurrentRoom, socket, currentRoom } from '../chat.js';
+import { onlineUsers, currentChatUser, allFriends, currentUser, unreadConversationsInfo, currentActiveConvoItem, setCurrentActiveConvoItem, setCurrentChatUser, setCurrentRoom, socket, currentRoom, notificationPermissionGranted } from '../chat.js';
 import { messageContainer, activeUsersListEl, contactsListEl, chatAreaWrapper, userStatusSpan, typingStatusHeader, typingIndicatorMessages } from '../ui/elements.js';
 
 /**
