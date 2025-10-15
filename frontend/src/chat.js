@@ -255,9 +255,14 @@ function setupEventListeners() {
 	console.log('%c--- Podpinanie listenera do addFriendButton... ---', 'color: blue;', elements.addFriendButton);
     
     // Listenery dla modalu znajomych
-    elements.addFriendButton.addEventListener('click', () => friendsService.openFriendRequestModal(true, false));
-	console.log('%c--- Kliknięto addFriendButton! Uruchamiam openFriendRequestModal... ---', 'color: green; font-weight: bold;');
-    elements.notificationButton.addEventListener('click', () => friendsService.openFriendRequestModal(false, true));
+    elements.addFriendButton.addEventListener('click', (event) => {
+        event.stopPropagation(); // ZATRZYMAJ KLIKNIĘCIE
+        friendsService.openFriendRequestModal(true, false);
+    });
+    elements.notificationButton.addEventListener('click', (event) => {
+        event.stopPropagation(); // ZATRZYMAJ KLIKNIĘCIE
+        friendsService.openFriendRequestModal(false, true);
+    });
     elements.closeFriendRequestModal.addEventListener('click', () => {
         elements.friendRequestModal.classList.remove('visible');
     });
