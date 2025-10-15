@@ -2,7 +2,7 @@
 
 import { addMessageToChat, showTypingIndicator, updateUserStatusIndicator } from './services/chatService.js';
 import { displayActiveUsers, handleNewFriendRequestNotification, loadFriendsAndRequests } from './services/friendsService.js';
-import { setSocket, setReconnectAttempts, socket, currentUser, currentRoom } from './chat.js';
+import { setSocket, setReconnectAttempts, socket, reconnectAttempts, currentUser, currentRoom } from './chat.js';
 import { contactsListEl } from './ui/elements.js';
 import { showCustomMessage } from './ui/helpers.js';
 import { getUserLabelById } from './profiles.js';
@@ -85,7 +85,6 @@ export function initWebSocket() {
             console.log(`[WebSocket] Rozłączono. Kod: ${event.code}`);
             if (event.code !== 1000) { // Jeśli to nie było normalne zamknięcie
                 console.log('[WebSocket] Próba ponownego połączenia...');
-				setReconnectAttempts(reconnectAttempts + 1);
                 setTimeout(() => initWebSocket().then(resolve).catch(reject), Math.min(1000 * ++reconnectAttempts, 10000));
             }
         };

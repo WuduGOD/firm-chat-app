@@ -75,6 +75,10 @@ export function setCurrentRoom(room) {
   currentRoom = room;
 }
 
+export function setAudioContext(context) {
+  audioContext = context;
+}
+
 // --- Funkcje Inicjalizacyjne i Główna Logika Aplikacji ---
 
 /**

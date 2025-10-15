@@ -1,6 +1,6 @@
 // Plik: helpers.js
 
-import { audioContext, setNotificationPermission, setAudioContextInitiated, audioContextInitiated, notificationPermissionGranted, unreadConversationsInfo, baseDocumentTitle } from '../chat.js';
+import { audioContext, setNotificationPermission, setAudioContext, setAudioContextInitiated, audioContextInitiated, notificationPermissionGranted, unreadConversationsInfo, baseDocumentTitle } from '../chat.js';
 import { enableSoundButton } from './elements.js';
 import { getUserLabelById } from '../profiles.js';
 
@@ -68,10 +68,11 @@ export function showCustomMessage(message, type = 'info') {
  */
 export function ensureAudioContext() {
     
-    if (!audioContext) {
-        console.log("[AudioContext] Creating new AudioContext due to user gesture.");
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    }
+	if (!audioContext) {
+		console.log("[AudioContext] Creating new AudioContext due to user gesture.");
+		const newAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+		setAudioContext(newAudioContext);
+	}
 
     // Sprawdź stan AudioContext. Jeśli jest zawieszony, spróbuj go wznowić.
     if (audioContext.state === 'suspended') {
