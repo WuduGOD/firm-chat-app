@@ -330,8 +330,27 @@ async function initializeApp() {
     await friendsService.loadActiveUsers();
     console.log("[Init] Dane znajomych i czatu załadowane.");
 
-    // 7. Ustaw nasłuchiwanie na zmiany w Supabase Realtime
-    // ... (kod dla supabase.channel(...).on(...).subscribe()) ...
+    // --- NOWY KOD: Nasłuchiwanie na zmiany statusów w czasie rzeczywistym ---
+    const profilesChannel = supabase
+        .channel('profiles-changes')
+        .on(
+            'postgres_changes',
+            {
+                event: 'UPDATE', // Słuchaj tylko aktualizacji
+                schema: 'public',
+                table: 'profiles',
+            },
+            (payload) => {
+                console.log('Otrzymano aktualizację profilu:', payload.new);
+                // Wywołaj funkcję, która już istnieje i potrafi zaktualizować UI
+                chatService.updateUserStatusIndicator(
+                    payload.new.id,
+                    payload.new.is_online,
+                    payload.new.last_seen_at
+                );
+            }
+        )
+        .subscribe();
 
     console.log("✅ Aplikacja Komunikator została pomyślnie zainicjalizowana!");
 }

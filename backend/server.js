@@ -87,9 +87,6 @@ wss.on('connection', (ws) => {
 
                 console.log(`User ${userData.userId} joined room ${userData.currentRoom}.`);
 
-                // Aktualizujemy status w bazie danych na online (jeśli to pierwsze dołączenie użytkownika)
-                await updateProfileStatus(userData.userId, true);
-                broadcastUserStatus(userData.userId, true); // Rozgłaszamy status online
 
                 // Wysyłamy historię wiadomości tylko do klienta, który dołączył,
                 // i tylko jeśli pokój nie jest 'global' (bo dla 'global' nie ma historii czatu)
@@ -216,8 +213,6 @@ wss.on('connection', (ws) => {
                 await updateProfileStatus(userId, isOnline);
                 console.log(`User ${userId} status updated to ${isOnline}. (from 'status' message)`);
 
-                // ZMIANA: Przekaż lastSeenTimestamp do broadcastUserStatus
-                broadcastUserStatus(userId, isOnline, lastSeenTimestamp); // Status zawsze rozsyłany globalnie
             }
             else {
                 console.warn('Unhandled message type or missing userData.userId:', data);
@@ -252,10 +247,8 @@ wss.on('connection', (ws) => {
                 try {
                     const res = await client.query('SELECT last_seen_at FROM public.profiles WHERE id = $1', [userData.userId]);
                     const lastSeen = res.rows.length > 0 ? res.rows[0].last_seen_at : null;
-                    broadcastUserStatus(userData.userId, false, lastSeen); // Rozgłaszamy status offline z last_seen
                 } catch (err) {
                     console.error('DB Error on close: Failed to get last_seen_at for broadcast:', err);
-                    broadcastUserStatus(userData.userId, false, new Date().toISOString()); // Fallback
                 } finally {
                     client.release();
                 }
@@ -471,30 +464,6 @@ function broadcastToRoom(roomId, msg, excludeWs = null) {
         }
     }
     console.log(`Broadcasted message to room ${roomId}. Sent to ${sentCount} clients.`);
-}
-
-/**
- * Broadcasts a user's online/offline status to ALL connected clients.
- * Statusy użytkowników są globalne i wszyscy powinni je otrzymać.
- * @param {string} userId - The ID of the user whose status is changing.
- * @param {boolean} isOnline - True if the user is online, false if offline.
- * @param {string | null} lastSeen - The 'last_seen_at' timestamp if the user is going offline.
- */
-function broadcastUserStatus(userId, isOnline, lastSeen = null) {
-    const msg = JSON.stringify({
-        type: 'status',
-        user: userId, 
-        online: isOnline,
-        last_seen: lastSeen 
-    });
-
-    for (const client of clients.keys()) {
-        // Wysyłamy status do wszystkich, niezależnie od tego, w którym pokoju się znajdują
-        if (client.readyState === WebSocket.OPEN) {
-            client.send(msg);
-        }
-    }
-    console.log(`Broadcasted user ${userId} status: ${isOnline ? 'online' : 'offline'}. Last seen: ${lastSeen || 'N/A'}.`);
 }
 
 /**
