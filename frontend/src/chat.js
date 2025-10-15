@@ -283,6 +283,7 @@ async function initializeApp() {
     
     // 1. Inicjalizuj elementy DOM
     elements.initializeDOMElements();
+	window.elements = elements; 
 
     // 2. Sprawdź sesję użytkownika
     const { data: { session } } = await supabase.auth.getSession();
