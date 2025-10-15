@@ -516,24 +516,24 @@ export async function handleNewFriendRequestNotification(senderId) {
  * @param {boolean} showPendingSection - If true, shows the 'pending requests' section.
  */
 export function openFriendRequestModal(showSendSection, showPendingSection) {
-    if (!friendRequestModal || !sendFriendRequestSection || !pendingRequestsSection) {
+    if (!elements.friendRequestModal || !elements.sendFriendRequestSection || !elements.pendingRequestsSection) {
         console.error("[Friends] Missing modal elements.");
         return;
     }
 
-    friendRequestModal.classList.add('visible'); // Show modal
+    elements.friendRequestModal.classList.add('visible'); // Show modal
 
     if (showSendSection) {
-        sendFriendRequestSection.classList.remove('hidden');
+        elements.sendFriendRequestSection.style.display = 'block';
     } else {
-        sendFriendRequestSection.classList.add('hidden');
+        elements.sendFriendRequestSection.style.display = 'none';
     }
 
     if (showPendingSection) {
-        pendingRequestsSection.classList.remove('hidden');
+        elements.pendingRequestsSection.style.display = 'block';
         loadFriendsAndRequests(); // Load fresh data for the pending requests list
     } else {
-        pendingRequestsSection.classList.add('hidden');
+        elements.pendingRequestsSection.style.display = 'none';
     }
 }
 
