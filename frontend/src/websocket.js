@@ -81,13 +81,15 @@ export function initWebSocket() {
             }
         };
 
-        newSocket.onclose = (event) => {
-            console.log(`[WebSocket] Rozłączono. Kod: ${event.code}`);
-            if (event.code !== 1000) { // Jeśli to nie było normalne zamknięcie
-                console.log('[WebSocket] Próba ponownego połączenia...');
-                setTimeout(() => initWebSocket().then(resolve).catch(reject), Math.min(1000 * ++reconnectAttempts, 10000));
-            }
-        };
+		newSocket.onclose = (event) => {
+			if (event.code !== 1000) {
+				// Używamy funkcji-settera do zmiany wartości
+				const newAttemptCount = reconnectAttempts + 1;
+				setReconnectAttempts(newAttemptCount);
+        
+				setTimeout(() => initWebSocket(), Math.min(1000 * newAttemptCount, 10000));
+			}
+		};
 
         newSocket.onerror = (error) => {
             console.error('[WebSocket] Błąd:', error);
