@@ -229,10 +229,10 @@ export async function handleConversationClick(user, clickedConvoItemElement) {
         }
 
         // Dołącz do nowego pokoju na serwerze WebSocket
-        if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({ type: 'join', room: currentRoom }));
-            console.log(`[handleConversationClick] Wysłano JOIN dla pokoju: ${currentRoom}`);
-        }
+		if (socket && socket.readyState === WebSocket.OPEN) {
+			socket.send(JSON.stringify({ type: 'join', name: currentUser.id, room: currentRoom }));
+			console.log(`[handleConversationClick] Wysłano JOIN dla pokoju: ${currentRoom}`);
+		}
 
         // Załaduj i wyświetl historię wiadomości
         const history = await fetchMessageHistory(currentRoom);
