@@ -1587,33 +1587,37 @@ body {
     background-color: var(--bg-color-main);
 }
 
+.emoji-picker.hidden {
+    display: none;
+}
+
+/* Styl dla WIDOCZNEGO panelu */
 .emoji-picker {
-    position: absolute;
-    bottom: 100%; /* Ustawia panel tuż nad stopką czatu */
-    left: 0;
-    width: 100%;
-    max-width: 320px; /* Ograniczenie szerokości na większych ekranach */
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(32px, 1fr));
+    gap: 0.5rem;
+    padding: 0.5rem;
+    
     background: var(--bg-color-dropdown);
     border: 1px solid var(--border-color-medium);
     border-radius: 8px;
     box-shadow: var(--shadow-large);
-    padding: 0.5rem;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(32px, 1fr)); /* Tworzy elastyczną siatkę */
-    gap: 0.5rem;
-    z-index: 1000;
-    max-height: 200px; /* Ograniczenie wysokości z przewijaniem */
+    
+    position: absolute;
+    bottom: calc(100% + 10px); /* Ustawia panel 10px NAD stopką czatu */
+    left: 0;
+    
+    width: 100%;
+    max-width: 320px;
+    max-height: 200px;
     overflow-y: auto;
-}
-
-.emoji-picker.hidden {
-    display: none;
+    z-index: 1000;
 }
 
 .emoji-picker button {
     background: none;
     border: none;
-    font-size: 1.5rem; /* Większe emotikony */
+    font-size: 1.5rem;
     cursor: pointer;
     border-radius: 4px;
     padding: 0.25rem;
