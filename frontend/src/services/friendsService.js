@@ -12,37 +12,26 @@ import { loadAllProfiles, getUserLabelById } from '../profiles.js';
  * Fetches friends from Supabase, retrieves their last message, and displays them
  */
 export async function loadContacts() {
-    console.log("[loadContacts] Loading contacts (friends only)...");
-    if (!currentUser) {
-        console.error("[loadContacts] Current user is not defined.");
-        return;
-    }
-
+    if (!currentUser) return;
     try {
-        // Krok 1: Pobierz relacje znajomych z bazy danych
         const { data: friendsData, error: friendsError } = await supabase
             .from('friends')
             .select('user_id, friend_id')
             .or(`user_id.eq.${currentUser.id},friend_id.eq.${currentUser.id}`)
             .eq('status', 'accepted');
-
         if (friendsError) throw friendsError;
 
-        // Krok 2: Wyodrębnij ID znajomych i wczytaj ich profile
         const friendIds = new Set(friendsData.map(f => (String(f.user_id) === String(currentUser.id) ? f.friend_id : f.user_id)));
         const allProfilesData = (await loadAllProfiles()) || [];
         const friends = allProfilesData.filter(profile => friendIds.has(profile.id));
-        setAllFriends(friends); // Zapisz listę znajomych w globalnym stanie
+        setAllFriends(friends);
 
-        // Krok 3: Wyczyść obecną listę kontaktów w UI
         if (elements.contactsListEl) {
             elements.contactsListEl.innerHTML = '';
         } else {
-            console.error("[loadContacts] Element contactsListEl nie został znaleziony.");
             return;
         }
 
-        // Krok 4: Pobierz ostatnie wiadomości dla wszystkich konwersacji
         let lastMessagesMap = {};
         if (socket && socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify({ type: 'get_last_messages_for_user_rooms', userId: currentUser.id }));
@@ -58,50 +47,33 @@ export async function loadContacts() {
                 const timeoutId = setTimeout(() => {
                     socket.removeEventListener('message', tempHandler);
                     resolve({});
-                }, 5000); // 5-sekundowy timeout
+                }, 5000);
                 socket.addEventListener('message', tempHandler);
             });
         }
 
-        // Krok 5: Połącz dane znajomych z ostatnimi wiadomościami i posortuj
         const contactsWithLastMessage = allFriends.map(user => {
             const roomId = getRoomName(String(currentUser.id), String(user.id));
             return { user, lastMessage: lastMessagesMap[roomId] || null, roomId };
         });
-
         const sortedContacts = sortConversations(contactsWithLastMessage);
 
-        // Krok 6: Wyrenderuj listę konwersacji
         sortedContacts.forEach(({ user, lastMessage, roomId }) => {
             const convoItem = document.createElement('li');
             convoItem.className = 'contact';
             convoItem.dataset.roomId = roomId;
             convoItem.dataset.convoId = user.id;
-
             const avatarSrc = `https://i.pravatar.cc/150?img=${user.id.charCodeAt(0) % 70 + 1}`;
             const senderName = lastMessage ? (String(lastMessage.username) === String(currentUser.id) ? "Ja" : (getUserLabelById(lastMessage.username) || '...')) : "";
             const previewText = lastMessage ? `${senderName}: ${lastMessage.text}` : "Brak wiadomości";
             const timeText = lastMessage ? new Date(lastMessage.inserted_at).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" }) : "";
-
-            convoItem.innerHTML = `
-                <img src="${avatarSrc}" alt="Avatar" class="avatar">
-                <div class="contact-info">
-                    <span class="contact-name">${getUserLabelById(user.id) || user.email}</span>
-                    <span class="status-dot offline"></span>
-                    <span class="last-message">${previewText}</span>
-                </div>
-                <div class="contact-meta">
-                    <span class="message-time">${timeText}</span>
-                    <span class="unread-count hidden"></span>
-                </div>
-            `;
+            convoItem.innerHTML = `<img src="${avatarSrc}" alt="Avatar" class="avatar"><div class="contact-info"><span class="contact-name">${getUserLabelById(user.id) || user.email}</span><span class="status-dot offline"></span><span class="last-message">${previewText}</span></div><div class="contact-meta"><span class="message-time">${timeText}</span><span class="unread-count hidden"></span></div>`;
             convoItem.addEventListener('click', () => handleConversationClick(user, convoItem));
             elements.contactsListEl.appendChild(convoItem);
         });
 
         await loadUnreadMessagesFromSupabase();
         renderActiveUsersList();
-
     } catch (e) {
         console.error("Błąd w loadContacts:", e);
         showCustomMessage("Wystąpił błąd podczas ładowania kontaktów.", "error");
@@ -130,20 +102,17 @@ export async function loadActiveUsers() {
     }
 }
 
-function renderActiveUsersList() {
+export function renderActiveUsersList() {
     if (!elements.activeUsersListEl || !elements.noActiveUsersText || !elements.onlineUsersMobile) return;
 
-    // Zawsze czyść obie listy przed ponownym renderowaniem
     elements.activeUsersListEl.innerHTML = '';
     elements.onlineUsersMobile.innerHTML = '';
 
-    // Filtruj listę znajomych, aby znaleźć tych, którzy są online
     const onlineFriends = allFriends.filter(friend => {
         const status = onlineUsers.get(String(friend.id));
         return status && status.isOnline && String(friend.id) !== String(currentUser.id);
     });
 
-    // Pokaż odpowiedni komunikat lub listę
     if (onlineFriends.length === 0) {
         elements.activeUsersListEl.style.display = 'none';
         elements.noActiveUsersText.style.display = 'block';
@@ -156,26 +125,28 @@ function renderActiveUsersList() {
             const userName = getUserLabelById(userId) || 'Nieznany';
             const avatarSrc = `https://i.pravatar.cc/150?img=${userId.charCodeAt(0) % 70 + 1}`;
 
-            // Tworzenie elementu dla listy desktopowej
-            const li = document.createElement('li');
-            li.className = 'active-user-item';
-            li.dataset.userId = userId;
-            li.innerHTML = `
-                <img src="${avatarSrc}" alt="Avatar" class="avatar">
-                <span class="username">${userName}</span>
-                <span class="status-dot online"></span>
-            `;
-            elements.activeUsersListEl.appendChild(li);
-
-            // Tworzenie elementu dla listy mobilnej
-            const divMobile = document.createElement('div');
-            divMobile.className = 'online-user-item-mobile';
-            divMobile.dataset.userId = userId;
-            divMobile.innerHTML = `
-                <img src="${avatarSrc}" alt="Avatar" class="avatar">
-                <span class="username">${userName}</span>
-            `;
-            elements.onlineUsersMobile.appendChild(divMobile);
+            const createItem = (isDesktop) => {
+                const item = document.createElement(isDesktop ? 'li' : 'div');
+                item.className = isDesktop ? 'active-user-item' : 'online-user-item-mobile';
+                item.dataset.userId = userId;
+                item.innerHTML = isDesktop ? `
+                    <img src="${avatarSrc}" alt="Avatar" class="avatar">
+                    <span class="username">${userName}</span>
+                    <span class="status-dot online"></span>` : `
+                    <img src="${avatarSrc}" alt="Avatar" class="avatar">
+                    <span class="username">${userName}</span>`;
+                item.addEventListener('click', () => {
+                    const userProfile = allFriends.find(p => String(p.id) === String(userId));
+                    if (userProfile) {
+                        const mockConvoItem = document.createElement('li');
+                        mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(userProfile.id));
+                        handleConversationClick(userProfile, mockConvoItem);
+                    }
+                });
+                return item;
+            };
+            elements.activeUsersListEl.appendChild(createItem(true));
+            elements.onlineUsersMobile.appendChild(createItem(false));
         });
     }
 }
@@ -185,13 +156,10 @@ function renderActiveUsersList() {
  * @param {Array<Object>} activeUsersData - An array of active user objects from the server.
  */
 export function displayActiveUsers(activeUsersData) {
-    // Krok 1: Zawsze aktualizuj globalny stan, kto jest online.
     onlineUsers.clear();
     activeUsersData.forEach(user => {
         onlineUsers.set(String(user.id), { isOnline: user.online, lastSeen: user.last_seen });
     });
-
-    // Krok 2: Użyj nowej, centralnej funkcji do przerysowania listy.
     renderActiveUsersList();
 }
 
