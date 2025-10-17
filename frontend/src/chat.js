@@ -80,13 +80,15 @@ export function setAudioContext(context) {
 }
 
 function setupEmojiPicker() {
+    // SZPIEG: Sprawdzamy, czy funkcja się uruchamia i czy znajduje przycisk
+    console.log('[Init] Uruchamianie setupEmojiPicker. Przycisk emoji:', elements.emojiButton);
+
     const emojiList = ['😀', '😂', '😍', '🤔', '😎', '😢', '👍', '❤️', '🔥', '🎉', '👋', '😊'];
     let emojiPicker = null;
 
     function createPicker() {
         const picker = document.createElement('div');
-        picker.className = 'emoji-picker hidden'; // Domyślnie ukryty
-
+        picker.className = 'emoji-picker hidden';
         emojiList.forEach(emoji => {
             const button = document.createElement('button');
             button.textContent = emoji;
@@ -98,8 +100,6 @@ function setupEmojiPicker() {
             });
             picker.appendChild(button);
         });
-        
-        // Dodaj panel do stopki czatu, aby był poprawnie pozycjonowany
         if(elements.chatFooter) {
             elements.chatFooter.appendChild(picker);
         }
@@ -108,27 +108,13 @@ function setupEmojiPicker() {
 
     if (elements.emojiButton) {
         elements.emojiButton.addEventListener('click', (event) => {
-            event.stopPropagation(); // Zapobiega natychmiastowemu zamknięciu
-            
-            // Stwórz panel tylko raz, przy pierwszym kliknięciu
+            event.stopPropagation();
             if (!emojiPicker) {
                 emojiPicker = createPicker();
             }
-            
-            // Przełącz widoczność panelu
             emojiPicker.classList.toggle('hidden');
         });
     }
-
-    // Dodaj logikę zamykania panelu po kliknięciu na zewnątrz
-    document.addEventListener('click', (event) => {
-        if (emojiPicker && !emojiPicker.classList.contains('hidden')) {
-            // Sprawdź, czy kliknięcie nie było wewnątrz przycisku lub samego panelu
-            if (!elements.emojiButton.contains(event.target) && !emojiPicker.contains(event.target)) {
-                emojiPicker.classList.add('hidden');
-            }
-        }
-    });
 }
 
 
