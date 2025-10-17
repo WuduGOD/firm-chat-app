@@ -26,10 +26,11 @@ export async function loadContacts() {
             .or(`user_id.eq.${String(currentUser.id)},friend_id.eq.${String(currentUser.id)}`)
             .eq('status', 'accepted');
 
-        if (friendsError) {
-            console.error('[loadContacts] Error loading friends from Supabase:', friendsError.message);
-            showCustomMessage(`Błąd ładowania listy znajomych: ${friendsError.message}`, 'error');
-            return;
+        if (friendsError) throw friendsError;
+            const friendIds = new Set(friendsData.map(f => String(f.user_id) === String(currentUser.id) ? f.friend_id : f.user_id));
+			const allProfilesData = (await loadAllProfiles()) || [];
+            const friends = allProfilesData.filter(profile => friendIds.has(profile.id));
+            setAllFriends(friends);
         }
 
         const safeFriendsData = friendsData || [];
@@ -135,6 +136,7 @@ export async function loadContacts() {
         });
         console.log("[loadContacts] Contacts (friends) loaded and rendered.");
         await loadUnreadMessagesFromSupabase();
+	renderActiveUsersList();	
     } catch (e) {
         console.error("Caught error in loadContacts:", e);
         showCustomMessage("Wystąpił błąd podczas ładowania kontaktów.", "error");
@@ -163,83 +165,69 @@ export async function loadActiveUsers() {
     }
 }
 
+function renderActiveUsersList() {
+    if (!elements.activeUsersListEl || !elements.noActiveUsersText || !elements.onlineUsersMobile) return;
+
+    // Zawsze czyść obie listy przed ponownym renderowaniem
+    elements.activeUsersListEl.innerHTML = '';
+    elements.onlineUsersMobile.innerHTML = '';
+
+    // Filtruj listę znajomych, aby znaleźć tych, którzy są online
+    const onlineFriends = allFriends.filter(friend => {
+        const status = onlineUsers.get(String(friend.id));
+        return status && status.isOnline && String(friend.id) !== String(currentUser.id);
+    });
+
+    // Pokaż odpowiedni komunikat lub listę
+    if (onlineFriends.length === 0) {
+        elements.activeUsersListEl.style.display = 'none';
+        elements.noActiveUsersText.style.display = 'block';
+    } else {
+        elements.activeUsersListEl.style.display = 'block';
+        elements.noActiveUsersText.style.display = 'none';
+        
+        onlineFriends.forEach(user => {
+            const userId = user.id;
+            const userName = getUserLabelById(userId) || 'Nieznany';
+            const avatarSrc = `https://i.pravatar.cc/150?img=${userId.charCodeAt(0) % 70 + 1}`;
+
+            // Tworzenie elementu dla listy desktopowej
+            const li = document.createElement('li');
+            li.className = 'active-user-item';
+            li.dataset.userId = userId;
+            li.innerHTML = `
+                <img src="${avatarSrc}" alt="Avatar" class="avatar">
+                <span class="username">${userName}</span>
+                <span class="status-dot online"></span>
+            `;
+            elements.activeUsersListEl.appendChild(li);
+
+            // Tworzenie elementu dla listy mobilnej
+            const divMobile = document.createElement('div');
+            divMobile.className = 'online-user-item-mobile';
+            divMobile.dataset.userId = userId;
+            divMobile.innerHTML = `
+                <img src="${avatarSrc}" alt="Avatar" class="avatar">
+                <span class="username">${userName}</span>
+            `;
+            elements.onlineUsersMobile.appendChild(divMobile);
+        });
+    }
+}
+
 /**
  * Displays a list of active users (friends) in the UI.
  * @param {Array<Object>} activeUsersData - An array of active user objects from the server.
  */
 export function displayActiveUsers(activeUsersData) {
-    if (!activeUsersListEl || !noActiveUsersText || !onlineUsersMobile) return;
+    // Krok 1: Zawsze aktualizuj globalny stan, kto jest online.
+    onlineUsers.clear();
+    activeUsersData.forEach(user => {
+        onlineUsers.set(String(user.id), { isOnline: user.online, lastSeen: user.last_seen });
+    });
 
-    try {
-        // Wyczyść istniejące listy i lokalne dane
-        activeUsersListEl.innerHTML = '';
-        onlineUsersMobile.innerHTML = '';
-        onlineUsers.clear();
-
-        // Wyświetlaj tylko tych użytkowników, którzy są znajomymi i są online
-        const onlineFriends = activeUsersData.filter(user =>
-            String(user.id) !== String(currentUser.id) &&
-            user.online &&
-            allFriends.some(friend => String(friend.id) === String(user.id))
-        );
-
-        // Pokaż lub ukryj listy w zależności od tego, czy są jacyś aktywni znajomi
-        if (onlineFriends.length === 0) {
-            activeUsersListEl.style.display = 'none';
-            noActiveUsersText.style.display = 'block';
-        } else {
-            activeUsersListEl.style.display = 'block';
-            noActiveUsersText.style.display = 'none';
-            
-            // Stwórz elementy HTML dla każdego aktywnego znajomego
-            onlineFriends.forEach(user => {
-                const avatarSrc = `https://i.pravatar.cc/150?img=${user.id.charCodeAt(0) % 70 + 1}`;
-                const userName = getUserLabelById(user.id) || user.username || 'Nieznany';
-
-                // Element dla listy desktopowej
-                const li = document.createElement('li');
-                li.className = 'active-user-item';
-                li.dataset.userId = user.id;
-                li.innerHTML = `
-                    <img src="${avatarSrc}" alt="Avatar" class="avatar">
-                    <span class="username">${userName}</span>
-                    <span class="status-dot online"></span>
-                `;
-                activeUsersListEl.appendChild(li);
-
-                // Element dla listy mobilnej
-                const divMobile = document.createElement('div');
-                divMobile.className = 'online-user-item-mobile';
-                divMobile.dataset.userId = user.id;
-                divMobile.innerHTML = `
-                    <img src="${avatarSrc}" alt="Avatar" class="avatar">
-                    <span class="username">${userName}</span>
-                `;
-                onlineUsersMobile.appendChild(divMobile);
-                
-                // Dodaj obsługę kliknięcia do obu elementów
-                [li, divMobile].forEach(item => {
-                    item.addEventListener('click', () => {
-                        const userProfile = allFriends.find(p => String(p.id) === String(user.id));
-                        if (userProfile) {
-                            // Symulujemy element konwersacji, aby przekazać go do funkcji
-                            const mockConvoItem = document.createElement('li');
-                            mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(user.id));
-                            handleConversationClick(userProfile, mockConvoItem);
-                        }
-                    });
-                });
-            });
-        }
-
-        // Zaktualizuj globalną mapę `onlineUsers` o status wszystkich użytkowników (nie tylko znajomych)
-        activeUsersData.forEach(user => {
-            onlineUsers.set(String(user.id), { isOnline: user.online, lastSeen: user.last_seen });
-        });
-
-    } catch (e) {
-        console.error("Błąd w displayActiveUsers:", e);
-    }
+    // Krok 2: Użyj nowej, centralnej funkcji do przerysowania listy.
+    renderActiveUsersList();
 }
 
 /**
@@ -272,7 +260,6 @@ export async function loadFriendsAndRequests() {
 
             // Krok 4: Zaktualizuj liczbę na ikonce powiadomień
             updateNotificationBadge(pendingRequests.length);
-		await loadActiveUsers();
         }
     } catch (e) {
         console.error("[Friends] Błąd krytyczny w loadFriendsAndRequests:", e);

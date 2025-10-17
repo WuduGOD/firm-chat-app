@@ -327,6 +327,7 @@ async function initializeApp() {
 
     // 6. Po udanym połączeniu, załaduj dane aplikacji
     await friendsService.loadFriendsAndRequests();
+	await friendsService.loadActiveUsers(); 
     console.log("[Init] Dane znajomych i czatu załadowane.");
 
     // --- NOWY KOD: Nasłuchiwanie na zmiany statusów w czasie rzeczywistym ---
