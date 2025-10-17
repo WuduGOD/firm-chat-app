@@ -1536,6 +1536,10 @@ body {
     border-bottom: none;
 }
 
+#enableSoundButton {
+    display: none !important;
+}
+
 /* Dark mode overrides */
 body.dark-mode {
     --primary-color: #2815ad;
