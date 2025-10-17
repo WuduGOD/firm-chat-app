@@ -1629,6 +1629,7 @@ body {
 }
 
 
+
 /* Dark mode overrides */
 body.dark-mode {
     --primary-color: #2815ad;
