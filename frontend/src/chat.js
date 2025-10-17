@@ -79,6 +79,59 @@ export function setAudioContext(context) {
   audioContext = context;
 }
 
+function setupEmojiPicker() {
+    const emojiList = ['😀', '😂', '😍', '🤔', '😎', '😢', '👍', '❤️', '🔥', '🎉', '👋', '😊'];
+    let emojiPicker = null;
+
+    function createPicker() {
+        const picker = document.createElement('div');
+        picker.className = 'emoji-picker hidden'; // Domyślnie ukryty
+
+        emojiList.forEach(emoji => {
+            const button = document.createElement('button');
+            button.textContent = emoji;
+            button.addEventListener('click', () => {
+                if (elements.messageInput) {
+                    elements.messageInput.value += emoji;
+                    elements.messageInput.focus();
+                }
+            });
+            picker.appendChild(button);
+        });
+        
+        // Dodaj panel do stopki czatu, aby był poprawnie pozycjonowany
+        if(elements.chatFooter) {
+            elements.chatFooter.appendChild(picker);
+        }
+        return picker;
+    }
+
+    if (elements.emojiButton) {
+        elements.emojiButton.addEventListener('click', (event) => {
+            event.stopPropagation(); // Zapobiega natychmiastowemu zamknięciu
+            
+            // Stwórz panel tylko raz, przy pierwszym kliknięciu
+            if (!emojiPicker) {
+                emojiPicker = createPicker();
+            }
+            
+            // Przełącz widoczność panelu
+            emojiPicker.classList.toggle('hidden');
+        });
+    }
+
+    // Dodaj logikę zamykania panelu po kliknięciu na zewnątrz
+    document.addEventListener('click', (event) => {
+        if (emojiPicker && !emojiPicker.classList.contains('hidden')) {
+            // Sprawdź, czy kliknięcie nie było wewnątrz przycisku lub samego panelu
+            if (!elements.emojiButton.contains(event.target) && !emojiPicker.contains(event.target)) {
+                emojiPicker.classList.add('hidden');
+            }
+        }
+    });
+}
+
+
 // --- Funkcje Inicjalizacyjne i Główna Logika Aplikacji ---
 
 /**

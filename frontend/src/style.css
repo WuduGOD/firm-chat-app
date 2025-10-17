@@ -1587,6 +1587,44 @@ body {
     background-color: var(--bg-color-main);
 }
 
+.emoji-picker {
+    position: absolute;
+    bottom: 100%; /* Ustawia panel tuż nad stopką czatu */
+    left: 0;
+    width: 100%;
+    max-width: 320px; /* Ograniczenie szerokości na większych ekranach */
+    background: var(--bg-color-dropdown);
+    border: 1px solid var(--border-color-medium);
+    border-radius: 8px;
+    box-shadow: var(--shadow-large);
+    padding: 0.5rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(32px, 1fr)); /* Tworzy elastyczną siatkę */
+    gap: 0.5rem;
+    z-index: 1000;
+    max-height: 200px; /* Ograniczenie wysokości z przewijaniem */
+    overflow-y: auto;
+}
+
+.emoji-picker.hidden {
+    display: none;
+}
+
+.emoji-picker button {
+    background: none;
+    border: none;
+    font-size: 1.5rem; /* Większe emotikony */
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 0.25rem;
+    transition: background-color 0.2s;
+}
+
+.emoji-picker button:hover {
+    background-color: var(--bg-color-search-input);
+}
+
+
 /* Dark mode overrides */
 body.dark-mode {
     --primary-color: #2815ad;
