@@ -13,112 +13,80 @@ import { loadAllProfiles, getUserLabelById } from '../profiles.js';
  */
 export async function loadContacts() {
     console.log("[loadContacts] Loading contacts (friends only)...");
-    if (!currentUser || !currentUser.id) {
-        console.error("[loadContacts] Current user is not defined, cannot load contacts.");
+    if (!currentUser) {
+        console.error("[loadContacts] Current user is not defined.");
         return;
     }
 
     try {
-        // Fetch only friends from the 'friends' table
+        // Krok 1: Pobierz relacje znajomych z bazy danych
         const { data: friendsData, error: friendsError } = await supabase
             .from('friends')
-            .select('user_id, friend_id, status')
-            .or(`user_id.eq.${String(currentUser.id)},friend_id.eq.${String(currentUser.id)}`)
+            .select('user_id, friend_id')
+            .or(`user_id.eq.${currentUser.id},friend_id.eq.${currentUser.id}`)
             .eq('status', 'accepted');
 
         if (friendsError) throw friendsError;
-            const friendIds = new Set(friendsData.map(f => String(f.user_id) === String(currentUser.id) ? f.friend_id : f.user_id));
-			const allProfilesData = (await loadAllProfiles()) || [];
-            const friends = allProfilesData.filter(profile => friendIds.has(profile.id));
-            setAllFriends(friends);
-        }
 
-        const safeFriendsData = friendsData || [];
-
-        // Extract friend IDs and fetch their profiles
-        const friendIds = new Set();
-        safeFriendsData.forEach(f => {
-            if (String(f.user_id) === String(currentUser.id)) {
-                friendIds.add(f.friend_id);
-            } else if (String(f.friend_id) === String(currentUser.id)) {
-                friendIds.add(f.user_id);
-            }
-        });
-
-        // Store allFriends globally for easy access
+        // Krok 2: Wyodrębnij ID znajomych i wczytaj ich profile
+        const friendIds = new Set(friendsData.map(f => (String(f.user_id) === String(currentUser.id) ? f.friend_id : f.user_id)));
         const allProfilesData = (await loadAllProfiles()) || [];
         const friends = allProfilesData.filter(profile => friendIds.has(profile.id));
-		setAllFriends(friends);
-        console.log("[loadContacts] Current user's friends:", allFriends);
+        setAllFriends(friends); // Zapisz listę znajomych w globalnym stanie
 
-        if (contactsListEl) {
-            contactsListEl.innerHTML = ''; // Clear existing contacts
+        // Krok 3: Wyczyść obecną listę kontaktów w UI
+        if (elements.contactsListEl) {
+            elements.contactsListEl.innerHTML = '';
         } else {
-            console.error("[loadContacts] contactsListEl element not found! Cannot load contacts list.");
+            console.error("[loadContacts] Element contactsListEl nie został znaleziony.");
             return;
         }
 
+        // Krok 4: Pobierz ostatnie wiadomości dla wszystkich konwersacji
         let lastMessagesMap = {};
         if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({
-                type: 'get_last_messages_for_user_rooms',
-                userId: currentUser.id
-            }));
-            console.log(`[loadContacts] Sent 'get_last_messages_for_user_rooms' request for user ${currentUser.id}.`);
-
+            socket.send(JSON.stringify({ type: 'get_last_messages_for_user_rooms', userId: currentUser.id }));
             lastMessagesMap = await new Promise(resolve => {
                 const tempHandler = (event) => {
                     const data = JSON.parse(event.data);
                     if (data.type === 'last_messages_for_user_rooms') {
-                        console.log("[loadContacts] Received 'last_messages_for_user_rooms' response.");
                         socket.removeEventListener('message', tempHandler);
                         clearTimeout(timeoutId);
                         resolve(data.messages);
                     }
                 };
                 const timeoutId = setTimeout(() => {
-                    console.warn("[loadContacts] Timeout waiting for 'last_messages_for_user_rooms' response.");
                     socket.removeEventListener('message', tempHandler);
                     resolve({});
-                }, 10000);
+                }, 5000); // 5-sekundowy timeout
                 socket.addEventListener('message', tempHandler);
             });
-        } else {
-            console.warn("[loadContacts] WebSocket not open, cannot request last messages.");
         }
 
-        const contactsWithLastMessage = (allFriends || []).map(user => {
+        // Krok 5: Połącz dane znajomych z ostatnimi wiadomościami i posortuj
+        const contactsWithLastMessage = allFriends.map(user => {
             const roomId = getRoomName(String(currentUser.id), String(user.id));
-            const lastMessage = lastMessagesMap[roomId] || null;
-            return { user, lastMessage, roomId };
+            return { user, lastMessage: lastMessagesMap[roomId] || null, roomId };
         });
 
         const sortedContacts = sortConversations(contactsWithLastMessage);
 
+        // Krok 6: Wyrenderuj listę konwersacji
         sortedContacts.forEach(({ user, lastMessage, roomId }) => {
             const convoItem = document.createElement('li');
-            convoItem.classList.add('contact');
-            convoItem.dataset.convoId = user.id;
-            convoItem.dataset.email = user.email;
+            convoItem.className = 'contact';
             convoItem.dataset.roomId = roomId;
+            convoItem.dataset.convoId = user.id;
 
             const avatarSrc = `https://i.pravatar.cc/150?img=${user.id.charCodeAt(0) % 70 + 1}`;
-            let previewText = "Brak wiadomości";
-            let timeText = "";
+            const senderName = lastMessage ? (String(lastMessage.username) === String(currentUser.id) ? "Ja" : (getUserLabelById(lastMessage.username) || '...')) : "";
+            const previewText = lastMessage ? `${senderName}: ${lastMessage.text}` : "Brak wiadomości";
+            const timeText = lastMessage ? new Date(lastMessage.inserted_at).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" }) : "";
 
-            if (lastMessage) {
-                const senderName = String(lastMessage.username) === String(currentUser.id) ? "Ja" : (getUserLabelById(lastMessage.username) || lastMessage.username);
-                previewText = `${senderName}: ${lastMessage.text}`;
-                const lastMessageTime = new Date(lastMessage.inserted_at);
-                if (!isNaN(lastMessageTime.getTime())) {
-                    timeText = lastMessageTime.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
-                }
-            }
-            
             convoItem.innerHTML = `
                 <img src="${avatarSrc}" alt="Avatar" class="avatar">
                 <div class="contact-info">
-                    <span class="contact-name">${getUserLabelById(user.id) || user.email || 'Nieznany'}</span>
+                    <span class="contact-name">${getUserLabelById(user.id) || user.email}</span>
                     <span class="status-dot offline"></span>
                     <span class="last-message">${previewText}</span>
                 </div>
@@ -127,18 +95,15 @@ export async function loadContacts() {
                     <span class="unread-count hidden"></span>
                 </div>
             `;
-
-            convoItem.addEventListener('click', () => {
-                handleConversationClick(user, convoItem);
-            });
-
-            contactsListEl.appendChild(convoItem);
+            convoItem.addEventListener('click', () => handleConversationClick(user, convoItem));
+            elements.contactsListEl.appendChild(convoItem);
         });
-        console.log("[loadContacts] Contacts (friends) loaded and rendered.");
+
         await loadUnreadMessagesFromSupabase();
-	renderActiveUsersList();	
+        renderActiveUsersList();
+
     } catch (e) {
-        console.error("Caught error in loadContacts:", e);
+        console.error("Błąd w loadContacts:", e);
         showCustomMessage("Wystąpił błąd podczas ładowania kontaktów.", "error");
     }
 }
