@@ -272,6 +272,7 @@ export async function loadFriendsAndRequests() {
 
             // Krok 4: Zaktualizuj liczbę na ikonce powiadomień
             updateNotificationBadge(pendingRequests.length);
+		await loadActiveUsers();
         }
     } catch (e) {
         console.error("[Friends] Błąd krytyczny w loadFriendsAndRequests:", e);
