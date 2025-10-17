@@ -346,7 +346,7 @@ export function updateUserStatusIndicator(userId, isOnline, lastSeenTimestamp = 
                 if (lastSeenInfo && lastSeenInfo.lastSeen) {
                     lastSeenText = `Offline (ostatnio widziany ${formatTimeAgo(new Date(lastSeenInfo.lastSeen))})`;
                 }
-                userStatusSpan.textContent = lastSeenText;
+                elements.userStatusSpan.textContent = lastSeenText;
             }
         }
 
@@ -354,13 +354,44 @@ export function updateUserStatusIndicator(userId, isOnline, lastSeenTimestamp = 
         const isFriend = allFriends.some(friend => String(friend.id) === String(userId));
         const shouldBeOnActiveList = isOnline && isFriend && String(userId) !== String(currentUser.id);
 
-        [activeUsersListEl, onlineUsersMobile].forEach(list => {
+        [elements.activeUsersListEl, elements.onlineUsersMobile].forEach(list => {
             if (!list) return;
             const userItem = list.querySelector(`[data-user-id="${userId}"]`);
             if (shouldBeOnActiveList && !userItem) {
                 // Dodaj użytkownika do listy aktywnych
-                const item = document.createElement(list === activeUsersListEl ? 'li' : 'div');
-                // ... (logika tworzenia elementu HTML) ...
+				const item = document.createElement(list === elements.activeUsersListEl ? 'li' : 'div');
+                const isDesktopList = list === elements.activeUsersListEl;
+                
+                item.className = isDesktopList ? 'active-user-item' : 'online-user-item-mobile';
+                item.dataset.userId = userId;
+
+                const avatarSrc = `https://i.pravatar.cc/150?img=${userId.charCodeAt(0) % 70 + 1}`;
+                const userName = getUserLabelById(userId) || 'Nieznany';
+
+                if (isDesktopList) {
+                    item.innerHTML = `
+                        <img src="${avatarSrc}" alt="Avatar" class="avatar">
+                        <span class="username">${userName}</span>
+                        <span class="status-dot online"></span>
+                    `;
+                } else {
+                    item.innerHTML = `
+                        <img src="${avatarSrc}" alt="Avatar" class="avatar">
+                        <span class="username">${userName}</span>
+                    `;
+                }
+                
+                // Dodaj listener do otwierania czatu
+                item.addEventListener('click', () => {
+                    const userProfile = allFriends.find(p => String(p.id) === String(userId));
+                    if (userProfile) {
+                        const mockConvoItem = document.createElement('li'); // Symulujemy element, by przekazać go do funkcji
+                        mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(userProfile.id));
+                        handleConversationClick(userProfile, mockConvoItem);
+                    }
+                });
+
+                list.appendChild(item);
             } else if (!shouldBeOnActiveList && userItem) {
                 userItem.remove(); // Usuń użytkownika z listy aktywnych
             }
