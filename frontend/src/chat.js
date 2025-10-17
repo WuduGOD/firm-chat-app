@@ -362,6 +362,7 @@ async function initializeApp() {
     setupEventListeners();
     setupSendMessage(); // Używamy teraz nazwy modułu
     setupChatSettingsDropdown(); // Używamy teraz nazwy modułu
+	setupEmojiPicker();
 
     // 4. Załaduj profile i poproś o uprawnienia
     await loadAllProfiles();
