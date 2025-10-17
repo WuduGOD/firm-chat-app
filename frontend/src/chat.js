@@ -80,13 +80,23 @@ export function setAudioContext(context) {
 }
 
 function setupEmojiPicker() {
-    // SZPIEG: Sprawdzamy, czy funkcja się uruchamia i czy znajduje przycisk
-    console.log('[Init] Uruchamianie setupEmojiPicker. Przycisk emoji:', elements.emojiButton);
+    // SZPIEG 1: Sprawdzamy, czy funkcja w ogóle startuje i czy widzi kluczowe elementy.
+    console.log('[Init] Uruchamianie setupEmojiPicker.');
+    console.log('Znaleziony emojiButton:', elements.emojiButton);
+    console.log('Znaleziony chatFooter:', elements.chatFooter);
+
+    if (!elements.emojiButton || !elements.chatFooter) {
+        console.error('BŁĄD KRYTYCZNY: Brakuje przycisku emoji lub stopki czatu. Panel emotikon nie będzie działać.');
+        return; // Zatrzymaj, jeśli brakuje kluczowych elementów
+    }
 
     const emojiList = ['😀', '😂', '😍', '🤔', '😎', '😢', '👍', '❤️', '🔥', '🎉', '👋', '😊'];
     let emojiPicker = null;
 
     function createPicker() {
+        // SZPIEG 3: Sprawdzamy, czy panel jest tworzony.
+        console.log('%c--- Tworzenie panelu emotikon (createPicker) ---', 'color: blue;');
+
         const picker = document.createElement('div');
         picker.className = 'emoji-picker hidden';
         emojiList.forEach(emoji => {
@@ -100,21 +110,26 @@ function setupEmojiPicker() {
             });
             picker.appendChild(button);
         });
-        if(elements.chatFooter) {
-            elements.chatFooter.appendChild(picker);
-        }
+
+        // SZPIEG 4: Sprawdzamy, czy panel jest dodawany do stopki.
+        console.log('%c--- Dodawanie panelu do chatFooter ---', 'color: blue;');
+        elements.chatFooter.appendChild(picker);
         return picker;
     }
 
-    if (elements.emojiButton) {
-        elements.emojiButton.addEventListener('click', (event) => {
-            event.stopPropagation();
-            if (!emojiPicker) {
-                emojiPicker = createPicker();
-            }
-            emojiPicker.classList.toggle('hidden');
-        });
-    }
+    elements.emojiButton.addEventListener('click', (event) => {
+        // SZPIEG 2: Sprawdzamy, czy kliknięcie jest rejestrowane.
+        console.log('%c--- Kliknięto emojiButton! ---', 'color: green; font-weight: bold;');
+        event.stopPropagation();
+
+        if (!emojiPicker) {
+            emojiPicker = createPicker();
+        }
+
+        // SZPIEG 5: Sprawdzamy, czy przełączamy klasę 'hidden' na panelu.
+        console.log('%c--- Przełączanie klasy "hidden" na panelu ---', 'color: green;');
+        emojiPicker.classList.toggle('hidden');
+    });
 }
 
 
