@@ -203,7 +203,6 @@ export function setupSendMessage() {
     }
 }
 
-* Tworzy nową grupę i dodaje do niej członków w bazie danych.
 /** //
  * Tworzy nową grupę i dodaje do niej członków w bazie danych.
  * @param {string} groupName - Nazwa nowej grupy.
