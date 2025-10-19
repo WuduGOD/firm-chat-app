@@ -14,7 +14,7 @@ import { loadAllProfiles, getUserLabelById } from '../profiles.js';
 export async function loadContacts() {
     if (!currentUser) return;
     try {
-        // --- Krok 1: Wczytaj znajomych (tak jak wcześniej) ---
+        // --- Krok 1: Wczytaj znajomych ---
         const { data: friendsData, error: friendsError } = await supabase
             .from('friends')
             .select('user_id, friend_id')
@@ -30,68 +30,71 @@ export async function loadContacts() {
         // --- Krok 2: Wczytaj grupy, do których należy użytkownik ---
         const { data: groupsData, error: groupsError } = await supabase
             .from('groups')
-            .select(`
-                id,
-                name,
-                group_members!inner(user_id)
-            `)
+            .select('id, name, group_members!inner(user_id)')
             .eq('group_members.user_id', currentUser.id);
-
         if (groupsError) throw groupsError;
 
         // --- Krok 3: Połącz znajomych i grupy w jedną listę konwersacji ---
         const friendConversations = friends.map(user => ({
-            id: user.id,
-            name: getUserLabelById(user.id) || user.email,
-            type: 'private', // Oznaczamy typ jako prywatny
-            raw: user // Surowe dane użytkownika
+            id: user.id, name: getUserLabelById(user.id) || user.email, type: 'private', raw: user
         }));
-
         const groupConversations = groupsData.map(group => ({
-            id: group.id,
-            name: group.name,
-            type: 'group', // Oznaczamy typ jako grupa
-            raw: group // Surowe dane grupy
+            id: group.id, name: group.name, type: 'group', raw: group
         }));
-
         const allConversations = [...friendConversations, ...groupConversations];
 
-        // Wyczyść listę w UI
         if (elements.contactsListEl) {
             elements.contactsListEl.innerHTML = '';
         } else {
             return;
         }
 
-        // --- Krok 4: Wyświetl wszystkie konwersacje ---
+        // --- Krok 4: Pobierz ostatnie wiadomości dla wszystkich konwersacji ---
+        const roomIds = allConversations.map(c => c.type === 'private' ? getRoomName(String(currentUser.id), String(c.id)) : c.id);
+        if (roomIds.length === 0) {
+            // Jeśli nie ma żadnych konwersacji, zakończ funkcję
+            renderActiveUsersList();
+            return;
+        }
+
+        const { data: lastMessagesData, error: lastMessagesError } = await supabase.rpc('get_last_messages_for_rooms', { room_ids: roomIds });
+
+        if (lastMessagesError) throw lastMessagesError;
+
+        const lastMessagesMap = new Map(lastMessagesData.map(msg => [msg.room_id, msg]));
+
+
+        // --- Krok 5: Wyświetl wszystkie konwersacje ---
         allConversations.forEach((convo) => {
             const convoItem = document.createElement('li');
             convoItem.className = 'contact';
 
             let avatarSrc = '';
             let roomId = '';
-
             if (convo.type === 'private') {
                 roomId = getRoomName(String(currentUser.id), String(convo.id));
                 avatarSrc = `https://i.pravatar.cc/150?img=${convo.id.charCodeAt(0) % 70 + 1}`;
-            } else { // Dla grupy
-                roomId = convo.id; // ID grupy jest naszym ID pokoju
-                // Użyjmy generycznego avatara dla grup
+            } else {
+                roomId = convo.id;
                 avatarSrc = `https://ui-avatars.com/api/?name=${encodeURIComponent(convo.name)}&background=6a5acd&color=fff`;
             }
 
             convoItem.dataset.roomId = roomId;
-            convoItem.dataset.convoId = convo.id; // To może być ID usera lub grupy
+            convoItem.dataset.convoId = convo.id;
+
+            const lastMessage = lastMessagesMap.get(roomId);
+            const previewText = lastMessage ? `${String(lastMessage.sender_id) === String(currentUser.id) ? "Ja" : getUserLabelById(lastMessage.sender_id)}: ${lastMessage.content}` : "Brak wiadomości";
+            const timeText = lastMessage ? new Date(lastMessage.created_at).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" }) : "";
 
             convoItem.innerHTML = `
                 <img src="${avatarSrc}" alt="Avatar" class="avatar">
                 <div class="contact-info">
                     <span class="contact-name">${convo.name}</span>
                     <span class="status-dot ${convo.type === 'private' ? 'offline' : ''}"></span>
-                    <span class="last-message">Brak wiadomości</span>
+                    <span class="last-message">${previewText}</span>
                 </div>
                 <div class="contact-meta">
-                    <span class="message-time"></span>
+                    <span class="message-time">${timeText}</span>
                     <span class="unread-count hidden"></span>
                 </div>`;
 
@@ -101,6 +104,8 @@ export async function loadContacts() {
 
         await loadUnreadMessagesFromSupabase();
         renderActiveUsersList();
+        // Na koniec posortuj listę
+        resortConversationList();
 
     } catch (e) {
         console.error("Błąd w loadContacts:", e);
