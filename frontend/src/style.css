@@ -1632,14 +1632,6 @@ body {
     transition: background-color 0.2s;
 }
 
-.emoji-picker button:focus,
-.emoji-picker button:active {
-    outline-style: none !important; /* Resetuje styl obwódki */
-    outline-color: transparent !important; /* Ustawia kolor obwódki na przezroczysty */
-    box-shadow: none !important; /* Usuwa również potencjalny cień jako obwódkę */
-    text-shadow: 0 0 5px var(--primary-color); /* Zostawiamy tylko poświatę na tekście */
-}
-
 .emoji-picker button:hover {
     background-color: var(--bg-color-search-input);
 }
