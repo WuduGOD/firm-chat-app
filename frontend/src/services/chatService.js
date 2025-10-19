@@ -235,50 +235,10 @@ export async function handleConversationClick(convoData, clickedConvoItemElement
 export async function addMessageToChat(msg) {
     console.log(`[addMessageToChat] Przetwarzanie wiadomości dla pokoju: ${msg.room}`);
     try {
-        let convoItem = elements.contactsListEl.querySelector(`.contact[data-room-id="${msg.room}"]`);
-        if (!convoItem) {
-            await loadContacts();
-            convoItem = elements.contactsListEl.querySelector(`.contact[data-room-id="${msg.room}"]`);
-            if (!convoItem) {
-                console.error(`Błąd krytyczny: Konwersacja dla pokoju ${msg.room} nie istnieje.`);
-                return;
-            }
-        }
+        // Zawsze aktualizuj podgląd konwersacji na liście
         updateConversationPreview(msg.room, msg);
 
-        const isMessageFromOtherUser = String(msg.username) !== String(currentUser.id);
-        const isForInactiveChat = msg.room !== currentRoom;
-
-        if (isMessageFromOtherUser && isForInactiveChat) {
-            await updateUnreadMessageCountInSupabase(msg.room, msg.username);
-        } else {
-            await clearUnreadMessageCountInSupabase(msg.room);
-        }
-
-        // --- BLOK DIAGNOSTYCZNY POWIADOMIEŃ ---
-        const shouldNotify = notificationPermissionGranted && isMessageFromOtherUser && (document.hidden || isForInactiveChat);
-
-        console.log('%c--- DIAGNOSTYKA POWIADOMIENIA ---', 'color: purple; font-weight: bold;');
-        console.log('Czy mam pozwolenie? (notificationPermissionGranted):', notificationPermissionGranted);
-        console.log('Czy wiadomość od kogoś innego? (isMessageFromOtherUser):', isMessageFromOtherUser);
-        console.log('Czy karta jest ukryta? (document.hidden):', document.hidden);
-        console.log('Czy to inny czat? (isForInactiveChat):', isForInactiveChat);
-        console.log('Czy powinienem pokazać powiadomienie? (shouldNotify):', shouldNotify);
-
-        if (shouldNotify) {
-            console.log('%c--- Warunki spełnione, TWORZĘ POWIADOMIENIE ---', 'color: green;');
-            const senderLabel = getUserLabelById(msg.username) || 'Ktoś';
-            new Notification(`Nowa wiadomość od ${senderLabel}`, {
-                body: msg.text,
-                icon: 'https://placehold.co/48x48/000000/FFFFFF?text=💬',
-                silent: true
-            }).onclick = () => window.focus();
-            playNotificationSound();
-        } else {
-            console.log('%c--- Warunki NIESPEŁNIONE, nie pokazuję powiadomienia. ---', 'color: gray;');
-        }
-        // --- KONIEC BLOKU DIAGNOSTYCZNEGO ---
-
+        // Dodaj wiadomość do okna czatu, tylko jeśli jest ono aktywne
         if (msg.room === currentRoom) {
             const div = document.createElement('div');
             div.classList.add('message', String(msg.username) === String(currentUser.id) ? 'sent' : 'received');
