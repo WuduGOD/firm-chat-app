@@ -108,6 +108,27 @@ export async function loadContacts() {
     }
 }
 
+function resortConversationList() {
+    if (!elements.contactsListEl) return;
+
+    const conversations = Array.from(elements.contactsListEl.querySelectorAll('li.contact'));
+
+    conversations.sort((a, b) => {
+        const timeA = a.querySelector('.message-time').textContent;
+        const timeB = b.querySelector('.message-time').textContent;
+
+        // Proste porównanie tekstowe dla formatu HH:MM, dla bardziej złożonych dat wymagałoby parsowania
+        // Konwersacje bez czasu lądują na dole
+        if (!timeA) return 1;
+        if (!timeB) return -1;
+
+        return timeB.localeCompare(timeA);
+    });
+
+    // Wyczyść i wstaw posortowane elementy
+    conversations.forEach(convo => elements.contactsListEl.appendChild(convo));
+}
+
 /**
  * Loads and displays the list of active users by requesting it from the server.
  */
@@ -508,8 +529,6 @@ export function updateConversationPreview(roomId, message) {
         }
 
         // Przenieś zaktualizowaną konwersację na górę listy
-        if (contactsListEl.firstChild !== convoItem) {
-            contactsListEl.prepend(convoItem);
-        }
+		resortConversationList();
     }
 }

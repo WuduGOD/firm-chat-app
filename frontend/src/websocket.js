@@ -49,9 +49,7 @@ export function initWebSocket() {
                 // Centralny router dla wiadomości z serwera
                 switch (data.type) {
                     case 'message':
-						if (String(data.username) !== String(currentUser.id)) {
-							addMessageToChat(data);
-						}
+						addMessageToChat(data);
                         break;
                     case 'typing':
                         showTypingIndicator(data.username);

@@ -174,9 +174,6 @@ export function setupSendMessage() {
             };
 
             socket.send(JSON.stringify(msgData));
-			
-			// Natychmiast wyświetl wysłaną wiadomość, nie czekając na serwer
-			chatService.addMessageToChat(msgData);
 
             // Przenieś konwersację na górę listy
             const convoItemToMove = elements.contactsListEl.querySelector(`.contact[data-room-id="${currentRoom}"]`);
