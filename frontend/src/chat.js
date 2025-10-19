@@ -204,86 +204,71 @@ export function setupSendMessage() {
 }
 
 function setupCreateGroupModal() {
-    console.log('[Init] Uruchamianie setupCreateGroupModal...');
-    
-    // Funkcja do wypełniania listy znajomych w modalu
-    function populateFriendsList() {
-        if (!elements.friendsListContainer) return;
-        elements.friendsListContainer.innerHTML = ''; // Wyczyść listę
+    if (!elements.addNewButton || !elements.createGroupModal) return;
+
+    // Otwieranie modalu
+    elements.addNewButton.addEventListener('click', (event) => {
+        event.stopPropagation(); // <-- KLUCZOWA POPRAWKA
         
-        allFriends.forEach(friend => {
-            const listItem = document.createElement('li');
-            const friendId = `friend-${friend.id}`;
-            listItem.innerHTML = `
-                <label for="${friendId}">
+        // Wypełnij listę znajomych za każdym razem, gdy modal jest otwierany
+        if (elements.friendsListContainer) {
+            elements.friendsListContainer.innerHTML = ''; // Wyczyść starą listę
+            allFriends.forEach(friend => {
+                const friendId = `friend-checkbox-${friend.id}`;
+                const li = document.createElement('li');
+                li.innerHTML = `
                     <input type="checkbox" id="${friendId}" value="${friend.id}">
-                    <span>${friend.username || friend.email}</span>
-                </label>
-            `;
-            elements.friendsListContainer.appendChild(listItem);
-        });
-    }
-
-    // Listener dla przycisku otwierającego modal (zielony plus)
-    if (elements.addNewButton) {
-        elements.addNewButton.addEventListener('click', () => {
-            populateFriendsList(); // Wypełnij listę znajomymi
-            if(elements.createGroupModal) {
-                elements.createGroupModal.classList.remove('hidden');
-            }
-        });
-    }
-
-    // Listener dla przycisku zamykającego modal (X)
-    if (elements.closeCreateGroupModal) {
-        elements.closeCreateGroupModal.addEventListener('click', () => {
-            if(elements.createGroupModal) {
-                elements.createGroupModal.classList.add('hidden');
-            }
-        });
-    }
-    
-    // Listener dla paska wyszukiwania znajomych
-    if (elements.searchFriendsInput) {
-        elements.searchFriendsInput.addEventListener('input', (e) => {
-            const searchTerm = e.target.value.toLowerCase();
-            const friends = elements.friendsListContainer.querySelectorAll('li');
-            friends.forEach(friend => {
-                const name = friend.querySelector('span').textContent.toLowerCase();
-                if (name.includes(searchTerm)) {
-                    friend.style.display = 'flex';
-                } else {
-                    friend.style.display = 'none';
-                }
+                    <label for="${friendId}">
+                        <img src="https://i.pravatar.cc/150?img=${friend.id.charCodeAt(0) % 70 + 1}" class="avatar">
+                        <span>${getUserLabelById(friend.id) || friend.email}</span>
+                    </label>
+                `;
+                elements.friendsListContainer.appendChild(li);
             });
-        });
-    }
+        }
+        elements.createGroupModal.classList.remove('hidden');
+    });
 
-    // Listener dla przycisku "Utwórz grupę"
-    if (elements.createGroupButton) {
-        elements.createGroupButton.addEventListener('click', () => {
-            const groupName = elements.groupNameInput.value.trim();
-            const selectedFriends = Array.from(elements.friendsListContainer.querySelectorAll('input:checked')).map(input => input.value);
+    // Zamykanie modalu
+    elements.closeCreateGroupModal.addEventListener('click', () => {
+        elements.createGroupModal.classList.add('hidden');
+    });
 
-            if (!groupName) {
-                helpers.showCustomMessage('Proszę podać nazwę grupy.', 'error');
-                return;
-            }
-            if (selectedFriends.length === 0) {
-                helpers.showCustomMessage('Proszę wybrać przynajmniej jednego znajomego.', 'error');
-                return;
-            }
-            
-            // Na razie tylko logujemy wynik do konsoli
-            console.log('Tworzenie grupy:', groupName);
-            console.log('Wybrani znajomi (ID):', selectedFriends);
-            
-            helpers.showCustomMessage(`Grupa "${groupName}" została utworzona!`, 'success');
-            if(elements.createGroupModal) {
-                elements.createGroupModal.classList.add('hidden');
+    // Logika przycisku "Utwórz grupę" (na razie tylko w konsoli)
+    elements.createGroupButton.addEventListener('click', () => {
+        const groupName = elements.groupNameInput.value.trim();
+        const selectedFriends = Array.from(elements.friendsListContainer.querySelectorAll('input:checked')).map(input => input.value);
+
+        if (!groupName) {
+            alert('Proszę podać nazwę grupy.');
+            return;
+        }
+        if (selectedFriends.length === 0) {
+            alert('Proszę wybrać przynajmniej jednego znajomego.');
+            return;
+        }
+
+        console.log('Tworzenie grupy:', {
+            name: groupName,
+            members: selectedFriends
+        });
+        
+        elements.createGroupModal.classList.add('hidden'); // Zamknij modal po utworzeniu
+    });
+
+    // Logika wyszukiwania na liście znajomych
+    elements.groupFriendSearchInput.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        const allFriendsItems = elements.friendsListContainer.querySelectorAll('li');
+        allFriendsItems.forEach(item => {
+            const label = item.querySelector('label span').textContent.toLowerCase();
+            if (label.includes(searchTerm)) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
             }
         });
-    }
+    });
 }
 
 /**
@@ -314,6 +299,10 @@ export function setupChatSettingsDropdown() {
             if (friendRequestModal && friendRequestModal.classList.contains('visible') && !friendRequestModal.contains(event.target)) {
                 friendRequestModal.classList.remove('visible');
             }
+			
+			if (elements.createGroupModal && !elements.createGroupModal.classList.contains('hidden') && !elements.createGroupModal.contains(event.target)) {
+            elements.createGroupModal.classList.add('hidden');
+			}
         });
 
         // Obsługa zmiany motywu kolorystycznego wiadomości
@@ -446,6 +435,7 @@ async function initializeApp() {
     setupSendMessage(); // Używamy teraz nazwy modułu
     setupChatSettingsDropdown(); // Używamy teraz nazwy modułu
 	setupEmojiPicker();
+	setupCreateGroupModal();
 
     // 4. Załaduj profile i poproś o uprawnienia
     await loadAllProfiles();
