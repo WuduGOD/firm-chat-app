@@ -203,6 +203,89 @@ export function setupSendMessage() {
     }
 }
 
+function setupCreateGroupModal() {
+    console.log('[Init] Uruchamianie setupCreateGroupModal...');
+    
+    // Funkcja do wypełniania listy znajomych w modalu
+    function populateFriendsList() {
+        if (!elements.friendsListContainer) return;
+        elements.friendsListContainer.innerHTML = ''; // Wyczyść listę
+        
+        allFriends.forEach(friend => {
+            const listItem = document.createElement('li');
+            const friendId = `friend-${friend.id}`;
+            listItem.innerHTML = `
+                <label for="${friendId}">
+                    <input type="checkbox" id="${friendId}" value="${friend.id}">
+                    <span>${friend.username || friend.email}</span>
+                </label>
+            `;
+            elements.friendsListContainer.appendChild(listItem);
+        });
+    }
+
+    // Listener dla przycisku otwierającego modal (zielony plus)
+    if (elements.addNewButton) {
+        elements.addNewButton.addEventListener('click', () => {
+            populateFriendsList(); // Wypełnij listę znajomymi
+            if(elements.createGroupModal) {
+                elements.createGroupModal.classList.remove('hidden');
+            }
+        });
+    }
+
+    // Listener dla przycisku zamykającego modal (X)
+    if (elements.closeCreateGroupModal) {
+        elements.closeCreateGroupModal.addEventListener('click', () => {
+            if(elements.createGroupModal) {
+                elements.createGroupModal.classList.add('hidden');
+            }
+        });
+    }
+    
+    // Listener dla paska wyszukiwania znajomych
+    if (elements.searchFriendsInput) {
+        elements.searchFriendsInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const friends = elements.friendsListContainer.querySelectorAll('li');
+            friends.forEach(friend => {
+                const name = friend.querySelector('span').textContent.toLowerCase();
+                if (name.includes(searchTerm)) {
+                    friend.style.display = 'flex';
+                } else {
+                    friend.style.display = 'none';
+                }
+            });
+        });
+    }
+
+    // Listener dla przycisku "Utwórz grupę"
+    if (elements.createGroupButton) {
+        elements.createGroupButton.addEventListener('click', () => {
+            const groupName = elements.groupNameInput.value.trim();
+            const selectedFriends = Array.from(elements.friendsListContainer.querySelectorAll('input:checked')).map(input => input.value);
+
+            if (!groupName) {
+                helpers.showCustomMessage('Proszę podać nazwę grupy.', 'error');
+                return;
+            }
+            if (selectedFriends.length === 0) {
+                helpers.showCustomMessage('Proszę wybrać przynajmniej jednego znajomego.', 'error');
+                return;
+            }
+            
+            // Na razie tylko logujemy wynik do konsoli
+            console.log('Tworzenie grupy:', groupName);
+            console.log('Wybrani znajomi (ID):', selectedFriends);
+            
+            helpers.showCustomMessage(`Grupa "${groupName}" została utworzona!`, 'success');
+            if(elements.createGroupModal) {
+                elements.createGroupModal.classList.add('hidden');
+            }
+        });
+    }
+}
+
 /**
  * Sets up the functionality for the chat settings dropdown menu and global click handlers.
  */

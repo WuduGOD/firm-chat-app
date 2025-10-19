@@ -13,6 +13,7 @@ export let messageContainer;
 export let chatFooter, attachButton, messageInput, emojiButton, sendButton;
 export let rightSidebarWrapper, rightSidebar, activeUsersListEl, noActiveUsersText;
 export let enableSoundButton;
+export let createGroupModal, closeCreateGroupModal, groupNameInput, searchFriendsInput, friendsListContainer, createGroupButton;
 
 /**
  * Pobiera wszystkie elementy DOM i przypisuje je do wyeksportowanych zmiennych.
@@ -85,6 +86,14 @@ export function initializeDOMElements() {
     rightSidebar = document.getElementById('rightSidebar');
     activeUsersListEl = document.getElementById('activeUsersList');
     noActiveUsersText = document.getElementById('noActiveUsersText');
+	
+	// NOWE PRZYPISANIA DLA MODALU GRUPY
+    createGroupModal = document.getElementById('createGroupModal');
+    closeCreateGroupModal = document.getElementById('closeCreateGroupModal');
+    groupNameInput = document.getElementById('groupNameInput');
+    searchFriendsInput = document.getElementById('searchFriendsInput');
+    friendsListContainer = document.getElementById('friendsListContainer');
+    createGroupButton = document.getElementById('createGroupButton');
 
     console.log('[Init] Inicjalizacja elementów DOM zakończona.');
 }
