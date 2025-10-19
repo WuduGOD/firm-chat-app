@@ -1623,7 +1623,11 @@ body {
     border-radius: 4px;
     padding: 0.25rem;
     transition: background-color 0.2s;
-	outline: none;
+}
+
+.emoji-picker button:focus-visible {
+    outline: none; /* Usuwamy domyślną kwadratową ramkę */
+    text-shadow: 0 0 5px var(--primary-color); /* Dodajemy subtelną poświatę do samej emotikony */
 }
 
 .emoji-picker button:hover {
