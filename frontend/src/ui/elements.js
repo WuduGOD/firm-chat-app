@@ -91,10 +91,10 @@ export function initializeDOMElements() {
 	// NOWE PRZYPISANIA DLA MODALU GRUPY
     createGroupModal = document.getElementById('createGroupModal');
     closeCreateGroupModal = document.getElementById('closeCreateGroupModal');
-    groupNameInput = document.getElementById('groupNameInput');
-    searchFriendsInput = document.getElementById('searchFriendsInput');
-    friendsListContainer = document.getElementById('friendsListContainer');
     createGroupButton = document.getElementById('createGroupButton');
+    groupNameInput = document.getElementById('groupNameInput');
+    groupFriendSearchInput = document.getElementById('groupFriendSearchInput');
+    friendsListContainer = document.getElementById('friendsListContainer');
 
     console.log('[Init] Inicjalizacja elementów DOM zakończona.');
 }

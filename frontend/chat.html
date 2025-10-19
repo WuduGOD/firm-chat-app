@@ -170,28 +170,20 @@
   <!-- ############################################ -->
   <div id="createGroupModal" class="modal hidden">
     <div class="modal-content">
-      <span class="close-button" id="closeCreateGroupModal">&times;</span>
-      <h2>Stw車rz now? grup?</h2>
-      
-      <!-- Sekcja do wpisania nazwy grupy -->
-      <div class="modal-section">
-        <label for="groupNameInput">Nazwa grupy:</label>
-        <input type="text" id="groupNameInput" placeholder="Wpisz nazw? grupy..." />
-      </div>
-      
-      <!-- Sekcja do wyboru znajomych -->
-      <div class="modal-section">
-        <h3>Wybierz cz?onk車w</h3>
-        <input type="text" id="searchFriendsInput" placeholder="Wyszukaj znajomych..." class="search-input" />
-        <ul id="friendsListContainer" class="friends-list-new">
-          <!-- Lista znajomych b?dzie generowana przez JavaScript -->
-        </ul>
-      </div>
-      
-      <!-- Przycisk do utworzenia grupy -->
-      <div class="app-modal-footer">
-          <button id="createGroupButton">Utw車rz grup?</button>
-      </div>
+        <span class="close-button" id="closeCreateGroupModal">&times;</span>
+        <h2>Stw車rz now? grup?</h2>
+        <div class="modal-section">
+            <label for="groupNameInput">Nazwa grupy:</label>
+            <input type="text" id="groupNameInput" placeholder="Wpisz nazw? grupy" />
+        </div>
+        <div class="modal-section">
+            <h3>Dodaj znajomych do grupy</h3>
+            <input type="search" id="groupFriendSearchInput" placeholder="Szukaj znajomych...">
+            <ul id="friendsListContainer" class="friends-list-container"></ul>
+        </div>
+        <div class="modal-footer">
+            <button id="createGroupButton">Utw車rz grup?</button>
+        </div>
     </div>
   </div>
 
