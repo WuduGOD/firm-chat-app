@@ -1014,6 +1014,10 @@ body {
     border-radius: 0;
     transition: color 0.2s;
 }
+.chat-footer .attach-button:hover,
+.chat-footer .emoji-button:hover {
+    color: var(--primary-color);
+}
 
 /* PRAWY SIDEBAR (AKTYWNI UŻYTKOWNICY) */
 .right-sidebar-wrapper {
@@ -1619,6 +1623,7 @@ body {
     border-radius: 4px;
     padding: 0.25rem;
     transition: background-color 0.2s;
+	outline: none;
 }
 
 .emoji-picker button:hover {
