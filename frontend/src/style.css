@@ -961,6 +961,7 @@ body {
     align-items: center;
     box-shadow: 0 -2px 5px rgba(0,0,0,0.03);
     flex-shrink: 0;
+	position: relative;
 }
 
 .chat-footer input {
@@ -1012,6 +1013,10 @@ body {
     height: auto;
     border-radius: 0;
     transition: color 0.2s;
+}
+.chat-footer .attach-button:hover,
+.chat-footer .emoji-button:hover {
+    color: var(--primary-color);
 }
 
 /* PRAWY SIDEBAR (AKTYWNI UŻYTKOWNICY) */
