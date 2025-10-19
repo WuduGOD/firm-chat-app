@@ -203,6 +203,57 @@ export function setupSendMessage() {
     }
 }
 
+* Tworzy nową grupę i dodaje do niej członków w bazie danych.
+ * @param {string} groupName - Nazwa nowej grupy.
+ * @param {string[]} memberIds - Tablica ID członków do dodania.
+ */
+async function createGroup(groupName, memberIds) {
+    if (!groupName || memberIds.length === 0) {
+        helpers.showCustomMessage("Nazwa grupy i członkowie są wymagani.", "error");
+        return;
+    }
+
+    try {
+        // Krok 1: Utwórz nową grupę w tabeli 'groups' i pobierz jej ID
+        const { data: groupData, error: groupError } = await supabase
+            .from('groups')
+            .insert({
+                name: groupName,
+                created_by: currentUser.id
+            })
+            .select()
+            .single();
+
+        if (groupError) throw groupError;
+
+        const groupId = groupData.id;
+
+        // Krok 2: Przygotuj listę członków do wstawienia do tabeli 'group_members'
+        // Pamiętaj, aby dodać również twórcę grupy!
+        const allMemberIds = [...new Set([...memberIds, currentUser.id])];
+        const membersToInsert = allMemberIds.map(userId => ({
+            group_id: groupId,
+            user_id: userId
+        }));
+
+        // Krok 3: Wstaw wszystkich członków do tabeli 'group_members'
+        const { error: membersError } = await supabase
+            .from('group_members')
+            .insert(membersToInsert);
+
+        if (membersError) throw membersError;
+
+        helpers.showCustomMessage(`Grupa "${groupName}" została utworzona!`, 'success');
+
+        // Krok 4: Odśwież listę konwersacji, aby pokazać nową grupę
+        await friendsService.loadContacts(); // Zakładamy, że ta funkcja będzie umiała w przyszłości ładować też grupy
+
+    } catch (error) {
+        console.error("Błąd podczas tworzenia grupy:", error);
+        helpers.showCustomMessage(`Błąd: ${error.message}`, "error");
+    }
+}
+
 function setupCreateGroupModal() {
     if (!elements.addNewButton || !elements.createGroupModal) {
         console.error("Brakuje przycisku 'addNewButton' lub modalu grupy.");
@@ -247,14 +298,18 @@ function setupCreateGroupModal() {
         elements.createGroupModal.classList.add('hidden');
     });
 
-    elements.groupFriendSearchInput.addEventListener('input', (e) => {
-        const searchTerm = e.target.value.toLowerCase();
-        const allFriendsItems = elements.friendsListContainer.querySelectorAll('li');
-        allFriendsItems.forEach(item => {
-            const label = item.querySelector('label span').textContent.toLowerCase();
-            item.style.display = label.includes(searchTerm) ? 'flex' : 'none';
-        });
-    });
+	elements.createGroupButton.addEventListener('click', async () => { // Dodano async
+		const groupName = elements.groupNameInput.value.trim();
+		const selectedFriends = Array.from(elements.friendsListContainer.querySelectorAll('input:checked')).map(input => input.value);
+
+		// Wywołujemy naszą nową funkcję
+		await createGroup(groupName, selectedFriends);
+
+		// Czyścimy formularz i zamykamy okno
+		elements.groupNameInput.value = '';
+		elements.friendsListContainer.querySelectorAll('input:checked').forEach(input => input.checked = false);
+		elements.createGroupModal.classList.remove('visible');
+	});
 }
 
 /**
