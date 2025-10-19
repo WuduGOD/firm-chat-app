@@ -2,11 +2,10 @@
 
 import { supabase } from '../supabaseClient.js';
 import * as elements from '../ui/elements.js';
-import * as chatState from '../chat.js';
 import { getUserLabelById } from '../profiles.js';
 import { formatTimeAgo, showCustomMessage, playNotificationSound, updateDocumentTitle } from '../ui/helpers.js';
 import { loadContacts, updateConversationPreview, renderActiveUsersList } from './friendsService.js';
-import { onlineUsers, currentChatUser, allFriends, currentUser, unreadConversationsInfo, currentActiveConvoItem, setCurrentActiveConvoItem, setCurrentChatUser, setCurrentRoom, socket, currentRoom, notificationPermissionGranted } from '../chat.js';
+import { onlineUsers, currentChatUser, allFriends, currentUser, unreadConversationsInfo, currentActiveConvoItem, setCurrentActiveConvoItem, setCurrentChatUser, setCurrentRoom, socket, currentRoom, notificationPermissionGranted, typingTimeout } from '../chat.js';
 import { messageContainer, activeUsersListEl, contactsListEl, chatAreaWrapper, userStatusSpan, typingStatusHeader, typingIndicatorMessages } from '../ui/elements.js';
 
 /**
@@ -208,8 +207,7 @@ export async function handleConversationClick(convoData, clickedConvoItemElement
             socket.send(JSON.stringify({ type: 'join', name: currentUser.id, room: newRoom }));
         }
 
-        // Dalsza logika, jak ładowanie historii, pozostaje bez zmian
-        const history = await fetchMessageHistory(newRoom);
+        const history = await fetchMessageHistory(currentRoom);
         if (elements.messageContainer) {
             elements.messageContainer.innerHTML = ''; // Wyczyść przed dodaniem historii
             history.forEach(msg => {
@@ -219,7 +217,7 @@ export async function handleConversationClick(convoData, clickedConvoItemElement
                 div.innerHTML = `<p>${msg.text}</p><span class="timestamp">${timeString}</span>`;
                 elements.messageContainer.appendChild(div);
             });
-            elements.messageContainer.scrollTop = messageContainer.scrollHeight; // Przewiń na dół
+            elements.messageContainer.scrollTop = elements.messageContainer.scrollHeight; // Przewiń na dół
         }
 
     } catch (e) {
@@ -236,50 +234,10 @@ export async function handleConversationClick(convoData, clickedConvoItemElement
 export async function addMessageToChat(msg) {
     console.log(`[addMessageToChat] Przetwarzanie wiadomości dla pokoju: ${msg.room}`);
     try {
-        let convoItem = elements.contactsListEl.querySelector(`.contact[data-room-id="${msg.room}"]`);
-        if (!convoItem) {
-            await loadContacts();
-            convoItem = elements.contactsListEl.querySelector(`.contact[data-room-id="${msg.room}"]`);
-            if (!convoItem) {
-                console.error(`Błąd krytyczny: Konwersacja dla pokoju ${msg.room} nie istnieje.`);
-                return;
-            }
-        }
+        // Zawsze aktualizuj podgląd konwersacji na liście
         updateConversationPreview(msg.room, msg);
 
-        const isMessageFromOtherUser = String(msg.username) !== String(currentUser.id);
-        const isForInactiveChat = msg.room !== currentRoom;
-
-        if (isMessageFromOtherUser && isForInactiveChat) {
-            await updateUnreadMessageCountInSupabase(msg.room, msg.username);
-        } else {
-            await clearUnreadMessageCountInSupabase(msg.room);
-        }
-
-        // --- BLOK DIAGNOSTYCZNY POWIADOMIEŃ ---
-        const shouldNotify = notificationPermissionGranted && isMessageFromOtherUser && (document.hidden || isForInactiveChat);
-
-        console.log('%c--- DIAGNOSTYKA POWIADOMIENIA ---', 'color: purple; font-weight: bold;');
-        console.log('Czy mam pozwolenie? (notificationPermissionGranted):', notificationPermissionGranted);
-        console.log('Czy wiadomość od kogoś innego? (isMessageFromOtherUser):', isMessageFromOtherUser);
-        console.log('Czy karta jest ukryta? (document.hidden):', document.hidden);
-        console.log('Czy to inny czat? (isForInactiveChat):', isForInactiveChat);
-        console.log('Czy powinienem pokazać powiadomienie? (shouldNotify):', shouldNotify);
-
-        if (shouldNotify) {
-            console.log('%c--- Warunki spełnione, TWORZĘ POWIADOMIENIE ---', 'color: green;');
-            const senderLabel = getUserLabelById(msg.username) || 'Ktoś';
-            new Notification(`Nowa wiadomość od ${senderLabel}`, {
-                body: msg.text,
-                icon: 'https://placehold.co/48x48/000000/FFFFFF?text=💬',
-                silent: true
-            }).onclick = () => window.focus();
-            playNotificationSound();
-        } else {
-            console.log('%c--- Warunki NIESPEŁNIONE, nie pokazuję powiadomienia. ---', 'color: gray;');
-        }
-        // --- KONIEC BLOKU DIAGNOSTYCZNEGO ---
-
+        // Dodaj wiadomość do okna czatu, tylko jeśli jest ono aktywne
         if (msg.room === currentRoom) {
             const div = document.createElement('div');
             div.classList.add('message', String(msg.username) === String(currentUser.id) ? 'sent' : 'received');
@@ -336,7 +294,7 @@ export function updateUserStatusIndicator(userId, isOnline, lastSeenTimestamp = 
                 // Dodaj użytkownika do listy aktywnych
 				const item = document.createElement(list === elements.activeUsersListEl ? 'li' : 'div');
                 const isDesktopList = list === elements.activeUsersListEl;
-
+                
                 item.className = isDesktopList ? 'active-user-item' : 'online-user-item-mobile';
                 item.dataset.userId = userId;
 
@@ -355,7 +313,7 @@ export function updateUserStatusIndicator(userId, isOnline, lastSeenTimestamp = 
                         <span class="username">${userName}</span>
                     `;
                 }
-
+                
                 // Dodaj listener do otwierania czatu
                 item.addEventListener('click', () => {
                     const userProfile = allFriends.find(p => String(p.id) === String(userId));
@@ -426,7 +384,7 @@ export function showTypingIndicator(usernameId) {
  */
 export async function updateUnreadMessageCountInSupabase(roomId, senderId) {
     if (!supabase || !currentUser) return;
-
+    
     try {
         const { error } = await supabase
             .from('unread_messages')
@@ -446,7 +404,7 @@ export async function updateUnreadMessageCountInSupabase(roomId, senderId) {
         } else {
             console.log(`[Supabase] Zaktualizowano licznik nieprzeczytanych dla pokoju ${roomId}.`);
         }
-
+        
         // Refresh local state from the database after the update
         await loadUnreadMessagesFromSupabase();
 
@@ -461,7 +419,7 @@ export async function updateUnreadMessageCountInSupabase(roomId, senderId) {
  */
 export async function clearUnreadMessageCountInSupabase(roomId) {
     if (!supabase || !currentUser) return;
-
+    
     try {
         const { error } = await supabase
             .from('unread_messages')
@@ -478,7 +436,7 @@ export async function clearUnreadMessageCountInSupabase(roomId) {
         } else {
             console.log(`[Supabase] Wyzerowano licznik nieprzeczytanych dla pokoju ${roomId}.`);
         }
-
+        
         // Refresh local state from the database after the update
         await loadUnreadMessagesFromSupabase();
 
@@ -507,7 +465,7 @@ export async function loadUnreadMessagesFromSupabase() {
 
         // Wyczyść lokalny stan przed aktualizacją
         unreadConversationsInfo.clear();
-
+        
         data.forEach(record => {
             // Zaktualizuj lokalną mapę
             if (record.count > 0) {
@@ -532,10 +490,11 @@ export async function loadUnreadMessagesFromSupabase() {
                 }
             }
         });
-
+        
         // Zaktualizuj tytuł zakładki przeglądarki
         updateDocumentTitle();
 
     } catch (e) {
         console.error("[Supabase] Błąd krytyczny podczas ładowania nieprzeczytanych wiadomości:", e);
     }
+}
