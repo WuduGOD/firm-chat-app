@@ -203,7 +203,8 @@ export function setupSendMessage() {
     }
 }
 
-* Tworzy nową grupę i dodaje do niej członków w bazie danych.
+/** //
+ * Tworzy nową grupę i dodaje do niej członków w bazie danych.
  * @param {string} groupName - Nazwa nowej grupy.
  * @param {string[]} memberIds - Tablica ID członków do dodania.
  */
@@ -287,15 +288,6 @@ function setupCreateGroupModal() {
 
     elements.closeCreateGroupModal.addEventListener('click', () => {
         elements.createGroupModal.classList.remove('visible');
-    });
-
-    elements.createGroupButton.addEventListener('click', () => {
-        const groupName = elements.groupNameInput.value.trim();
-        const selectedFriends = Array.from(elements.friendsListContainer.querySelectorAll('input:checked')).map(input => input.value);
-        if (!groupName) { alert('Proszę podać nazwę grupy.'); return; }
-        if (selectedFriends.length === 0) { alert('Proszę wybrać przynajmniej jednego znajomego.'); return; }
-        console.log('Tworzenie grupy:', { name: groupName, members: selectedFriends });
-        elements.createGroupModal.classList.add('hidden');
     });
 
 	elements.createGroupButton.addEventListener('click', async () => { // Dodano async
