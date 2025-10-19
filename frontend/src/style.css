@@ -1013,10 +1013,6 @@ body {
     border-radius: 0;
     transition: color 0.2s;
 }
-.chat-footer .attach-button:hover,
-.chat-footer .emoji-button:hover {
-    color: var(--primary-color);
-}
 
 /* PRAWY SIDEBAR (AKTYWNI UŻYTKOWNICY) */
 .right-sidebar-wrapper {
