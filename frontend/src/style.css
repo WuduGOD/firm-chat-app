@@ -1023,8 +1023,10 @@ body {
 
 .chat-footer .emoji-button:focus,
 .chat-footer .emoji-button:active {
-    outline: none !important;
-    box-shadow: none !important;
+    outline-style: none !important;     /* Mówi "nie używaj żadnego stylu obwódki" */
+    outline-color: transparent !important; /* Mówi "kolor obwódki ma być przezroczysty" */
+    outline-width: 0 !important;        /* Mówi "szerokość obwódki ma być zerowa" */
+    box-shadow: none !important;        /* Usuwa potencjalny cień zamiast obwódki */
 }
 
 /* PRAWY SIDEBAR (AKTYWNI UŻYTKOWNICY) */
