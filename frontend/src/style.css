@@ -1108,6 +1108,7 @@ body {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     opacity: 1;
     transition: opacity 0.5s ease-out;
+    font-family: 'Inter', sans-serif;
     display: none !important;
 }
 .custom-message-box.success {
@@ -1203,6 +1204,12 @@ body {
 .modal-section:first-child {
     border-top: none;
     padding-top: 0;
+}
+
+.modal-section h3 {
+    font-size: 1.2rem;
+    color: var(--text-color-dark);
+    margin-bottom: 10px;
 }
 
 .modal-section input[type="email"],
@@ -2316,6 +2323,3 @@ body.auth-body {
 .switch-link a:hover {
     color: var(--primary-color-dark);
 }
-
-}
-
