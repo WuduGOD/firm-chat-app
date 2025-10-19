@@ -226,11 +226,11 @@ function setupCreateGroupModal() {
                 elements.friendsListContainer.appendChild(li);
             });
         }
-        elements.createGroupModal.classList.remove('hidden');
+        elements.createGroupModal.classList.add('visible');
     });
 
     elements.closeCreateGroupModal.addEventListener('click', () => {
-        elements.createGroupModal.classList.add('hidden');
+        elements.createGroupModal.classList.remove('visible');
     });
 
     elements.createGroupButton.addEventListener('click', () => {
@@ -282,7 +282,7 @@ export function setupChatSettingsDropdown() {
             }
 			
 			if (elements.createGroupModal && !elements.createGroupModal.classList.contains('hidden') && !elements.createGroupModal.contains(event.target)) {
-            elements.createGroupModal.classList.add('hidden');
+            elements.createGroupModal.classList.remove('visible');
 			}
         });
 
