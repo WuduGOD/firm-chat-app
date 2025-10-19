@@ -14,7 +14,7 @@ import { loadAllProfiles, getUserLabelById } from '../profiles.js';
 export async function loadContacts() {
     if (!currentUser) return;
     try {
-        // --- Krok 1: Wczytaj znajomych ---
+        // --- Krok 1: Wczytaj znajomych (tak jak wcześniej) ---
         const { data: friendsData, error: friendsError } = await supabase
             .from('friends')
             .select('user_id, friend_id')
@@ -30,71 +30,67 @@ export async function loadContacts() {
         // --- Krok 2: Wczytaj grupy, do których należy użytkownik ---
         const { data: groupsData, error: groupsError } = await supabase
             .from('groups')
-            .select('id, name, group_members!inner(user_id)')
+            .select(`
+                id,
+                name,
+                group_members!inner(user_id)
+            `)
             .eq('group_members.user_id', currentUser.id);
+
         if (groupsError) throw groupsError;
 
         // --- Krok 3: Połącz znajomych i grupy w jedną listę konwersacji ---
         const friendConversations = friends.map(user => ({
-            id: user.id, name: getUserLabelById(user.id) || user.email, type: 'private', raw: user
+            id: user.id,
+            name: getUserLabelById(user.id) || user.email,
+            type: 'private', // Oznaczamy typ jako prywatny
+            raw: user // Surowe dane użytkownika
         }));
+
         const groupConversations = groupsData.map(group => ({
-            id: group.id, name: group.name, type: 'group', raw: group
+            id: group.id,
+            name: group.name,
+            type: 'group', // Oznaczamy typ jako grupa
+            raw: group // Surowe dane grupy
         }));
+
         const allConversations = [...friendConversations, ...groupConversations];
 
+        // Wyczyść listę w UI
         if (elements.contactsListEl) {
             elements.contactsListEl.innerHTML = '';
         } else {
             return;
         }
-
-        // --- Krok 4: Pobierz ostatnie wiadomości dla wszystkich konwersacji ---
-        const roomIds = allConversations.map(c => c.type === 'private' ? getRoomName(String(currentUser.id), String(c.id)) : c.id);
-        if (roomIds.length === 0) {
-            // Jeśli nie ma żadnych konwersacji, zakończ funkcję
-            renderActiveUsersList();
-            return;
-        }
-
-        const { data: lastMessagesData, error: lastMessagesError } = await supabase.rpc('get_last_messages_for_rooms', { room_ids: roomIds });
-
-        if (lastMessagesError) throw lastMessagesError;
-
-        const lastMessagesMap = new Map(lastMessagesData.map(msg => [msg.room_id, msg]));
-
-
-        // --- Krok 5: Wyświetl wszystkie konwersacje ---
+        // --- Krok 4: Wyświetl wszystkie konwersacje ---
         allConversations.forEach((convo) => {
             const convoItem = document.createElement('li');
             convoItem.className = 'contact';
 
             let avatarSrc = '';
             let roomId = '';
+
             if (convo.type === 'private') {
                 roomId = getRoomName(String(currentUser.id), String(convo.id));
                 avatarSrc = `https://i.pravatar.cc/150?img=${convo.id.charCodeAt(0) % 70 + 1}`;
-            } else {
-                roomId = convo.id;
+            } else { // Dla grupy
+                roomId = convo.id; // ID grupy jest naszym ID pokoju
+                // Użyjmy generycznego avatara dla grup
                 avatarSrc = `https://ui-avatars.com/api/?name=${encodeURIComponent(convo.name)}&background=6a5acd&color=fff`;
             }
 
             convoItem.dataset.roomId = roomId;
-            convoItem.dataset.convoId = convo.id;
-
-            const lastMessage = lastMessagesMap.get(roomId);
-            const previewText = lastMessage ? `${String(lastMessage.sender_id) === String(currentUser.id) ? "Ja" : getUserLabelById(lastMessage.sender_id)}: ${lastMessage.content}` : "Brak wiadomości";
-            const timeText = lastMessage ? new Date(lastMessage.created_at).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" }) : "";
+            convoItem.dataset.convoId = convo.id; // To może być ID usera lub grupy
 
             convoItem.innerHTML = `
                 <img src="${avatarSrc}" alt="Avatar" class="avatar">
                 <div class="contact-info">
                     <span class="contact-name">${convo.name}</span>
                     <span class="status-dot ${convo.type === 'private' ? 'offline' : ''}"></span>
-                    <span class="last-message">${previewText}</span>
+                    <span class="last-message">Brak wiadomości</span>
                 </div>
                 <div class="contact-meta">
-                    <span class="message-time">${timeText}</span>
+                    <span class="message-time"></span>
                     <span class="unread-count hidden"></span>
                 </div>`;
 
@@ -104,34 +100,11 @@ export async function loadContacts() {
 
         await loadUnreadMessagesFromSupabase();
         renderActiveUsersList();
-        // Na koniec posortuj listę
-        resortConversationList();
 
     } catch (e) {
         console.error("Błąd w loadContacts:", e);
         showCustomMessage("Wystąpił błąd podczas ładowania kontaktów.", "error");
     }
-}
-
-function resortConversationList() {
-    if (!elements.contactsListEl) return;
-
-    const conversations = Array.from(elements.contactsListEl.querySelectorAll('li.contact'));
-
-    conversations.sort((a, b) => {
-        const timeA = a.querySelector('.message-time').textContent;
-        const timeB = b.querySelector('.message-time').textContent;
-
-        // Proste porównanie tekstowe dla formatu HH:MM, dla bardziej złożonych dat wymagałoby parsowania
-        // Konwersacje bez czasu lądują na dole
-        if (!timeA) return 1;
-        if (!timeB) return -1;
-
-        return timeB.localeCompare(timeA);
-    });
-
-    // Wyczyść i wstaw posortowane elementy
-    conversations.forEach(convo => elements.contactsListEl.appendChild(convo));
 }
 
 /**
@@ -173,7 +146,7 @@ export function renderActiveUsersList() {
     } else {
         elements.activeUsersListEl.style.display = 'block';
         elements.noActiveUsersText.style.display = 'none';
-        
+
         onlineFriends.forEach(user => {
             const userId = user.id;
             const userName = getUserLabelById(userId) || 'Nieznany';
@@ -359,11 +332,11 @@ async function renderPendingFriendRequests(requests) {
                     <button class="reject-button">Odrzuć</button>
                 </div>
             `;
-            
+
             // Podepnij akcje do przycisków
             listItem.querySelector('.accept-button').addEventListener('click', () => acceptFriendRequest(request.id, request.user_id));
             listItem.querySelector('.reject-button').addEventListener('click', () => declineFriendRequest(request.id));
-            
+
             pendingFriendRequestsList.appendChild(listItem);
         });
     }
@@ -379,7 +352,7 @@ export async function acceptFriendRequest(requestId, senderId) {
         showCustomMessage("Błąd: Brak danych do akceptacji zaproszenia.", "error");
         return;
     }
-    
+
     try {
         // Zmień status relacji na 'accepted'
         const { error } = await supabase
@@ -395,7 +368,7 @@ export async function acceptFriendRequest(requestId, senderId) {
 
         // Odśwież UI, aby nowy znajomy pojawił się na liście, a zaproszenie zniknęło
         await loadFriendsAndRequests();
-        
+
         // Zamknij okno powiadomień
         if (friendRequestModal) {
             friendRequestModal.classList.remove('visible');
@@ -432,12 +405,12 @@ export async function declineFriendRequest(requestId) {
 
         // Odśwież UI, aby zaproszenie zniknęło
         await loadFriendsAndRequests();
-        
+
         // Zamknij okno powiadomień
         if (friendRequestModal) {
             friendRequestModal.classList.remove('visible');
         }
-        
+
     } catch (error) {
         console.error("[Friends] Błąd podczas odrzucania zaproszenia:", error.message);
         showCustomMessage(`Błąd: ${error.message}`, "error");
@@ -534,6 +507,7 @@ export function updateConversationPreview(roomId, message) {
         }
 
         // Przenieś zaktualizowaną konwersację na górę listy
-		resortConversationList();
+        if (contactsListEl.firstChild !== convoItem) {
+            contactsListEl.prepend(convoItem);
+        }
     }
-}

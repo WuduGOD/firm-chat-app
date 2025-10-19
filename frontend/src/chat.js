@@ -174,6 +174,8 @@ export function setupSendMessage() {
             };
 
             socket.send(JSON.stringify(msgData));
+
+			// Natychmiast wyświetl wysłaną wiadomość, nie czekając na serwer
 			chatService.addMessageToChat(msgData);
 
             // Przenieś konwersację na górę listy
@@ -201,6 +203,7 @@ export function setupSendMessage() {
     }
 }
 
+* Tworzy nową grupę i dodaje do niej członków w bazie danych.
 /** //
  * Tworzy nową grupę i dodaje do niej członków w bazie danych.
  * @param {string} groupName - Nazwa nowej grupy.
@@ -288,6 +291,15 @@ function setupCreateGroupModal() {
         elements.createGroupModal.classList.remove('visible');
     });
 
+    elements.createGroupButton.addEventListener('click', () => {
+        const groupName = elements.groupNameInput.value.trim();
+        const selectedFriends = Array.from(elements.friendsListContainer.querySelectorAll('input:checked')).map(input => input.value);
+        if (!groupName) { alert('Proszę podać nazwę grupy.'); return; }
+        if (selectedFriends.length === 0) { alert('Proszę wybrać przynajmniej jednego znajomego.'); return; }
+        console.log('Tworzenie grupy:', { name: groupName, members: selectedFriends });
+        elements.createGroupModal.classList.add('hidden');
+    });
+
 	elements.createGroupButton.addEventListener('click', async () => { // Dodano async
 		const groupName = elements.groupNameInput.value.trim();
 		const selectedFriends = Array.from(elements.friendsListContainer.querySelectorAll('input:checked')).map(input => input.value);
@@ -330,7 +342,7 @@ export function setupChatSettingsDropdown() {
             if (friendRequestModal && friendRequestModal.classList.contains('visible') && !friendRequestModal.contains(event.target)) {
                 friendRequestModal.classList.remove('visible');
             }
-			
+
 			if (elements.createGroupModal && !elements.createGroupModal.classList.contains('hidden') && !elements.createGroupModal.contains(event.target)) {
             elements.createGroupModal.classList.remove('visible');
 			}
@@ -363,7 +375,7 @@ export function setupChatSettingsDropdown() {
                 }
             });
         });
-        
+
         // ... (reszta logiki dla zmiany nicku i wyszukiwania - jest specyficzna i zostaje) ...
 
     } catch (e) {
@@ -408,9 +420,9 @@ function setupEventListeners() {
         }
     });
     // --- KONIEC UZUPEŁNIONEJ LOGIKI ---
-	
+
 	console.log('%c--- Podpinanie listenera do addFriendButton... ---', 'color: blue;', elements.addFriendButton);
-    
+
     // Listenery dla modalu znajomych
     elements.addFriendButton.addEventListener('click', (event) => {
         event.stopPropagation(); // ZATRZYMAJ KLIKNIĘCIE
@@ -424,7 +436,7 @@ function setupEventListeners() {
         elements.friendRequestModal.classList.remove('visible');
     });
     elements.sendFriendRequestButton.addEventListener('click', friendsService.sendFriendRequest);
-    
+
     // Globalny listener do zamykania okienek
     document.addEventListener('click', (event) => {
         if (!elements.chatSettingsDropdown.classList.contains('hidden') && !elements.chatSettingsButton.contains(event.target)) {
@@ -446,7 +458,7 @@ function setupEventListeners() {
  */
 async function initializeApp() {
     console.log("Start inicjalizacji Komunikatora...");
-    
+
     // 1. Inicjalizuj elementy DOM
     elements.initializeDOMElements();
 	window.elements = elements; 

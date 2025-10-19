@@ -30,7 +30,7 @@ export function initWebSocket() {
                 // Dołącz do globalnego kanału i wyślij status online
                 socket.send(JSON.stringify({ type: 'join', room: 'global' }));
                 socket.send(JSON.stringify({ type: 'status', user: currentUser.id, online: true }));
-                
+
                 // Jeśli byliśmy w jakimś pokoju, dołącz do niego ponownie
                 if (currentRoom && currentRoom !== 'global') {
                     socket.send(JSON.stringify({ type: 'join', room: currentRoom }));
@@ -49,10 +49,11 @@ export function initWebSocket() {
                 // Centralny router dla wiadomości z serwera
                 switch (data.type) {
                     case 'message':
-						addMessageToChat(data);
+                        addMessageToChat(data);
+						if (String(data.username) !== String(currentUser.id)) {
+							addMessageToChat(data);
+						}
                         break;
-					case 'history':
-						break;
                     case 'typing':
                         showTypingIndicator(data.username);
                         break;
@@ -88,7 +89,7 @@ export function initWebSocket() {
 				// Używamy funkcji-settera do zmiany wartości
 				const newAttemptCount = reconnectAttempts + 1;
 				setReconnectAttempts(newAttemptCount);
-        
+
 				setTimeout(() => initWebSocket(), Math.min(1000 * newAttemptCount, 10000));
 			}
 		};
@@ -98,4 +99,3 @@ export function initWebSocket() {
             reject(error);
         };
     });
-}
