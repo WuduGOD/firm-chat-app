@@ -1019,6 +1019,11 @@ body {
     color: var(--primary-color);
 }
 
+.chat-footer .emoji-button:focus {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
 /* PRAWY SIDEBAR (AKTYWNI UŻYTKOWNICY) */
 .right-sidebar-wrapper {
     min-width: 300px;
