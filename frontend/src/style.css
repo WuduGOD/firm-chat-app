@@ -1625,9 +1625,11 @@ body {
     transition: background-color 0.2s;
 }
 
-.emoji-picker button:focus {
-    outline: none; /* Stanowczo usuwamy domyślną kwadratową ramkę */
-    text-shadow: 0 0 5px var(--primary-color); /* Zostawiamy subtelną poświatę dla samej emotikony */
+.emoji-picker button:focus,
+.emoji-picker button:active {
+    outline: none !important; /* Używamy !important, aby nadpisać wszystkie inne style */
+    box-shadow: none !important; /* Usuwamy również potencjalny cień jako obwódkę */
+    text-shadow: 0 0 5px var(--primary-color); /* Zostawiamy tylko poświatę na tekście */
 }
 
 .emoji-picker button:hover {
