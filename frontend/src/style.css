@@ -1017,11 +1017,8 @@ body {
 .chat-footer .attach-button:hover,
 .chat-footer .emoji-button:hover {
     color: var(--primary-color);
-}
-
-.chat-footer .emoji-button:focus {
-    outline: none !important;
-    box-shadow: none !important;
+	outline: none !important;   /* Dodajemy to, aby usunąć obwódkę */
+    box-shadow: none !important; /* Dodajemy to, aby usunąć potencjalny cień */
 }
 
 /* PRAWY SIDEBAR (AKTYWNI UŻYTKOWNICY) */
