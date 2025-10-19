@@ -217,12 +217,17 @@ function setupCreateGroupModal() {
                 const friendId = `friend-checkbox-${friend.id}`;
                 const li = document.createElement('li');
                 li.innerHTML = `
+                    <img src="https://i.pravatar.cc/150?img=${friend.id.charCodeAt(0) % 70 + 1}" class="avatar">
+                    <span>${getUserLabelById(friend.id) || friend.email}</span>
                     <input type="checkbox" id="${friendId}" value="${friend.id}">
-                    <label for="${friendId}">
-                        <img src="https://i.pravatar.cc/150?img=${friend.id.charCodeAt(0) % 70 + 1}" class="avatar">
-                        <span>${getUserLabelById(friend.id) || friend.email}</span>
-                    </label>
                 `;
+				li.addEventListener('click', (event) => {
+					// Zapobiegamy podwójnemu kliknięciu, jeśli klikniemy bezpośrednio na checkbox
+					if (event.target.tagName !== 'INPUT') {
+						const checkbox = li.querySelector('input[type="checkbox"]');
+						checkbox.checked = !checkbox.checked;
+					}
+				});
                 elements.friendsListContainer.appendChild(li);
             });
         }

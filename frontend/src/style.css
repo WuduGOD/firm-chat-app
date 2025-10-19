@@ -2444,16 +2444,44 @@ body.auth-body {
     background-color: var(--primary-color-dark);
 }
 
-#createGroupModal .friends-list-container .avatar {
-    width: 35px;
-    height: 35px;
-    margin-right: 10px; /* Dodajmy mały margines dla odstępu */
+#createGroupModal .friends-list-container {
+    list-style: none;
+    padding: 0; /* Usuwamy domyślny padding listy */
 }
 
-#createGroupModal .friends-list-container label {
-    display: flex;
-    align-items: center;
-    width: 100%;
+/* Styl pojedynczego wiersza z znajomym */
+#createGroupModal .friends-list-container li {
+    display: flex; /* Włączamy Flexbox dla pozycjonowania */
+    align-items: center; /* Wyrównujemy elementy w pionie */
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+#createGroupModal .friends-list-container li:hover {
+    background-color: var(--bg-color-hover);
+}
+
+/* Zaokrąglamy zdjęcia i ustalamy ich rozmiar */
+#createGroupModal .friends-list-container .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%; /* To jest klucz do okrągłych zdjęć */
+    margin-right: 12px;
+}
+
+/* Nazwa użytkownika zajmuje dostępną przestrzeń */
+#createGroupModal .friends-list-container li span {
+    flex-grow: 1;
+}
+
+/* Przesuwamy checkbox na samą prawą stronę */
+#createGroupModal .friends-list-container input[type="checkbox"] {
+    margin-left: auto; /* To jest magia, która przesuwa element na prawo */
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
 }
 
 /* --- Ciemny tryb dla nowego modalu --- */
