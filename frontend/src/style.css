@@ -1016,12 +1016,14 @@ body {
 }
 
 .chat-footer .attach-button:hover,
-.chat-footer .emoji-button:hover,
+.chat-footer .emoji-button:hover {
+    color: var(--primary-color);
+}
+
 .chat-footer .emoji-button:focus,
 .chat-footer .emoji-button:active {
-    color: var(--primary-color); /* Zostawiamy pożądaną zmianę koloru */
-    outline: none !important;   /* Agresywnie usuwamy obwódkę */
-    box-shadow: none !important; /* Agresywnie usuwamy potencjalny cień */
+    outline: none !important;
+    box-shadow: none !important;
 }
 
 /* PRAWY SIDEBAR (AKTYWNI UŻYTKOWNICY) */
