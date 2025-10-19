@@ -1018,6 +1018,7 @@ body {
 .chat-footer .attach-button:hover,
 .chat-footer .emoji-button:hover {
     color: var(--primary-color);
+	outline: none !important;
 }
 
 .chat-footer .emoji-button:focus,
