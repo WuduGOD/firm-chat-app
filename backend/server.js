@@ -88,26 +88,42 @@ wss.on('connection', (ws) => {
                 console.log(`User ${userData.userId} joined room ${userData.currentRoom}.`);
 
 
-                // Wysyłamy historię wiadomości tylko do klienta, który dołączył,
-                // i tylko jeśli pokój nie jest 'global' (bo dla 'global' nie ma historii czatu)
-                if (data.room && data.room !== 'global') {
-                    const history = await getLastMessages(data.room);
-                    ws.send(JSON.stringify({
-                        type: 'history',
-                        room: data.room,
-                        messages: history.map(msg => ({
-                            username: msg.username, // Mapujemy z powrotem na username
-                            text: msg.text, // Mapujemy z powrotem na text
-                            inserted_at: msg.inserted_at, // Mapujemy z powrotem na inserted_at
-                            room: msg.room // Zapewniamy, że room jest przekazywany dalej
-                        })),
-                    }));
-                    console.log(`Sent history to room ${data.room} for user ${userData.userId}:`, history.length, 'messages.');
-                } else if (data.room === 'global') {
-                    console.log(`User ${userData.userId} joined global room, not sending chat history.`);
-                } else {
-                    console.warn("Join message received without a room, or room is null/undefined:", data);
-                }
+				const targetRoom = data.room;
+				console.log(`Processing MESSAGE type for room: ${targetRoom} from user: ${userData.userId}.`);
+
+				// Zapisz wiadomość w bazie
+				const created_at = await saveMessage(userData.userId, targetRoom, data.text);
+				const msgObj = {
+					type: 'message',
+					username: userData.userId,
+					text: data.text,
+					inserted_at: created_at,
+					room: targetRoom,
+				};
+
+				const isGroupChat = !targetRoom.includes('_'); // Proste sprawdzenie: ID grupy nie mają podkreślnika
+
+				if (isGroupChat) {
+					// Logika dla czatu grupowego
+					console.log(`Broadcasting to group: ${targetRoom}`);
+					// Pobierz wszystkich członków grupy
+					const { data: members, error } = await supabase.from('group_members').select('user_id').eq('group_id', targetRoom);
+					if (error) {
+						console.error('DB Error: Failed to get group members:', error);
+						return;
+					}
+					const memberIds = members.map(m => m.user_id);
+					// Roześlij wiadomość do każdego członka
+					memberIds.forEach(memberId => {
+						broadcastToUser(memberId, JSON.stringify(msgObj));
+					});
+				} else {
+					// Logika dla czatu prywatnego (1-na-1)
+					const recipientId = getOtherParticipantId(userData.userId, targetRoom);
+					if (recipientId) {
+						broadcastToParticipants(userData.userId, recipientId, JSON.stringify(msgObj));
+					}
+				}
 
             }
             else if (data.type === 'message' && userData.userId) { // Wiadomość czatu

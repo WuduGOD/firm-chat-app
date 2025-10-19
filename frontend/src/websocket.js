@@ -51,6 +51,8 @@ export function initWebSocket() {
                     case 'message':
 						addMessageToChat(data);
                         break;
+					case 'history':
+						break;
                     case 'typing':
                         showTypingIndicator(data.username);
                         break;

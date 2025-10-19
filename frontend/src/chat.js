@@ -174,6 +174,7 @@ export function setupSendMessage() {
             };
 
             socket.send(JSON.stringify(msgData));
+			chatService.addMessageToChat(msgData);
 
             // Przenieś konwersację na górę listy
             const convoItemToMove = elements.contactsListEl.querySelector(`.contact[data-room-id="${currentRoom}"]`);
