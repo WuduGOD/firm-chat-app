@@ -14,6 +14,7 @@ import { loadAllProfiles, getUserLabelById } from '../profiles.js';
 export async function loadContacts() {
     if (!currentUser) return;
     try {
+        // --- Krok 1: Wczytaj znajomych (tak jak wcześniej) ---
         const { data: friendsData, error: friendsError } = await supabase
             .from('friends')
             .select('user_id, friend_id')
@@ -26,54 +27,81 @@ export async function loadContacts() {
         const friends = allProfilesData.filter(profile => friendIds.has(profile.id));
         setAllFriends(friends);
 
+        // --- Krok 2: Wczytaj grupy, do których należy użytkownik ---
+        const { data: groupsData, error: groupsError } = await supabase
+            .from('groups')
+            .select(`
+                id,
+                name,
+                group_members!inner(user_id)
+            `)
+            .eq('group_members.user_id', currentUser.id);
+
+        if (groupsError) throw groupsError;
+
+        // --- Krok 3: Połącz znajomych i grupy w jedną listę konwersacji ---
+        const friendConversations = friends.map(user => ({
+            id: user.id,
+            name: getUserLabelById(user.id) || user.email,
+            type: 'private', // Oznaczamy typ jako prywatny
+            raw: user // Surowe dane użytkownika
+        }));
+
+        const groupConversations = groupsData.map(group => ({
+            id: group.id,
+            name: group.name,
+            type: 'group', // Oznaczamy typ jako grupa
+            raw: group // Surowe dane grupy
+        }));
+
+        const allConversations = [...friendConversations, ...groupConversations];
+
+        // Wyczyść listę w UI
         if (elements.contactsListEl) {
             elements.contactsListEl.innerHTML = '';
         } else {
             return;
         }
 
-        let lastMessagesMap = {};
-        if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({ type: 'get_last_messages_for_user_rooms', userId: currentUser.id }));
-            lastMessagesMap = await new Promise(resolve => {
-                const tempHandler = (event) => {
-                    const data = JSON.parse(event.data);
-                    if (data.type === 'last_messages_for_user_rooms') {
-                        socket.removeEventListener('message', tempHandler);
-                        clearTimeout(timeoutId);
-                        resolve(data.messages);
-                    }
-                };
-                const timeoutId = setTimeout(() => {
-                    socket.removeEventListener('message', tempHandler);
-                    resolve({});
-                }, 5000);
-                socket.addEventListener('message', tempHandler);
-            });
-        }
-
-        const contactsWithLastMessage = allFriends.map(user => {
-            const roomId = getRoomName(String(currentUser.id), String(user.id));
-            return { user, lastMessage: lastMessagesMap[roomId] || null, roomId };
-        });
-        const sortedContacts = sortConversations(contactsWithLastMessage);
-
-        sortedContacts.forEach(({ user, lastMessage, roomId }) => {
+        // --- Krok 4: Wyświetl wszystkie konwersacje ---
+        allConversations.forEach((convo) => {
             const convoItem = document.createElement('li');
             convoItem.className = 'contact';
+
+            let avatarSrc = '';
+            let roomId = '';
+
+            if (convo.type === 'private') {
+                roomId = getRoomName(String(currentUser.id), String(convo.id));
+                avatarSrc = `https://i.pravatar.cc/150?img=${convo.id.charCodeAt(0) % 70 + 1}`;
+            } else { // Dla grupy
+                roomId = convo.id; // ID grupy jest naszym ID pokoju
+                // Użyjmy generycznego avatara dla grup
+                avatarSrc = `https://ui-avatars.com/api/?name=${encodeURIComponent(convo.name)}&background=6a5acd&color=fff`;
+            }
+
             convoItem.dataset.roomId = roomId;
-            convoItem.dataset.convoId = user.id;
-            const avatarSrc = `https://i.pravatar.cc/150?img=${user.id.charCodeAt(0) % 70 + 1}`;
-            const senderName = lastMessage ? (String(lastMessage.username) === String(currentUser.id) ? "Ja" : (getUserLabelById(lastMessage.username) || '...')) : "";
-            const previewText = lastMessage ? `${senderName}: ${lastMessage.text}` : "Brak wiadomości";
-            const timeText = lastMessage ? new Date(lastMessage.inserted_at).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" }) : "";
-            convoItem.innerHTML = `<img src="${avatarSrc}" alt="Avatar" class="avatar"><div class="contact-info"><span class="contact-name">${getUserLabelById(user.id) || user.email}</span><span class="status-dot offline"></span><span class="last-message">${previewText}</span></div><div class="contact-meta"><span class="message-time">${timeText}</span><span class="unread-count hidden"></span></div>`;
-            convoItem.addEventListener('click', () => handleConversationClick(user, convoItem));
+            convoItem.dataset.convoId = convo.id; // To może być ID usera lub grupy
+
+            convoItem.innerHTML = `
+                <img src="${avatarSrc}" alt="Avatar" class="avatar">
+                <div class="contact-info">
+                    <span class="contact-name">${convo.name}</span>
+                    <span class="status-dot ${convo.type === 'private' ? 'offline' : ''}"></span>
+                    <span class="last-message">Brak wiadomości</span>
+                </div>
+                <div class="contact-meta">
+                    <span class="message-time"></span>
+                    <span class="unread-count hidden"></span>
+                </div>`;
+
+            convoItem.addEventListener('click', () => handleConversationClick(convo.raw, convoItem, convo.type));
             elements.contactsListEl.appendChild(convoItem);
         });
 
         await loadUnreadMessagesFromSupabase();
         renderActiveUsersList();
+
     } catch (e) {
         console.error("Błąd w loadContacts:", e);
         showCustomMessage("Wystąpił błąd podczas ładowania kontaktów.", "error");

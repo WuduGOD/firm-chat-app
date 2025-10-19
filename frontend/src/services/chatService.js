@@ -144,109 +144,78 @@ export function sortConversations(conversations) {
  * @param {Object} user - The user object of the selected contact.
  * @param {HTMLElement} clickedConvoItemElement - The clicked list item element.
  */
-export async function handleConversationClick(user, clickedConvoItemElement) {
-    console.log('[handleConversationClick] Conversation item clicked, user:', user);
-
+export async function handleConversationClick(convoData, clickedConvoItemElement, convoType = 'private') {
     try {
-        // Deaktywuj poprzednio aktywny element
         if (currentActiveConvoItem) {
             currentActiveConvoItem.classList.remove('active');
         }
         clickedConvoItemElement.classList.add('active');
         setCurrentActiveConvoItem(clickedConvoItemElement);
 
-        // Opuść poprzedni pokój WebSocket, jeśli istniał
         if (socket && socket.readyState === WebSocket.OPEN && currentRoom && currentRoom !== 'global') {
             socket.send(JSON.stringify({ type: 'leave', room: currentRoom }));
-            console.log(`[handleConversationClick] Wysłano LEAVE dla pokoju: ${currentRoom}`);
-        }
-		
-		if (window.matchMedia('(max-width: 768px)').matches) {
-            if (elements.sidebarWrapper) {
-                elements.sidebarWrapper.classList.add('hidden-on-mobile');
-            }
-            if (elements.chatAreaWrapper) {
-                elements.chatAreaWrapper.classList.add('active-on-mobile');
-            }
         }
 
-        // Natychmiast pokaż obszar czatu, aby uniknąć migotania
+        if (window.matchMedia('(max-width: 768px)').matches) {
+            if (elements.sidebarWrapper) elements.sidebarWrapper.classList.add('hidden-on-mobile');
+            if (elements.chatAreaWrapper) elements.chatAreaWrapper.classList.add('active-on-mobile');
+        }
+
         if (elements.logoScreen) elements.logoScreen.classList.add('hidden');
         if (elements.chatArea) elements.chatArea.classList.add('active');
-
-        // Pokaż przycisk "wstecz" na mobile
-        if (backButton && window.matchMedia('(max-width: 768px)').matches) {
-            backButton.style.display = 'block';
+        if (elements.backButton && window.matchMedia('(max-width: 768px)').matches) {
+            elements.backButton.style.display = 'block';
         }
 
-        resetChatView(); // Zresetuj widok czatu (wyczyść treść)
-		
-		const newChatUser = {
-			id: user.id,
-			username: getUserLabelById(user.id) || user.email,
-			email: user.email,
-		};
+        resetChatView();
 
-        // Ustaw bieżącego rozmówcę i pokój
-        setCurrentChatUser({
-            id: user.id,
-            username: getUserLabelById(user.id) || user.email,
-            email: user.email,
-		});
-        const newRoom = getRoomName(String(currentUser.id), String(newChatUser.id));
+        let newRoom = '';
+        let chatName = '';
+
+        if (convoType === 'private') {
+            const user = convoData;
+            newRoom = getRoomName(String(currentUser.id), String(user.id));
+            chatName = getUserLabelById(user.id) || user.email;
+            setCurrentChatUser({ id: user.id, username: chatName, email: user.email });
+        } else { // Dla grupy
+            const group = convoData;
+            newRoom = group.id;
+            chatName = group.name;
+            // Dla grup, currentChatUser może być obiektem grupy
+            setCurrentChatUser({ id: group.id, username: chatName, isGroup: true });
+        }
+
         setCurrentRoom(newRoom);
-        console.log(`[handleConversationClick] Inicjacja sesji. Użytkownik: ${currentChatUser.username}, Pokój: ${currentRoom}`);
 
-        // Wyczyść licznik nieprzeczytanych wiadomości w bazie
-        await clearUnreadMessageCountInSupabase(newRoom);
-
-        // Zaktualizuj nagłówek czatu (nazwa, status online)
-        if (elements.chatUserName && elements.messageInput && elements.sendButton && elements.userStatusSpan) {
-            elements.chatUserName.textContent = newChatUser.username;
-            const userStatus = onlineUsers.get(String(user.id));
+        if (elements.chatUserName) elements.chatUserName.textContent = chatName;
+        // Tutaj można dodać logikę statusu online dla rozmów 1-1
+        if (convoType === 'private' && elements.userStatusSpan) {
+            const userStatus = onlineUsers.get(String(convoData.id));
             const isUserOnline = userStatus ? userStatus.isOnline : false;
             elements.userStatusSpan.classList.toggle('online', isUserOnline);
             elements.userStatusSpan.classList.toggle('offline', !isUserOnline);
-            if (isUserOnline) {
-                elements.userStatusSpan.textContent = 'Online';
-            } else {
-                let lastSeenText = 'Offline';
-                if (userStatus && userStatus.lastSeen) {
-                    lastSeenText = `Offline (ostatnio widziany ${formatTimeAgo(new Date(userStatus.lastSeen))})`;
-                }
-                userStatusSpan.textContent = lastSeenText;
-            }
-            elements.messageInput.disabled = false;
-            elements.sendButton.disabled = false;
-            elements.messageInput.focus();
+            elements.userStatusSpan.textContent = isUserOnline ? 'Online' : 'Offline';
+        } else if (elements.userStatusSpan) {
+            // Ukryj status dla grup
+            elements.userStatusSpan.textContent = '';
+            elements.userStatusSpan.classList.remove('online', 'offline');
         }
 
-        // Zresetuj licznik nieprzeczytanych wiadomości w UI
-        const unreadCount = clickedConvoItemElement.querySelector('.unread-count');
-        if (unreadCount) {
-            unreadCount.textContent = '';
-            unreadCount.classList.add('hidden');
+        if (elements.messageInput) elements.messageInput.disabled = false;
+        if (elements.sendButton) elements.sendButton.disabled = false;
+
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({ type: 'join', name: currentUser.id, room: newRoom }));
         }
 
-        // Dołącz do nowego pokoju na serwerze WebSocket
-		if (socket && socket.readyState === WebSocket.OPEN) {
-			socket.send(JSON.stringify({ type: 'join', name: currentUser.id, room: currentRoom }));
-			console.log(`[handleConversationClick] Wysłano JOIN dla pokoju: ${currentRoom}`);
-		}
-
-        // Załaduj i wyświetl historię wiadomości
-        const history = await fetchMessageHistory(currentRoom);
+        // Dalsza logika, jak ładowanie historii, pozostaje bez zmian
+        const history = await fetchMessageHistory(newRoom);
         if (elements.messageContainer) {
-            elements.messageContainer.innerHTML = ''; // Wyczyść przed dodaniem historii
-            history.forEach(msg => {
-                const div = document.createElement('div');
-                div.classList.add('message', String(msg.username) === String(currentUser.id) ? 'sent' : 'received');
-                const timeString = new Date(msg.inserted_at).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
-                div.innerHTML = `<p>${msg.text}</p><span class="timestamp">${timeString}</span>`;
-                elements.messageContainer.appendChild(div);
-            });
-            elements.messageContainer.scrollTop = messageContainer.scrollHeight; // Przewiń na dół
+            elements.messageContainer.innerHTML = '';
+            history.forEach(msg => addMessageToChat(msg, true)); // Przekazujemy flagę, że to historia
+            elements.messageContainer.scrollTop = elements.messageContainer.scrollHeight;
         }
+
     } catch (e) {
         console.error("Błąd w handleConversationClick:", e);
         showCustomMessage("Wystąpił błąd podczas ładowania konwersacji.", "error");
