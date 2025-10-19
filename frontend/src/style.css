@@ -1627,8 +1627,9 @@ body {
 
 .emoji-picker button:focus,
 .emoji-picker button:active {
-    outline: none !important; /* Używamy !important, aby nadpisać wszystkie inne style */
-    box-shadow: none !important; /* Usuwamy również potencjalny cień jako obwódkę */
+    outline-style: none !important; /* Resetuje styl obwódki */
+    outline-color: transparent !important; /* Ustawia kolor obwódki na przezroczysty */
+    box-shadow: none !important; /* Usuwa również potencjalny cień jako obwódkę */
     text-shadow: 0 0 5px var(--primary-color); /* Zostawiamy tylko poświatę na tekście */
 }
 
