@@ -204,15 +204,15 @@ export function setupSendMessage() {
 }
 
 function setupCreateGroupModal() {
-    if (!elements.addNewButton || !elements.createGroupModal) return;
+    if (!elements.addNewButton || !elements.createGroupModal) {
+        console.error("Brakuje przycisku 'addNewButton' lub modalu grupy.");
+        return;
+    }
 
-    // Otwieranie modalu
     elements.addNewButton.addEventListener('click', (event) => {
-        event.stopPropagation(); // <-- KLUCZOWA POPRAWKA
-        
-        // Wypełnij listę znajomych za każdym razem, gdy modal jest otwierany
+        event.stopPropagation();
         if (elements.friendsListContainer) {
-            elements.friendsListContainer.innerHTML = ''; // Wyczyść starą listę
+            elements.friendsListContainer.innerHTML = '';
             allFriends.forEach(friend => {
                 const friendId = `friend-checkbox-${friend.id}`;
                 const li = document.createElement('li');
@@ -229,44 +229,25 @@ function setupCreateGroupModal() {
         elements.createGroupModal.classList.remove('hidden');
     });
 
-    // Zamykanie modalu
     elements.closeCreateGroupModal.addEventListener('click', () => {
         elements.createGroupModal.classList.add('hidden');
     });
 
-    // Logika przycisku "Utwórz grupę" (na razie tylko w konsoli)
     elements.createGroupButton.addEventListener('click', () => {
         const groupName = elements.groupNameInput.value.trim();
         const selectedFriends = Array.from(elements.friendsListContainer.querySelectorAll('input:checked')).map(input => input.value);
-
-        if (!groupName) {
-            alert('Proszę podać nazwę grupy.');
-            return;
-        }
-        if (selectedFriends.length === 0) {
-            alert('Proszę wybrać przynajmniej jednego znajomego.');
-            return;
-        }
-
-        console.log('Tworzenie grupy:', {
-            name: groupName,
-            members: selectedFriends
-        });
-        
-        elements.createGroupModal.classList.add('hidden'); // Zamknij modal po utworzeniu
+        if (!groupName) { alert('Proszę podać nazwę grupy.'); return; }
+        if (selectedFriends.length === 0) { alert('Proszę wybrać przynajmniej jednego znajomego.'); return; }
+        console.log('Tworzenie grupy:', { name: groupName, members: selectedFriends });
+        elements.createGroupModal.classList.add('hidden');
     });
 
-    // Logika wyszukiwania na liście znajomych
     elements.groupFriendSearchInput.addEventListener('input', (e) => {
         const searchTerm = e.target.value.toLowerCase();
         const allFriendsItems = elements.friendsListContainer.querySelectorAll('li');
         allFriendsItems.forEach(item => {
             const label = item.querySelector('label span').textContent.toLowerCase();
-            if (label.includes(searchTerm)) {
-                item.style.display = 'flex';
-            } else {
-                item.style.display = 'none';
-            }
+            item.style.display = label.includes(searchTerm) ? 'flex' : 'none';
         });
     });
 }

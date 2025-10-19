@@ -14,6 +14,7 @@ export let chatFooter, attachButton, messageInput, emojiButton, sendButton;
 export let rightSidebarWrapper, rightSidebar, activeUsersListEl, noActiveUsersText;
 export let enableSoundButton;
 export let createGroupModal, closeCreateGroupModal, groupNameInput, searchFriendsInput, friendsListContainer, createGroupButton;
+export let groupFriendSearchInput;
 
 /**
  * Pobiera wszystkie elementy DOM i przypisuje je do wyeksportowanych zmiennych.
