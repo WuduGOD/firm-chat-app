@@ -208,12 +208,17 @@ export async function handleConversationClick(convoData, clickedConvoItemElement
             socket.send(JSON.stringify({ type: 'join', name: currentUser.id, room: newRoom }));
         }
 
-        // Dalsza logika, jak ładowanie historii, pozostaje bez zmian
-        const history = await fetchMessageHistory(newRoom);
+        const history = await fetchMessageHistory(currentRoom);
         if (elements.messageContainer) {
-            elements.messageContainer.innerHTML = '';
-            history.forEach(msg => addMessageToChat(msg, true)); // Przekazujemy flagę, że to historia
-            elements.messageContainer.scrollTop = elements.messageContainer.scrollHeight;
+            elements.messageContainer.innerHTML = ''; // Wyczyść przed dodaniem historii
+            history.forEach(msg => {
+                const div = document.createElement('div');
+                div.classList.add('message', String(msg.username) === String(currentUser.id) ? 'sent' : 'received');
+                const timeString = new Date(msg.inserted_at).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+                div.innerHTML = `<p>${msg.text}</p><span class="timestamp">${timeString}</span>`;
+                elements.messageContainer.appendChild(div);
+            });
+            elements.messageContainer.scrollTop = elements.messageContainer.scrollHeight; // Przewiń na dół
         }
 
     } catch (e) {
