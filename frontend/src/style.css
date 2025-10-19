@@ -1639,151 +1639,7 @@ body {
     background-color: var(--bg-color-search-input);
 }
 
-.app-modal {
-    position: fixed; /* Pozycja względem okna przeglądarki */
-    z-index: 2000;   /* Bardzo wysoki z-index, aby był na wierzchu */
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.6); /* Ciemne tło z przezroczystością */
-    display: flex; /* Używamy flexbox do centrowania */
-    justify-content: center;
-    align-items: center;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
-}
 
-/* Klasa do pokazywania modalu */
-.app-modal:not(.hidden) {
-    opacity: 1;
-    visibility: visible;
-}
-
-/* Główne okno modalu */
-.app-modal-content {
-    background-color: var(--bg-color-modal-content);
-    padding: 25px;
-    border-radius: 12px;
-    width: 90%;
-    max-width: 500px;
-    position: relative;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    display: flex;
-    flex-direction: column;
-    gap: 20px; /* Odstępy między sekcjami */
-}
-
-/* Nagłówek w modalu */
-.app-modal-content h2,
-.app-modal-content h3 {
-    text-align: center;
-    color: var(--text-color-dark);
-    margin-bottom: 0;
-}
-
-.app-modal-content h3 {
-    font-size: 1.1rem;
-    color: var(--text-color-medium);
-}
-
-/* Przycisk zamykania (X) */
-.app-modal-close {
-    color: var(--text-color-medium);
-    font-size: 28px;
-    font-weight: bold;
-    position: absolute;
-    right: 15px;
-    top: 10px;
-    cursor: pointer;
-    transition: color 0.2s;
-}
-
-.app-modal-close:hover {
-    color: var(--primary-color);
-}
-
-/* Ogólny styl dla sekcji w modalu */
-.app-modal-section {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.app-modal-section label {
-    font-weight: bold;
-    color: var(--text-color-medium);
-}
-
-/* Pola do wpisywania tekstu */
-.app-modal-section input[type="text"] {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid var(--border-color-medium);
-    border-radius: 8px;
-    font-size: 1rem;
-    background-color: var(--bg-color-search-input);
-    color: var(--text-color-dark);
-}
-
-/* Lista znajomych do wyboru */
-.friends-list-new {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    max-height: 200px; /* Ograniczona wysokość, aby lista była przewijalna */
-    overflow-y: auto;
-    border: 1px solid var(--border-color-light);
-    border-radius: 8px;
-}
-
-.friends-list-new li {
-    display: flex;
-    align-items: center;
-    padding: 10px 15px;
-    border-bottom: 1px solid var(--border-color-light);
-}
-
-.friends-list-new li:last-child {
-    border-bottom: none;
-}
-
-.friends-list-new label {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    cursor: pointer;
-}
-
-.friends-list-new input[type="checkbox"] {
-    margin-right: 12px;
-    width: 18px;
-    height: 18px;
-}
-
-/* Stopka modalu z przyciskiem */
-.app-modal-footer {
-    display: flex;
-    justify-content: flex-end; /* Przycisk po prawej stronie */
-    margin-top: 10px;
-}
-
-.app-modal-footer button {
-    padding: 12px 25px;
-    border: none;
-    border-radius: 8px;
-    background-color: var(--primary-color);
-    color: white;
-    font-weight: bold;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.app-modal-footer button:hover {
-    background-color: var(--primary-color-dark);
-}
 
 /* Dark mode overrides */
 body.dark-mode {
@@ -2469,4 +2325,142 @@ body.auth-body {
 }
 .switch-link a:hover {
     color: var(--primary-color-dark);
+}
+
+#createGroupModal {
+    /* Początkowo ukryty */
+    display: none; 
+}
+
+#createGroupModal.visible {
+    /* Styl dla widocznego modalu - używamy flex do centrowania */
+    display: flex;
+    position: fixed;
+    z-index: 10000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    justify-content: center;
+    align-items: center;
+}
+
+#createGroupModal .modal-content {
+    background-color: var(--bg-color-modal-content);
+    padding: 25px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* --- Ogólne style dla listy znajomych w modalu --- */
+#createGroupModal .friends-list-new {
+    list-style: none;
+    padding: 0;
+    margin-top: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color-medium);
+    border-radius: var(--border-radius-default);
+}
+
+/* --- Pojedynczy element na liście (znajomy) --- */
+#createGroupModal .friends-list-new li {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--border-color-light);
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+#createGroupModal .friends-list-new li:last-child {
+    border-bottom: none;
+}
+
+#createGroupModal .friends-list-new li:hover {
+    background-color: var(--bg-color-hover);
+}
+
+/* --- Elementy wewnątrz pozycji na liście --- */
+#createGroupModal .friends-list-new li input[type="checkbox"] {
+    margin-right: 12px;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+#createGroupModal .friends-list-new li label {
+    flex-grow: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#createGroupModal .friends-list-new .avatar {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+/* --- Pole wyszukiwania znajomych w modalu --- */
+#createGroupModal .search-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border-color-medium);
+    border-radius: var(--border-radius-default);
+    font-size: 1rem;
+    margin-top: 10px;
+}
+
+/* --- Stopka modalu z przyciskiem --- */
+#createGroupModal .app-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color-light);
+}
+
+/* --- Przycisk "Utwórz grupę" --- */
+#createGroupButton {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: var(--border-radius-default);
+    background-color: var(--primary-color);
+    color: var(--text-color-light);
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+#createGroupButton:hover {
+    background-color: var(--primary-color-dark);
+}
+
+/* --- Ciemny tryb dla nowego modalu --- */
+body.dark-mode #createGroupModal .modal-content {
+    background-color: var(--bg-color-modal-content);
+}
+
+body.dark-mode #createGroupModal .friends-list-new {
+    border-color: var(--border-color-medium);
+}
+
+body.dark-mode #createGroupModal .friends-list-new li {
+    border-bottom-color: var(--border-color-medium);
+}
+
+body.dark-mode #createGroupModal .friends-list-new li:hover {
+    background-color: var(--bg-color-hover);
+}
+
+body.dark-mode #createGroupModal .app-modal-footer {
+    border-top-color: var(--border-color-medium);
 }

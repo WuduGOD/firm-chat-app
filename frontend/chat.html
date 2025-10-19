@@ -9,7 +9,7 @@
 </head>
 <body>
 
-  <header class="main-header" id="mainHeader"> <h1 class="app-title">üêí Kongo</h1>
+  <header class="main-header" id="mainHeader"> <h1 class="app-title">?? Kongo</h1>
   
       <!-- PRZYCISK DO WLACZANIA DZIEKOW - PRZYWR√ìCONY -->
     <button id="enableSoundButton" class="hidden enable-sound-button">
@@ -164,41 +164,24 @@
     </div>
   </div>
     
-  <div id="createGroupModal" class="app-modal hidden">
+<div id="createGroupModalNew" class="app-modal app-modal-hidden">
     <div class="app-modal-content">
-        <!-- Przycisk do zamykania okna -->
-        <span class="app-modal-close" id="closeCreateGroupModal">&times;</span>
-        <h2>Stw®Ærz now? grup?</h2>
-
-        <!-- Sekcja do wpisywania nazwy grupy -->
+        <span class="app-modal-close" id="closeCreateGroupModalNew">&times;</span>
+        <h2>Stw√≥rz nowƒÖ grupƒô</h2>
         <div class="app-modal-section">
-            <label for="groupNameInput">Nazwa grupy:</label>
-            <input type="text" id="groupNameInput" placeholder="Wpisz nazw? grupy..." />
+            <label for="groupNameInputNew">Nazwa grupy:</label>
+            <input type="text" id="groupNameInputNew" placeholder="Wpisz nazwƒô grupy" />
         </div>
-        
-        <!-- Sekcja z list? znajomych do wyboru -->
         <div class="app-modal-section">
-            <h3>Wybierz cz?onk®Æw</h3>
-            <!-- Pole do wyszukiwania znajomych na li?cie -->
-            <input type="text" id="groupMemberSearchInput" placeholder="Szukaj znajomych..." class="search-input"/>
-            <!-- Lista, w kt®Ærej JavaScript umie?ci znajomych -->
-            <ul id="groupMembersList" class="friends-list-new">
-                <!-- Przyk?ad znajomego, reszta b?dzie dodana dynamicznie -->
-                <!-- <li>
-                    <label>
-                        <input type="checkbox" value="user-id-1" />
-                        Nazwa Znajomego 1
-                    </label>
-                </li> -->
-            </ul>
+            <h3>Dodaj znajomych do grupy</h3>
+            <ul id="friendsListNew" class="friends-list-new">
+                </ul>
         </div>
-        
-        <!-- Stopka z przyciskiem do utworzenia grupy -->
         <div class="app-modal-footer">
-            <button id="createGroupButton">Utw®Ærz grup?</button>
+            <button id="createGroupButtonNew">Stw√≥rz grupƒô</button>
         </div>
     </div>
-  </div>
+</div>
 
   <script type="module" src="./src/chat.js"></script>
 </body>
