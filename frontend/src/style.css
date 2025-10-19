@@ -1606,7 +1606,7 @@ body {
     
     position: absolute;
     bottom: calc(100% + 10px); /* Ustawia panel 10px NAD stopką czatu */
-    left: 0;
+    right: 0;
     
     width: 100%;
     max-width: 320px;
