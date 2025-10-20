@@ -247,13 +247,56 @@ function setupCreateGroupModal() {
         elements.createGroupModal.classList.add('hidden');
     });
 
-    elements.groupFriendSearchInput.addEventListener('input', (e) => {
-        const searchTerm = e.target.value.toLowerCase();
-        const allFriendsItems = elements.friendsListContainer.querySelectorAll('li');
-        allFriendsItems.forEach(item => {
-            const label = item.querySelector('label span').textContent.toLowerCase();
-            item.style.display = label.includes(searchTerm) ? 'flex' : 'none';
-        });
+	elements.createGroupButton.addEventListener('click', async () => {
+        const groupName = elements.groupNameInput.value.trim();
+        const selectedFriendsIds = Array.from(elements.friendsListContainer.querySelectorAll('input:checked')).map(input => input.value);
+
+        if (!groupName) {
+            helpers.showCustomMessage('Proszę podać nazwę grupy.', 'error');
+            return;
+        }
+        if (selectedFriendsIds.length === 0) {
+            helpers.showCustomMessage('Proszę wybrać przynajmniej jednego znajomego.', 'error');
+            return;
+        }
+
+        try {
+            // Krok 1: Stwórz nową grupę w tabeli 'groups'
+            const { data: groupData, error: groupError } = await supabase
+                .from('groups')
+                .insert({ name: groupName, created_by: currentUser.id })
+                .select()
+                .single();
+
+            if (groupError) throw groupError;
+
+            const newGroupId = groupData.id;
+
+            // Krok 2: Przygotuj listę członków (wybrani znajomi + twórca grupy)
+            const membersToInsert = [
+                ...selectedFriendsIds.map(friendId => ({ group_id: newGroupId, user_id: friendId })),
+                { group_id: newGroupId, user_id: currentUser.id } // Dodaj siebie do grupy
+            ];
+
+            // Krok 3: Dodaj wszystkich członków do tabeli 'group_members'
+            const { error: membersError } = await supabase
+                .from('group_members')
+                .insert(membersToInsert);
+
+            if (membersError) throw membersError;
+
+            // Krok 4: Poinformuj użytkownika i odśwież interfejs
+            helpers.showCustomMessage(`Grupa "${groupName}" została utworzona!`, 'success');
+            elements.createGroupModal.classList.remove('visible');
+            elements.groupNameInput.value = ''; // Wyczyść pole nazwy
+            
+            // Odśwież listę konwersacji, aby pokazać nową grupę
+            await friendsService.loadContacts(); 
+
+        } catch (error) {
+            console.error('Błąd podczas tworzenia grupy:', error);
+            helpers.showCustomMessage(`Błąd: ${error.message}`, 'error');
+        }
     });
 }
 

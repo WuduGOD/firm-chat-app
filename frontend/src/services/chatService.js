@@ -189,7 +189,8 @@ export async function handleConversationClick(user, clickedConvoItemElement) {
 		};
 
         setCurrentChatUser(newChatUser);
-        const newRoom = getRoomName(String(currentUser.id), String(newChatUser.id));
+        const isGroup = user.type === 'group';
+		const newRoom = isGroup ? user.id : getRoomName(String(currentUser.id), String(newChatUser.id));
         setCurrentRoom(newRoom);
         console.log(`[handleConversationClick] Inicjacja sesji. Użytkownik: ${currentChatUser.username}, Pokój: ${currentRoom}`);
 
@@ -197,11 +198,16 @@ export async function handleConversationClick(user, clickedConvoItemElement) {
 
         if (elements.chatUserName && elements.messageInput && elements.sendButton && elements.userStatusSpan) {
             elements.chatUserName.textContent = newChatUser.username;
-            const userStatus = onlineUsers.get(String(user.id));
-            const isUserOnline = userStatus ? userStatus.isOnline : false;
-            elements.userStatusSpan.classList.toggle('online', isUserOnline);
-            elements.userStatusSpan.classList.toggle('offline', !isUserOnline);
-            elements.userStatusSpan.textContent = isUserOnline ? 'Online' : `Offline (ostatnio widziany ${formatTimeAgo(new Date((userStatus && userStatus.lastSeen) || Date.now()))})`;
+		if (isGroup) {
+			elements.userStatusSpan.style.display = 'none';
+		} else {
+			elements.userStatusSpan.style.display = 'block';
+			const userStatus = onlineUsers.get(String(user.id));
+			const isUserOnline = userStatus ? userStatus.isOnline : false;
+			elements.userStatusSpan.classList.toggle('online', isUserOnline);
+			elements.userStatusSpan.classList.toggle('offline', !isUserOnline);
+			elements.userStatusSpan.textContent = isUserOnline ? 'Online' : `Offline (ostatnio widziany ${formatTimeAgo(new Date((userStatus && userStatus.lastSeen) || Date.now()))})`;
+		}
             elements.messageInput.disabled = false;
             elements.sendButton.disabled = false;
             elements.messageInput.focus();

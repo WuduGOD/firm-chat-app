@@ -92,36 +92,59 @@ wss.on('connection', (ws) => {
 				console.log(`Processing MESSAGE type for room: ${targetRoom} from user: ${userData.userId}.`);
 
             }
-            else if (data.type === 'message' && userData.userId) { // Wiadomość czatu
+			else if (data.type === 'message' && userData.userId) { // Wiadomość czatu
                 const targetRoom = data.room; 
                 console.log(`Processing MESSAGE type for room: ${targetRoom} from user: ${userData.userId}. Data:`, data);
 
-                // WYODRĘBNIANIE participant1_id i participant2_id z room_id
-                const participants = targetRoom.split('_').sort(); // Zakładamy, że room_id to 'id1_id2' posortowane alfabetycznie
-                const participant1Id = participants[0];
-                const participant2Id = participants[1];
+                const isGroupChat = !targetRoom.includes('_'); // Proste sprawdzenie: ID grupy (UUID) nie mają podkreślnika
 
-                // Zapisz wiadomość w bazie danych (używamy sender_id, room_id, content, participant1_id, participant2_id)
-                const created_at = await saveMessage(userData.userId, targetRoom, data.text, participant1Id, participant2Id); // Dodano nowe parametry
-                const msgObj = {
-                    type: 'message',
-                    username: userData.userId, // To będzie sender_id
-                    text: data.text, // To będzie content
-                    inserted_at: created_at, // To będzie created_at
-                    room: targetRoom, // To będzie room_id
-                };
-                console.log('Message saved to DB, attempting to broadcast to participants:', msgObj);
-                
-                // KLUCZOWA ZMIANA: Zamiast broadcastToAllConnectedClients, używamy broadcastToParticipants
-                const recipientId = getOtherParticipantId(userData.userId, targetRoom);
-                if (recipientId) {
-                    broadcastToParticipants(userData.userId, recipientId, JSON.stringify(msgObj));
-                } else {
-                    // W przypadku błędu w identyfikacji odbiorcy, wiadomość jest wysyłana tylko do nadawcy
-                    console.warn(`Could not determine recipient for room ${targetRoom} and sender ${userData.userId}. Broadcasting to sender only.`);
-                    broadcastToUser(userData.userId, JSON.stringify(msgObj));
+                let participant1Id = null;
+                let participant2Id = null;
+
+                if (!isGroupChat) {
+                    const participants = targetRoom.split('_').sort();
+                    participant1Id = participants[0];
+                    participant2Id = participants[1];
                 }
 
+                // Zapisz wiadomość w bazie
+                const created_at = await saveMessage(userData.userId, targetRoom, data.text, participant1Id, participant2Id);
+                const msgObj = {
+                    type: 'message',
+                    username: userData.userId,
+                    text: data.text,
+                    inserted_at: created_at,
+                    room: targetRoom,
+                };
+
+                if (isGroupChat) {
+                    // Logika dla czatu grupowego
+                    console.log(`Broadcasting to group: ${targetRoom}`);
+                    try {
+                        // Pobierz wszystkich członków grupy
+                        const { data: members, error } = await supabase
+                            .from('group_members')
+                            .select('user_id')
+                            .eq('group_id', targetRoom);
+
+                        if (error) throw error;
+                        
+                        const memberIds = members.map(m => m.user_id);
+                        // Roześlij wiadomość do każdego członka
+                        memberIds.forEach(memberId => {
+                            broadcastToUser(memberId, JSON.stringify(msgObj));
+                        });
+                        console.log(`Message for group ${targetRoom} sent to ${memberIds.length} members.`);
+                    } catch (dbError) {
+                        console.error('DB Error: Failed to get group members:', dbError);
+                    }
+                } else {
+                    // Logika dla czatu prywatnego (1-na-1)
+                    const recipientId = getOtherParticipantId(userData.userId, targetRoom);
+                    if (recipientId) {
+                        broadcastToParticipants(userData.userId, recipientId, JSON.stringify(msgObj));
+                    }
+                }
             }
             else if (data.type === 'typing' && userData.userId) { // Wskaźnik pisania
                 const typingMsg = {
