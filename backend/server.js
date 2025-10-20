@@ -418,11 +418,17 @@ async function getOnlineStatusesFromDb() {
 async function getLastMessagesForUserRooms(userId) {
     const client = await pool.connect();
     try {
-        console.time(`getLastMessagesForUserRooms_db_query_${userId}`); // Start DB query timer
-        // Używamy CTE (Common Table Expression) z ROW_NUMBER() do znalezienia najnowszej wiadomości dla każdego pokoju.
-        // Zmieniono klauzulę WHERE, aby używać nowych kolumn participant1_id i participant2_id.
+        console.time(`getLastMessagesForUserRooms_db_query_${userId}`);
+        
+        // NOWE, POPRAWIONE ZAPYTANIE SQL
         const query = `
-            WITH RankedMessages AS (
+            WITH UserRooms AS (
+                -- Znajdź wszystkie ID pokoi (prywatnych i grupowych), do których należy użytkownik
+                SELECT room_id FROM public.messages WHERE participant1_id = $1 OR participant2_id = $1
+                UNION
+                SELECT group_id::text FROM public.group_members WHERE user_id = $1
+            ),
+            RankedMessages AS (
                 SELECT
                     m.room_id,
                     m.sender_id,
@@ -430,9 +436,9 @@ async function getLastMessagesForUserRooms(userId) {
                     m.created_at,
                     ROW_NUMBER() OVER (PARTITION BY m.room_id ORDER BY m.created_at DESC) as rn
                 FROM
-                    messages m
-                WHERE
-                    m.participant1_id = $1 OR m.participant2_id = $1 -- Zoptymalizowane zapytanie
+                    public.messages m
+                -- Użyj JOIN, aby rozważać tylko wiadomości z pokoi użytkownika
+                INNER JOIN UserRooms ur ON m.room_id = ur.room_id
             )
             SELECT
                 room_id,
@@ -444,8 +450,9 @@ async function getLastMessagesForUserRooms(userId) {
             WHERE
                 rn = 1;
         `;
+        
         const res = await client.query(query, [userId]);
-        console.timeEnd(`getLastMessagesForUserRooms_db_query_${userId}`); // End DB query timer
+        console.timeEnd(`getLastMessagesForUserRooms_db_query_${userId}`);
         console.log(`DB: Fetched ${res.rows.length} last messages for user ${userId}'s rooms.`);
 
         const lastMessagesMap = {};
