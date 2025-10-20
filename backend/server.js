@@ -87,30 +87,43 @@ wss.on('connection', (ws) => {
 
                 console.log(`User ${userData.userId} joined room ${userData.currentRoom}.`);
 
-                // Aktualizujemy status w bazie danych na online (jeśli to pierwsze dołączenie użytkownika)
-                await updateProfileStatus(userData.userId, true);
-                broadcastUserStatus(userData.userId, true); // Rozgłaszamy status online
 
-                // Wysyłamy historię wiadomości tylko do klienta, który dołączył,
-                // i tylko jeśli pokój nie jest 'global' (bo dla 'global' nie ma historii czatu)
-                if (data.room && data.room !== 'global') {
-                    const history = await getLastMessages(data.room);
-                    ws.send(JSON.stringify({
-                        type: 'history',
-                        room: data.room,
-                        messages: history.map(msg => ({
-                            username: msg.username, // Mapujemy z powrotem na username
-                            text: msg.text, // Mapujemy z powrotem na text
-                            inserted_at: msg.inserted_at, // Mapujemy z powrotem na inserted_at
-                            room: msg.room // Zapewniamy, że room jest przekazywany dalej
-                        })),
-                    }));
-                    console.log(`Sent history to room ${data.room} for user ${userData.userId}:`, history.length, 'messages.');
-                } else if (data.room === 'global') {
-                    console.log(`User ${userData.userId} joined global room, not sending chat history.`);
-                } else {
-                    console.warn("Join message received without a room, or room is null/undefined:", data);
-                }
+				const targetRoom = data.room;
+				console.log(`Processing MESSAGE type for room: ${targetRoom} from user: ${userData.userId}.`);
+
+				// Zapisz wiadomość w bazie
+				const created_at = await saveMessage(userData.userId, targetRoom, data.text);
+				const msgObj = {
+					type: 'message',
+					username: userData.userId,
+					text: data.text,
+					inserted_at: created_at,
+					room: targetRoom,
+				};
+
+				const isGroupChat = !targetRoom.includes('_'); // Proste sprawdzenie: ID grupy nie mają podkreślnika
+
+				if (isGroupChat) {
+					// Logika dla czatu grupowego
+					console.log(`Broadcasting to group: ${targetRoom}`);
+					// Pobierz wszystkich członków grupy
+					const { data: members, error } = await supabase.from('group_members').select('user_id').eq('group_id', targetRoom);
+					if (error) {
+						console.error('DB Error: Failed to get group members:', error);
+						return;
+					}
+					const memberIds = members.map(m => m.user_id);
+					// Roześlij wiadomość do każdego członka
+					memberIds.forEach(memberId => {
+						broadcastToUser(memberId, JSON.stringify(msgObj));
+					});
+				} else {
+					// Logika dla czatu prywatnego (1-na-1)
+					const recipientId = getOtherParticipantId(userData.userId, targetRoom);
+					if (recipientId) {
+						broadcastToParticipants(userData.userId, recipientId, JSON.stringify(msgObj));
+					}
+				}
 
             }
             else if (data.type === 'message' && userData.userId) { // Wiadomość czatu
@@ -132,7 +145,7 @@ wss.on('connection', (ws) => {
                     room: targetRoom, // To będzie room_id
                 };
                 console.log('Message saved to DB, attempting to broadcast to participants:', msgObj);
-
+                
                 // KLUCZOWA ZMIANA: Zamiast broadcastToAllConnectedClients, używamy broadcastToParticipants
                 const recipientId = getOtherParticipantId(userData.userId, targetRoom);
                 if (recipientId) {
@@ -212,12 +225,10 @@ wss.on('connection', (ws) => {
                     userIdToSockets.get(userData.userId).add(ws);
                     console.log(`User ${userData.userId} (from status message) now has ${userIdToSockets.get(userData.userId).size} active connections.`);
                 }
-
+                
                 await updateProfileStatus(userId, isOnline);
                 console.log(`User ${userId} status updated to ${isOnline}. (from 'status' message)`);
 
-                // ZMIANA: Przekaż lastSeenTimestamp do broadcastUserStatus
-                broadcastUserStatus(userId, isOnline, lastSeenTimestamp); // Status zawsze rozsyłany globalnie
             }
             else {
                 console.warn('Unhandled message type or missing userData.userId:', data);
@@ -242,7 +253,7 @@ wss.on('connection', (ws) => {
                     console.log(`User ${userData.userId} has no more active connections. Removed from userIdToSockets.`);
                 }
             }
-
+            
             // Tylko jeśli użytkownik nie ma innych aktywnych połączeń, ustawiamy go na offline
             if (!userIdToSockets.has(userData.userId) || userIdToSockets.get(userData.userId).size === 0) {
                 await updateProfileStatus(userData.userId, false); // Zaktualizuj bazę danych na offline
@@ -252,10 +263,8 @@ wss.on('connection', (ws) => {
                 try {
                     const res = await client.query('SELECT last_seen_at FROM public.profiles WHERE id = $1', [userData.userId]);
                     const lastSeen = res.rows.length > 0 ? res.rows[0].last_seen_at : null;
-                    broadcastUserStatus(userData.userId, false, lastSeen); // Rozgłaszamy status offline z last_seen
                 } catch (err) {
                     console.error('DB Error on close: Failed to get last_seen_at for broadcast:', err);
-                    broadcastUserStatus(userData.userId, false, new Date().toISOString()); // Fallback
                 } finally {
                     client.release();
                 }
@@ -471,30 +480,6 @@ function broadcastToRoom(roomId, msg, excludeWs = null) {
         }
     }
     console.log(`Broadcasted message to room ${roomId}. Sent to ${sentCount} clients.`);
-}
-
-/**
- * Broadcasts a user's online/offline status to ALL connected clients.
- * Statusy użytkowników są globalne i wszyscy powinni je otrzymać.
- * @param {string} userId - The ID of the user whose status is changing.
- * @param {boolean} isOnline - True if the user is online, false if offline.
- * @param {string | null} lastSeen - The 'last_seen_at' timestamp if the user is going offline.
- */
-function broadcastUserStatus(userId, isOnline, lastSeen = null) {
-    const msg = JSON.stringify({
-        type: 'status',
-        user: userId, 
-        online: isOnline,
-        last_seen: lastSeen 
-    });
-
-    for (const client of clients.keys()) {
-        // Wysyłamy status do wszystkich, niezależnie od tego, w którym pokoju się znajdują
-        if (client.readyState === WebSocket.OPEN) {
-            client.send(msg);
-        }
-    }
-    console.log(`Broadcasted user ${userId} status: ${isOnline ? 'online' : 'offline'}. Last seen: ${lastSeen || 'N/A'}.`);
 }
 
 /**
