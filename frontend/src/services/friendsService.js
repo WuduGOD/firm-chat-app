@@ -27,16 +27,17 @@ export async function loadContacts() {
         const friends = allProfilesData.filter(profile => friendIds.has(profile.id));
         setAllFriends(friends);
 
-        // --- KROK 2: Pobierz grupy ---
-        const { data: groupsData, error: groupsError } = await supabase
-            .from('groups')
-            .select(`
-                id,
-                name,
-                group_members!inner(user_id)
-            `)
-            .eq('group_members.user_id', currentUser.id);
+		// --- KROK 2: Pobierz grupy (POPRAWIONA WERSJA) ---
+        const { data: userGroupsData, error: groupsError } = await supabase
+            .from('group_members')
+            .select('groups (id, name)') // Pobierz dane z tabeli 'groups' przez relację
+            .eq('user_id', currentUser.id);
+        
         if (groupsError) throw groupsError;
+        
+        // Wyodrębnij same obiekty grup z wyników
+        const groupsData = userGroupsData.map(item => item.groups).filter(Boolean);
+
 
         // --- KROK 3: Połącz znajomych i grupy w jedną listę konwersacji ---
         const friendConversations = friends.map(friend => ({
@@ -44,7 +45,7 @@ export async function loadContacts() {
             id: friend.id,
             name: getUserLabelById(friend.id) || friend.email,
             roomId: getRoomName(String(currentUser.id), String(friend.id)),
-            user: friend // Dodajemy obiekt użytkownika dla spójności
+            user: friend
         }));
 
         const groupConversations = groupsData.map(group => ({
