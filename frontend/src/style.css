@@ -1,0 +1,2318 @@
+/* Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body { /* Dodano wysokość dla html i body */
+    height: 100%;
+	
+}
+
+:root {
+    /* Kolory bazowe */
+    --primary-color: #6a5acd;
+    --primary-color-dark: #5a4bbf;
+    --secondary-color: #4caf50; /* dla przycisku dodawania */
+    --secondary-color-dark: #388e3c; /* DODANE: Ciemniejszy odcień dla secondary-color */
+
+    /* Kolory tekstu */
+    --text-color-dark: #333;
+    --text-color-medium: #666;
+    --text-color-light: #f1f1f1;
+
+    /* Kolory tła */
+    --bg-color-light: #f8f9fa; /* Główne tło aplikacji */
+    --bg-color-lighter: #fbfbfb; /* dla logo-screen */
+    --bg-color-sidebar-wrapper: #eef2f6; /* Tło lewej i prawej kolumny */
+    --bg-color-sidebar: #fff; /* Tło listy kontaktów/aktywnych użytkowników w sidebarach */
+    --bg-color-chat-messages: #f9fafb; /* Tło obszaru wiadomości */
+    --bg-color-message-received: #e9eef2; /* Tło wiadomości odebranych */
+    --bg-color-search-input: #f1f2f3; /* Tło pola wyszukiwania */
+    --bg-color-header: #fff; /* Tło nagłówka aplikacji */
+    --bg-color-chat-header: #fff; /* Tło nagłówka czatu */
+    --bg-color-chat-footer: #fff; /* Tło stopki czatu */
+    --bg-color-dropdown: #fff; /* Tło dropdownów */
+
+    /* Kolory obramowań i cieni */
+    --border-color-light: #eee;
+    --border-color-medium: #ddd;
+    --shadow-light: 0 2px 5px rgba(0,0,0,0.03);
+    --shadow-medium: 0 0 20px rgba(0,0,0,0.08);
+
+    /* Inne */
+    --dropdown-top-offset: 120%; /* Domyślna pozycja dropdown */
+
+    /* Nowe zmienne dla trybu autoryzacji */
+    --bg-color-container: #ffffff; /* Tło kontenera logowania */
+    --bg-color-input: #f1f2f3; /* Tło inputów logowania */
+
+    /* DODANE: zmienne dla border-radius */
+    --border-radius-default: 8px;
+    --border-radius-message: 15px;
+
+    /* DODANE: nowe zmienne dla kolorów ikon i hover states w nagłówku */
+    --icon-color-medium: var(--text-color-medium);
+    --bg-color-hover: var(--bg-color-search-input);
+    --color-online: #4caf50;
+    --color-offline: #888;
+
+    /* NOWE: Kolory dla modala i powiadomień */
+    --bg-color-modal-overlay: rgba(0, 0, 0, 0.6);
+    --bg-color-modal-content: #fff;
+    --color-success: #4CAF50;
+    --color-error: #f44336;
+    --color-info: #2196F3;
+    --color-notification-badge: #ff4d4d;
+}
+
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: var(--bg-color-light);
+    color: var(--text-color-dark);
+    height: 100%; /* Zmieniono na 100% */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Zapobiega przewijaniu się całej strony */
+}
+
+/* Główna nawigacja (Nagłówek aplikacji) */
+.main-header {
+    background: var(--bg-color-header);
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color-medium);
+    box-shadow: var(--shadow-light);
+    flex-shrink: 0;
+}
+
+.app-title {
+    font-size: 1.4rem;
+    color: var(--primary-color);
+    font-weight: bold;
+}
+
+.user-menu {
+    display: flex;
+    gap: 0.8rem;
+    position: relative;
+}
+
+.user-menu button {
+    background: none;
+    border: none;
+    font-size: 1.3rem;
+    cursor: pointer;
+    color: var(--text-color-medium);
+    transition: color 0.2s;
+}
+.user-menu button:hover {
+    color: var(--primary-color);
+}
+
+/* Dropdown (dla menu głównego i czatu) */
+.dropdown {
+    position: absolute;
+    right: 0;
+    top: var(--dropdown-top-offset);
+    background: var(--bg-color-dropdown);
+    border: 1px solid var(--border-color-medium);
+    padding: 0.5rem;
+    border-radius: 6px;
+    box-shadow: var(--shadow-medium);
+    z-index: 1000; /* Zwiększono z-index, aby było na wierzchu */
+    min-width: 180px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.dropdown.hidden {
+    display: none;
+}
+/* Style dla przycisków w głównym dropdownie */
+.dropdown #themeToggle,
+.dropdown #logoutButton {
+    background: none;
+    border: none;
+    color: var(--text-color-dark);
+    font-size: 1rem;
+    padding: 0.6rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: background 0.2s, color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.dropdown #themeToggle i,
+.dropdown #logoutButton i {
+    font-size: 1.1rem;
+    color: var(--text-color-medium);
+}
+
+.dropdown #themeToggle:hover,
+.dropdown #logoutButton:hover {
+    background: var(--bg-color-search-input);
+    color: var(--text-color-dark);
+}
+.dropdown #themeToggle:hover i,
+.dropdown #logoutButton:hover i {
+    color: var(--primary-color);
+}
+
+
+/* Układ główny - KONTEJNER DLA 3 KOLUMN */
+.container {
+    flex: 1;
+    display: flex;
+    align-items: stretch;
+    overflow: hidden;
+    border-radius: 12px;
+    box-shadow: var(--shadow-medium);
+    width: 100%;
+    margin: 0;
+    height: 100%; /* Upewnij się, że kontener zajmuje całą dostępną wysokość */
+}
+
+/* Sidebar Wrapper (lewy pasek - rozmowy + ikony) */
+.sidebar-wrapper {
+    display: flex;
+    flex-direction: row; /* Domyślnie wierszowy układ na desktopie */
+    min-width: 280px;
+    flex: 0 0 25%;
+    max-width: 350px; /* Domyślna max-width dla desktopu */
+    background: var(--bg-color-sidebar-wrapper);
+    border-right: 1px solid var(--border-color-light);
+    flex-shrink: 0;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    height: 100%;
+}
+
+/* Main Nav Icons (pionowy pasek ikon) */
+.main-nav-icons {
+    width: 60px;
+    background: var(--primary-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 1rem;
+    padding-bottom: 0.5rem;
+    flex-shrink: 0;
+    height: 100%;
+    gap: 0.8rem;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.nav-icon {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    width: 45px;
+    height: 45px;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: background 0.3s, color 0.3s;
+    position: relative;
+    color: var(--text-color-light); /* Ustawienie koloru ikon na jasny */
+}
+
+.nav-icon::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%) translateX(10px);
+    white-space: nowrap;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: var(--text-color-light);
+    padding: 0.5rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out, transform 0.2s ease-in-out;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+.nav-icon:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.nav-icon:hover::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(-50%) translateX(0);
+}
+
+.nav-icon.active {
+    background: var(--bg-color-sidebar);
+    color: var(--primary-color);
+}
+
+.nav-icon.add-new-button {
+    margin-top: auto;
+    margin-bottom: 0;
+    background: var(--secondary-color);
+    border-radius: 50%;
+    font-size: 1.8rem;
+    color: var(--text-color-light);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+.nav-icon.add-new-button:hover {
+    background: var(--secondary-color-dark);
+}
+
+/* Sidebar (lista konwersacji) */
+#sidebar.conversations-list {
+    flex-grow: 1;
+    background: var(--bg-color-sidebar);
+    padding: 0.5rem 1rem 1rem 1rem;
+    overflow-y: auto;
+    flex-shrink: 1;
+    min-height: 0;
+}
+
+#sidebar.conversations-list h2 {
+    margin-bottom: 0.5rem;
+    font-size: 1.3rem;
+    color: var(--text-color-dark);
+    padding-top: 0.5rem;
+}
+
+.search-bar {
+    position: relative;
+    margin-bottom: 0.5rem;
+}
+.search-bar input {
+    width: 100%;
+    padding: 0.6rem 0.8rem 0.6rem 2.5rem;
+    border-radius: 20px;
+    border: 1px solid var(--border-color-medium);
+    background: var(--bg-color-search-input);
+    font-size: 0.9rem;
+    outline: none;
+    color: var(--text-color-dark);
+}
+.search-bar input::placeholder {
+    color: var(--text-color-medium);
+}
+.search-bar i {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-color-medium);
+}
+
+/* Kategorie sortowania kontaktów */
+.contact-categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding: 0 0.5rem;
+}
+.contact-categories .category-button {
+    background: var(--bg-color-search-input);
+    border: 1px solid var(--border-color-medium);
+    padding: 0.5rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    color: var(--text-color-medium);
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+    white-space: nowrap;
+}
+.contact-categories .category-button:hover {
+    background: var(--bg-color-message-received);
+    border-color: var(--border-color-medium);
+}
+.contact-categories .category-button.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: var(--text-color-light);
+}
+
+/* Styl pojedynczego kontaktu/konwersacji */
+.contact {
+    padding: 0.8rem;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: background 0.2s;
+    position: relative;
+    margin-bottom: 0.3rem;
+    color: var(--text-color-dark);
+}
+.contact:hover,
+.contact.active {
+    background: var(--bg-color-sidebar-wrapper);
+}
+
+.contact img.avatar {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    margin-right: 0.8rem;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.contact .contact-info {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.contact .contact-name {
+    font-weight: bold;
+    color: var(--text-color-dark);
+    font-size: 1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.contact .last-message {
+    font-size: 0.85rem;
+    color: var(--text-color-medium);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.contact .contact-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+    font-size: 0.8rem;
+    color: var(--text-color-medium);
+    flex-shrink: 0;
+    margin-left: 0.5rem;
+}
+
+.contact .unread-count {
+    background: #ff4d4d;
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 7px;
+    border-radius: 10px;
+    min-width: 22px;
+    text-align: center;
+    font-weight: bold;
+    display: block;
+    /* DODANA REGUŁA */
+    /* Upewnij się, że element jest niewidoczny, jeśli ma klasę hidden */
+    /* To nadpisze wszelkie style, które mogą powodować, że ramka/tło jest widoczne */
+    &.hidden {
+        display: none !important;
+    }
+}
+
+/* Status online/offline - w nagłówku czatu */
+#userStatus {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-color-medium);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+#userStatus::before {
+    content: '';
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+}
+#userStatus.online::before {
+    background-color: var(--color-online);
+}
+#userStatus.offline::before {
+    background-color: var(--color-offline);
+}
+#userStatus.online {
+    color: var(--color-online);
+}
+#userStatus.offline {
+    color: var(--color-offline);
+}
+
+/* Chat Area Wrapper - nowy kontener dla logo-screen i chat-area */
+.chat-area-wrapper {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    background: var(--bg-color-lighter);
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-top-left-radius: 0;
+    flex-shrink: 0;
+    height: 100%;
+}
+
+.logo-screen {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    color: var(--text-color-medium);
+    padding: 2rem;
+    font-size: 1.1rem;
+    background: var(--bg-color-lighter);
+}
+.logo-screen.hidden {
+    display: none;
+}
+
+.chat-area {
+    flex: 1;
+    display: none;
+    flex-direction: column;
+    position: relative;
+    background: var(--bg-color-chat-messages);
+    height: 100%;
+}
+.chat-area.active {
+    display: flex;
+}
+
+/* --- ZMODYFIKOWANE SEKCJE DLA NAGŁÓWKA CZATU --- */
+.chat-header {
+    padding: 0.7rem 1.5rem;
+    background: var(--bg-color-chat-header);
+    border-bottom: 1px solid var(--border-color-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 1rem;
+    box-shadow: var(--shadow-light);
+    position: relative;
+    flex-shrink: 0;
+    z-index: 50;
+    min-height: 60px;
+}
+
+/* ZMODYFIKOWANE: Przycisk wstecz */
+.back-button {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 1.3rem;
+    color: var(--text-color-medium);
+    cursor: pointer;
+    padding: 0.4rem;
+    border-radius: 50%;
+    transition: color 0.2s, background-color 0.2s;
+}
+
+.back-button:hover {
+    color: var(--primary-color);
+    background-color: var(--bg-color-search-input);
+}
+
+/* NOWE: Wrapper dla avatara, nazwy i statusu */
+.user-info-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.user-info-wrapper .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+
+/* ZMODYFIKOWANE: user-info */
+.user-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    min-width: 0;
+}
+
+/* ZMODYFIKOWANE: Poprawka selektora dla nazwy użytkownika (przez ID) */
+#chatUserName {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: var(--text-color-dark);
+}
+
+/* ZMODYFIKOWANE: chat-header-actions */
+.chat-header-actions { /* Usunięto .right-aligned, aby było bardziej elastyczne */
+    display: flex;
+    gap: 0.8rem;
+    margin-left: auto; /* Przesuwa akcje na prawo */
+    flex-shrink: 0;
+    align-items: center;
+}
+
+.chat-header-actions button {
+    background: none;
+    border: none;
+    font-size: 1.3rem;
+    cursor: pointer;
+    color: var(--text-color-medium);
+    transition: color 0.2s, background-color 0.2s;
+    padding: 0.5rem;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative; /* Dla licznika powiadomień */
+}
+
+.chat-header-actions button:hover {
+    color: var(--primary-color);
+    background-color: var(--bg-color-hover);
+}
+
+/* Licznik powiadomień */
+.notification-count {
+    position: absolute;
+    top: -8px; /* Dostosuj pozycję */
+    right: -8px; /* Dostosuj pozycję */
+    background-color: var(--color-notification-badge);
+    color: white;
+    font-size: 0.7rem;
+    font-weight: bold;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transform: translate(50%, -50%); /* Centrowanie na krawędzi */
+    z-index: 1; /* Nad ikoną */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.notification-count.hidden {
+    display: none;
+}
+
+
+/* Dropdown ustawień czatu */
+.chat-settings-dropdown {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    width: 400px !important;
+    padding: 0.8rem;
+    border-top-right-radius: 0;
+    z-index: 101;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    overflow-y: hidden;
+    max-height: none;
+}
+.chat-settings-dropdown h3 {
+    font-size: 1rem;
+    margin-bottom: 0.3rem;
+    color: var(--text-color-dark);
+}
+.chat-settings-dropdown .setting-group {
+    margin-bottom: 0.3rem;
+    padding-bottom: 0.3rem;
+    border-bottom: 1px solid var(--border-color-light);
+}
+.chat-settings-dropdown .setting-group:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+.chat-settings-dropdown h4 {
+    font-size: 0.9rem;
+    color: var(--text-color-medium);
+    margin-bottom: 0.15rem;
+}
+.chat-settings-dropdown input[type="text"] {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color-medium);
+    border-radius: 6px;
+    margin-bottom: 0.25rem;
+    font-size: 0.9rem;
+    background-color: var(--bg-color-search-input);
+    color: var(--text-color-dark);
+}
+.chat-settings-dropdown input[type="text"]::placeholder {
+    color: var(--text-color-medium);
+}
+.chat-settings-dropdown button {
+    width: auto;
+    padding: 0.5rem 1rem;
+    font-size: 0.95rem;
+    display: block;
+    margin-top: 0.25rem;
+    background: var(--primary-color);
+    color: var(--text-color-light);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.chat-settings-dropdown button:hover {
+    background: var(--primary-color-dark);
+}
+
+/* Opcje kolorów/tła */
+.color-options, .background-options {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 20px;
+    margin: 0.4rem 0;
+    width: auto;
+    box-sizing: border-box;
+    justify-content: space-between;
+    align-items: center;
+}
+.color-box, .bg-box {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: border-color 0.2s;
+    flex-shrink: 0;
+}
+
+.color-box.active, .bg-box.active {
+    border-color: var(--primary-color);
+}
+
+/* Konkretne motywy kolorów wiadomości */
+.color-box.default-color { background-color: #6a5acd; }
+.color-box.blue-color { background-color: #3b82f6; }
+.color-box.green-color { background-color: #10b981; }
+.color-box.red-color { background-color: #ef4444; }
+
+/* Konkretne tła czatu */
+.bg-box.default-bg { background-color: #f9fafb; border: 1px solid var(--border-color-medium); }
+.bg-box.dark-bg { background-color: #333; }
+.bg-box.pattern-bg { background-image: url('data:image/svg+xml;utf8,<svg width="10" height="10" viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"><circle cx="2.5" cy="2.5" r="1.5" fill="%23e0e0e0"/></svg>'); background-size: 10px 10px; }
+
+/* Animacja ładowania (typing indicator) */
+.typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 10px 20px;
+    position: absolute;
+    bottom: 80px;
+    left: 15px;
+    background: var(--bg-color-message-received);
+    border-radius: 15px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    z-index: 5;
+}
+.typing-indicator.hidden {
+    display: none;
+}
+
+.typing-indicator .dot {
+    width: 8px;
+    height: 8px;
+    background-color: var(--text-color-medium);
+    border-radius: 50%;
+    animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.typing-indicator .dot:nth-child(1) { animation-delay: -0.32s; }
+.typing-indicator .dot:nth-child(2) { animation-delay: -0.16s; }
+.typing-indicator .dot:nth-child(3) { animation-delay: 0s; }
+
+@keyframes bounce {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1.0); }
+}
+
+/* Prawidłowe pozycjonowanie dla statusu pisania w nagłówku */
+.typing-status {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.75rem;
+    color: var(--text-color-medium);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 60%;
+    padding-bottom: 3px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+    z-index: 60;
+}
+.typing-status.visible {
+    opacity: 1;
+}
+.typing-status .dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background-color: var(--text-color-medium);
+    border-radius: 50%;
+    margin: 0 1px;
+    animation: bounceHeader 1.4s infinite ease-in-out both;
+}
+
+@keyframes bounceHeader {
+    0%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-3px); }
+}
+
+
+.messages {
+    flex: 1;
+    padding: 1.5rem;
+    overflow-y: auto;
+    background: var(--bg-color-chat-messages);
+    min-height: 0; /* Ważne dla flexboxa */
+}
+
+/* Stylowanie wiadomości w zależności od motywu */
+.messages.blue-theme .message.sent {
+    background: #3b82f6;
+}
+.messages.green-theme .message.sent {
+    background: #10b981;
+}
+.messages.red-theme .message.sent {
+    background: #ef4444;
+}
+
+/* Stylowanie ogonków wiadomości w zależności od motywu */
+.messages.blue-theme .message.sent::before {
+    border-color: transparent transparent transparent #3b82f6;
+}
+.messages.green-theme .message.sent::before {
+    border-color: transparent transparent transparent #10b981;
+}
+.messages.red-theme .message.sent::before {
+    border-color: transparent transparent transparent #ef4444;
+}
+
+/* Stylowanie tła czatu */
+.messages.dark-bg {
+    background-color: #333;
+}
+.messages.pattern-bg {
+    background-image: url('data:image/svg+xml;utf8,<svg width="10" height="10" viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"><circle cx="2.5" cy="2.5" r="1.5" fill="%23e0e0e0"/></svg>');
+    background-size: 10px 10px;
+    background-color: var(--bg-color-chat-messages);
+}
+
+.message {
+    max-width: 65%;
+    padding: 0.8rem 1rem;
+    border-radius: var(--border-radius-message);
+    background: var(--bg-color-message-received);
+    position: relative;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    width: fit-content;
+    min-width: 60px;
+    color: var(--text-color-dark);
+    margin-bottom: 0.7rem;
+}
+.message:last-child {
+    margin-bottom: 0;
+}
+.message.sent {
+    margin-left: auto;
+    background: var(--primary-color);
+    color: var(--text-color-light);
+}
+
+.message.received {
+    margin-right: auto;
+    background-color: var(--bg-color-message-received);
+    color: var(--text-color-dark);
+}
+
+/* Ogonek wiadomości - uniwersalny styl dla obu trybów */
+.message::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    border: 8px solid transparent;
+    width: 0;
+    height: 0;
+}
+
+.message.sent::before {
+    right: -8px;
+    border-left-color: var(--primary-color);
+    border-top-right-radius: 0;
+}
+
+.message.received::before {
+    left: -8px;
+    border-right-color: var(--bg-color-message-received);
+    border-top-left-radius: 0;
+}
+
+.timestamp {
+    font-size: 0.7rem;
+    opacity: 0.7;
+    margin-top: 5px;
+    display: block;
+    text-align: right;
+    color: var(--text-color-medium);
+}
+.message.sent .timestamp {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Link Preview */
+.link-preview-message {
+    background: var(--bg-color-sidebar);
+    border: 1px solid var(--border-color-light);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0.8rem;
+}
+.link-preview-message::before {
+    border-color: transparent var(--bg-color-sidebar) transparent transparent;
+}
+.link-preview-message.sent {
+    background: var(--bg-color-search-input);
+    border-color: var(--border-color-medium);
+}
+.link-preview-message.sent::before {
+    border-color: transparent transparent transparent var(--bg-color-search-input);
+}
+
+.link-preview {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    width: 100%;
+}
+.link-preview-icon {
+    font-size: 1.8rem;
+    color: var(--primary-color);
+    background: var(--bg-color-search-input);
+    padding: 0.5rem;
+    border-radius: 8px;
+}
+.link-preview-content {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.link-preview-title {
+    font-weight: bold;
+    color: var(--text-color-dark);
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.link-preview-description {
+    font-size: 0.8rem;
+    color: var(--text-color-medium);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Dolna belka (Chat Footer) */
+.chat-footer {
+    display: flex;
+    gap: 0.8rem;
+    padding: 1rem 1.5rem;
+    background: var(--bg-color-chat-footer);
+    border-top: 1px solid var(--border-color-light);
+    align-items: center;
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.03);
+    flex-shrink: 0;
+}
+
+.chat-footer input {
+    flex: 1;
+    padding: 0.7rem 1rem;
+    border-radius: 25px;
+    border: 1px solid var(--border-color-medium);
+    background: var(--bg-color-search-input);
+    font-size: 0.95rem;
+    outline: none;
+    color: var(--text-color-dark);
+    pointer-events: auto !important;
+    user-select: auto !important;
+}
+.chat-footer input::placeholder {
+    color: var(--text-color-medium);
+}
+
+.chat-footer button {
+    padding: 0.7rem 1.2rem;
+    border: none;
+    background: var(--primary-color);
+    color: var(--text-color-light);
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background 0.3s;
+    pointer-events: auto !important;
+    user-select: auto !important;
+}
+
+.chat-footer button:hover {
+    background: var(--primary-color-dark);
+}
+
+.chat-footer button:disabled {
+    background: #a1a1aa;
+    cursor: not-allowed;
+}
+
+.chat-footer .attach-button,
+.chat-footer .emoji-button {
+    background: none;
+    border: none;
+    color: var(--text-color-medium);
+    font-size: 1.5rem;
+    padding: 0;
+    width: auto;
+    height: auto;
+    border-radius: 0;
+    transition: color 0.2s;
+}
+.chat-footer .attach-button:hover,
+.chat-footer .emoji-button:hover {
+    color: var(--primary-color);
+}
+
+/* PRAWY SIDEBAR (AKTYWNI UŻYTKOWNICY) */
+.right-sidebar-wrapper {
+    min-width: 300px;
+    width: 28%;
+    max-width: 400px;
+    border-left: 1px solid var(--border-color-light);
+    background-color: var(--bg-color-sidebar-wrapper);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 1rem;
+    overflow-y: auto;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    flex-shrink: 0;
+}
+
+.right-sidebar h4 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: var(--text-color-dark);
+    text-align: center;
+    font-size: 1.2rem;
+}
+
+.active-users-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    flex-grow: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.active-users-list li {
+    display: flex;
+    align-items: center;
+    padding: 0.6rem 0.8rem;
+    margin-bottom: 5px;
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
+    cursor: pointer;
+    color: var(--text-color-dark);
+}
+
+.active-users-list li:hover {
+    background-color: var(--bg-color-search-input);
+}
+
+.active-users-list li .avatar {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    margin-right: 10px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.active-users-list li .username {
+    font-weight: 500;
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.active-users-list li .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #4caf50;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.custom-message-box {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #333;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    z-index: 1000;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    opacity: 1;
+    transition: opacity 0.5s ease-out;
+    font-family: 'Inter', sans-serif;
+    display: none !important;
+}
+.custom-message-box.success {
+    background-color: #4CAF50;
+}
+.custom-message-box.error {
+    background-color: #f44336;
+}
+.custom-message-box.info {
+    background-color: #2196F3;
+}
+
+.enable-sound-button {
+    background-color: var(--primary-color);
+    color: var(--button-text-color);
+    border: none;
+    padding: 8px 15px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    position: absolute; /* Możesz dostosować pozycję */
+    top: 15px;
+    right: 150px; /* Obok menu użytkownika */
+    z-index: 10; /* Aby był na wierzchu */
+}
+
+.enable-sound-button:hover {
+    background-color: var(--primary-color-dark);
+    transform: translateY(-1px);
+}
+
+.enable-sound-button.hidden {
+    display: none;
+}
+
+/* Modale */
+
+.modal.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none; /* Upewnij się, że nie blokuje kliknięć, gdy jest ukryty */
+}
+
+.modal.visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.modal-content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.modal.visible .modal-content {
+}
+
+.modal-content h2 {
+    font-size: 1.6rem;
+    color: var(--primary-color);
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.close-button {
+    color: var(--text-color-medium);
+    font-size: 28px;
+    font-weight: bold;
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.close-button:hover,
+.close-button:focus {
+    color: var(--text-color-dark);
+    text-decoration: none;
+}
+
+.modal-section {
+    border-top: 1px solid var(--border-color-light);
+    padding-top: 20px;
+}
+.modal-section:first-child {
+    border-top: none;
+    padding-top: 0;
+}
+
+.modal-section h3 {
+    font-size: 1.2rem;
+    color: var(--text-color-dark);
+    margin-bottom: 10px;
+}
+
+.modal-section input[type="email"],
+.modal-section input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid var(--border-color-medium);
+    border-radius: 8px;
+    font-size: 1rem;
+    background-color: var(--bg-color-search-input);
+    color: var(--text-color-dark);
+}
+
+.modal-section button {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.2s;
+}
+
+.modal-section #sendFriendRequestButton {
+    background-color: var(--primary-color);
+    color: var(--text-color-light);
+}
+.modal-section #sendFriendRequestButton:hover {
+    background-color: var(--primary-color-dark);
+}
+
+.status-message {
+    margin-top: 10px;
+    font-size: 0.9rem;
+    text-align: center;
+    color: var(--text-color-medium);
+}
+.status-message.success {
+    color: var(--color-success);
+}
+.status-message.error {
+    color: var(--color-error);
+}
+
+.friend-requests-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 200px; /* Ogranicz wysokość listy */
+    overflow-y: auto; /* Dodaj przewijanie, jeśli lista jest długa */
+}
+
+.friend-request-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-color-light);
+}
+.friend-request-item:last-child {
+    border-bottom: none;
+}
+
+.friend-request-item .request-info {
+    flex-grow: 1;
+    color: var(--text-color-dark);
+}
+.friend-request-item .request-info .sender-name {
+    font-weight: bold;
+}
+.friend-request-item .request-info .request-time {
+    font-size: 0.8rem;
+    color: var(--text-color-medium);
+    margin-left: 10px;
+}
+
+.friend-request-item .request-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.friend-request-item .accept-button,
+.friend-request-item .reject-button {
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+
+.friend-request-item .accept-button {
+    background-color: var(--color-success);
+    color: white;
+}
+.friend-request-item .accept-button:hover {
+    background-color: var(--secondary-color-dark);
+}
+
+.friend-request-item .reject-button {
+    background-color: var(--color-error);
+    color: white;
+}
+.friend-request-item .reject-button:hover {
+    background-color: #d32f2f;
+}
+
+#friendRequestModal {
+    position: fixed; /* Pozycjonuje element względem okna przeglądarki */
+    top: 50%; /* Przesuwa górną krawędź elementu do połowy wysokości okna */
+    left: 50%; /* Przesuwa lewą krawędź elementu do połowy szerokości okna */
+    transform: translate(-50%, -50%); /* Koryguje pozycję, przesuwając element o połowę jego własnej szerokości i wysokości, aby jego środek był dokładnie na środku okna */
+    z-index: 10000; /* Bardzo wysoki z-index, aby był zawsze na wierzchu */
+
+    /* Style wizualne dla całego okna modala */
+    background-color: var(--bg-color-modal-content); /* Użyj zmiennej dla tła modala */
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    width: 90%;
+    max-width: 500px;
+    box-sizing: border-box; /* Ważne dla prawidłowego obliczania szerokości i paddingu */
+
+    /* Początkowo niewidoczny, kontrola przez JS */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+	
+	display: none;
+}
+
+/* Styl dla aktywnego/widocznego modala (kontrolowany przez JS) */
+#friendRequestModal.visible {
+    opacity: 1;
+    visibility: visible;
+    display: block;
+}
+
+/* Style dla sekcji tworzenia grupy w modalu */
+#createGroupSection {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding-top: 20px;
+}
+
+/* Styl listy członków */
+.group-members-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 200px; /* Ogranicz wysokość, aby była przewijana */
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--bg-color-light);
+}
+
+.group-members-list li {
+    padding: 10px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.group-members-list li:hover {
+    background-color: var(--bg-color-sidebar-wrapper);
+}
+
+.group-members-list li:last-child {
+    border-bottom: none;
+}
+
+.group-members-list input[type="checkbox"] {
+    margin-right: 10px;
+    cursor: pointer;
+}
+
+/* Styl dla przycisku utwórz grupę */
+#createGroupSubmitButton {
+    padding: 12px 20px;
+    background-color: var(--primary-color);
+    color: var(--text-color-light);
+    border: none;
+    border-radius: 8px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+#createGroupSubmitButton:hover {
+    background-color: var(--primary-color-dark);
+    transform: translateY(-1px);
+}
+#createGroupSubmitButton:active {
+    transform: translateY(1px);
+}
+/* Style dla pola wyszukiwania */
+.search-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1em;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: border-color 0.2s;
+}
+.search-input:focus {
+    border-color: var(--primary-color);
+    outline: none;
+}
+
+/* Nowe style dla modalów */
+.app-modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.app-modal-content {
+    background-color: var(--bg-color-modal);
+    padding: 25px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.app-modal-content h2,
+.app-modal-content h3 {
+    text-align: center;
+    color: var(--text-color-primary);
+    margin-bottom: 15px;
+}
+
+.app-modal-close {
+    color: var(--text-color-light);
+    font-size: 28px;
+    font-weight: bold;
+    position: absolute;
+    right: 15px;
+    top: 10px;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.app-modal-close:hover,
+.app-modal-close:focus {
+    color: var(--primary-color);
+}
+
+.app-modal-hidden {
+    display: none;
+}
+
+/* Style dla sekcji w modalach */
+.app-modal-section {
+    margin-bottom: 20px;
+}
+
+.app-modal-section label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: var(--text-color-medium);
+}
+
+.app-modal-section input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--bg-color-input);
+    color: var(--text-color-primary);
+}
+
+.app-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+.app-modal-footer button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    background-color: var(--primary-color);
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.app-modal-footer button:hover {
+    background-color: var(--primary-color-dark);
+}
+
+/* Style dla listy znajomych w modalu */
+.friends-list-new {
+    list-style: none;
+    padding: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+.friends-list-new li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 15px;
+    border-bottom: 1px solid var(--border-color-light);
+}
+
+.friends-list-new li:last-child {
+    border-bottom: none;
+}
+
+#enableSoundButton {
+    display: none !important;
+}
+
+.bg-options {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+/* Styl dla pojedynczego pola wyboru tła (.bg-box) */
+.bg-box {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%; /* Robi z kwadratu koło */
+    border: 2px solid var(--border-color-light);
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: var(--shadow-small);
+}
+
+.bg-box:hover {
+    transform: scale(1.1); /* Lekkie powiększenie przy najechaniu */
+}
+
+/* Styl dla aktywnej (wybranej) opcji */
+.bg-box.active {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px var(--primary-color-light); /* Podświetlenie wokół */
+}
+
+/* Konkretne style dla podglądu tła */
+.bg-box.default-bg {
+    background-color: var(--bg-color-main); /* Domyślny kolor tła */
+}
+
+.bg-box.dark-bg {
+    background-color: #2d3436; /* Ciemny kolor tła */
+}
+
+.bg-box.pattern-bg {
+    /* Prosty wzór utworzony za pomocą gradientu CSS */
+    background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), 
+                      linear-gradient(-45deg, #ccc 25%, transparent 25%),
+                      linear-gradient(45deg, transparent 75%, #ccc 75%),
+                      linear-gradient(-45deg, transparent 75%, #ccc 75%);
+    background-size: 10px 10px;
+    background-position: 0 0, 0 5px, 5px -5px, -5px 0px;
+    background-color: var(--bg-color-main);
+}
+
+.emoji-picker.hidden {
+    display: none;
+}
+
+/* Styl dla WIDOCZNEGO panelu */
+.emoji-picker {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(32px, 1fr));
+    gap: 0.5rem;
+    padding: 0.5rem;
+    
+    background: var(--bg-color-dropdown);
+    border: 1px solid var(--border-color-medium);
+    border-radius: 8px;
+    box-shadow: var(--shadow-large);
+    
+    position: absolute;
+    bottom: calc(100% + 10px); /* Ustawia panel 10px NAD stopką czatu */
+    left: 0;
+    
+    width: 100%;
+    max-width: 320px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+.emoji-picker button {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 0.25rem;
+    transition: background-color 0.2s;
+}
+
+.emoji-picker button:hover {
+    background-color: var(--bg-color-search-input);
+}
+
+
+
+/* Dark mode overrides */
+body.dark-mode {
+    --primary-color: #2815ad;
+    --primary-color-dark: #140c4a;
+    --secondary-color: #388e3c;
+    --secondary-color-dark: #2e7d32;
+    --text-color-dark: #f1f1f1;
+    --text-color-medium: #aaa;
+    --text-color-light: #f1f1f1;
+
+    /* Zmienione kolory tła na ciemniejsze/czarne */
+    --bg-color-light: #000000; /* Główny kolor tła aplikacji - CZARNY */
+    --bg-color-lighter: #000000; /* Dla logo-screen - CZARNY */
+    --bg-color-sidebar-wrapper: #0a0a0a; /* Tło lewej i prawej kolumny - BARDZO CIEMNY SZARY */
+    --bg-color-sidebar: #121212; /* Tło listy kontaktów/aktywnych użytkowników w sidebarach - CIEMNY SZARY */
+    --bg-color-chat-messages: #000000; /* Tło obszaru wiadomości - CZARNY */
+    --bg-color-message-received: #1c1c1c; /* Tło wiadomości odebranych - CIEMNIEJSZY SZARY */
+    --bg-color-search-input: #1c1c1c; /* Tło pola wyszukiwania - CIEMNIEJSZY SZARY */
+    --bg-color-header: #121212; /* Tło nagłówka aplikacji - CIEMNY SZARY */
+    --bg-color-chat-header: #121212; /* Tło nagłówka czatu - CIEMNY SZARY */
+    --bg-color-chat-footer: #121212; /* Tło stopki czatu - CIEMNY SZARY */
+    --bg-color-dropdown: #121212; /* Tło dropdownów - CIEMNY SZARY */
+
+    --border-color-light: #2c2c2c; /* Jaśniejsze obramowania w ciemnym trybie */
+    --border-color-medium: #3a3a3a; /* Średnie obramowania w ciemnym trybie */
+    --shadow-light: 0 2px 5px rgba(0,0,0,0.1);
+    --shadow-medium: 0 0 20px rgba(0,0,0,0.3); /* Ciemniejszy cień dla lepszego kontrastu */
+
+    --bg-color-container: #121212; /* Tło kontenera logowania - CIEMNY SZARY */
+    --bg-color-input: #1c1c1c; /* Tło inputów logowania - CIEMNIEJSZY SZARY */
+
+    /* DODANE: zmienne dla dark mode dla ikon i hover states */
+    --icon-color-medium: var(--text-color-medium);
+    --bg-color-hover: #2a2a2a; /* Ciemniejszy hover dla trybu ciemnego */
+
+    /* NOWE: Kolory dla modala w trybie ciemnym */
+    --bg-color-modal-overlay: rgba(0, 0, 0, 0.8);
+    --bg-color-modal-content: #1a1a1a;
+}
+
+/* Główne sekcje w dark mode */
+.dark-mode .main-header,
+.dark-mode #sidebar.conversations-list,
+.dark-mode .chat-header,
+.dark-mode .chat-footer,
+.dark-mode .dropdown,
+.dark-mode .right-sidebar-wrapper {
+    background-color: var(--bg-color-header);
+    border-color: var(--border-color-medium);
+    color: var(--text-color-dark);
+}
+
+.dark-mode .sidebar-wrapper {
+    background-color: var(--bg-color-sidebar-wrapper);
+}
+
+.dark-mode .main-nav-icons {
+    background: var(--primary-color-dark);
+}
+.dark-mode .nav-icon {
+    color: var(--text-color-light);
+}
+
+body.dark-mode .nav-icon::after {
+    background-color: var(--bg-color-dropdown);
+    color: var(--text-color-dark);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.dark-mode .nav-icon:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+.dark-mode .nav-icon.active {
+    background: var(--bg-color-sidebar);
+    color: var(--primary-color);
+}
+.dark-mode .nav-icon.add-new-button {
+    background: var(--secondary-color);
+}
+.dark-mode .nav-icon.add-new-button:hover {
+    background: var(--secondary-color-dark);
+}
+
+/* Lista kontaktów w dark mode */
+.dark-mode .contact {
+    background-color: transparent;
+    color: var(--text-color-dark);
+}
+.dark-mode .contact:hover,
+.dark-mode .contact.active {
+    background-color: var(--bg-color-sidebar-wrapper);
+}
+.dark-mode .contact .contact-name {
+    color: var(--text-color-dark);
+}
+.dark-mode .contact .last-message,
+.dark-mode .contact .message-time {
+    color: var(--text-color-medium);
+}
+.dark-mode .search-bar input {
+    background: var(--bg-color-search-input);
+    border-color: var(--border-color-medium);
+    color: var(--text-color-dark);
+}
+.dark-mode .search-bar input::placeholder {
+    color: var(--text-color-medium);
+}
+.dark-mode .search-bar i {
+    color: var(--text-color-medium);
+}
+
+/* Kategorie sortowania w dark mode */
+.dark-mode .contact-categories .category-button {
+    background: var(--bg-color-search-input);
+    border-color: var(--border-color-medium);
+    color: var(--text-color-dark);
+}
+.dark-mode .contact-categories .category-button:hover {
+    background: var(--bg-color-sidebar-wrapper);
+    border-color: var(--border-color-medium);
+}
+.dark-mode .contact-categories .category-button.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: var(--text-color-light);
+}
+
+/* Czat w dark mode */
+.dark-mode .chat-area,
+.dark-mode .logo-screen {
+    background-color: var(--bg-color-chat-messages);
+    color: var(--text-color-dark);
+}
+/* Tła czatu w dark mode */
+.dark-mode .messages {
+    background-color: var(--bg-color-chat-messages);
+}
+.dark-mode .messages.dark-bg {
+    background-color: #0d0d1e;
+}
+.dark-mode .messages.pattern-bg {
+    background-image: url('data:image/svg+xml;utf8,<svg width="10" height="10" viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"><circle cx="2.5" cy="2.5" r="1.5" fill="%23404040"/></svg>');
+    background-size: 10px 10px;
+    background-color: var(--bg-color-chat-messages);
+}
+
+/* Wiadomości w dark mode */
+.dark-mode .message {
+    background-color: var(--bg-color-message-received);
+    color: var(--text-color-light);
+}
+.dark-mode .message.sent {
+    background-color: var(--primary-color);
+}
+.dark-mode .message::before {
+    border-color: transparent var(--bg-color-message-received) transparent transparent;
+}
+.dark-mode .message.sent::before {
+    border-color: transparent transparent transparent var(--primary-color);
+}
+.dark-mode .timestamp {
+    color: var(--text-color-medium);
+}
+.dark-mode .message.sent .timestamp {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Stylowanie wiadomości w zależności od motywu w dark mode */
+.dark-mode .messages.blue-theme .message.sent {
+    background: #3b82f6;
+}
+.dark-mode .messages.green-theme .message.sent {
+    background: #10b981;
+}
+.dark-mode .messages.red-theme .message.sent {
+    background: #ef4444;
+}
+
+.dark-mode .messages.blue-theme .message.sent::before {
+    border-color: transparent transparent transparent #3b82f6;
+}
+.dark-mode .messages.green-theme .message.sent::before {
+    border-color: transparent transparent transparent #10b981;
+}
+.dark-mode .messages.red-theme .message.sent::before {
+    border-color: transparent transparent transparent #ef4444;
+}
+
+/* Link Preview w dark mode */
+.dark-mode .link-preview-message {
+    background: var(--bg-color-sidebar);
+    border-color: var(--border-color-medium);
+}
+.dark-mode .link-preview-message::before {
+    border-color: transparent var(--bg-color-sidebar) transparent transparent;
+}
+.dark-mode .link-preview-message.sent {
+    background: var(--bg-color-search-input);
+    border-color: var(--border-color-medium);
+}
+.dark-mode .link-preview-message.sent::before {
+    border-color: transparent transparent transparent var(--bg-color-search-input);
+}
+.dark-mode .link-preview-icon {
+    background: var(--bg-color-search-input);
+    color: var(--primary-color);
+}
+.dark-mode .link-preview-title {
+    color: var(--text-color-dark);
+}
+.dark-mode .link-preview-description {
+    color: var(--text-color-medium);
+}
+
+/* Animacja ładowania w dark mode */
+.dark-mode .typing-indicator {
+    background: var(--bg-color-search-input);
+}
+.dark-mode .typing-indicator .dot {
+    background-color: var(--text-color-medium);
+}
+
+/* Pole wpisywania wiadomości w dark mode */
+.dark-mode .chat-footer input {
+    background-color: var(--bg-color-search-input);
+    border: 1px solid var(--border-color-medium);
+    color: var(--text-color-dark);
+}
+.dark-mode .chat-footer input::placeholder {
+    color: var(--text-color-medium);
+}
+
+/* Przyciski w dark mode */
+.dark-mode .chat-footer button {
+    background-color: var(--primary-color);
+    color: var(--text-color-light);
+}
+.dark-mode .chat-footer button:disabled {
+    background-color: var(--border-color-medium);
+    color: var(--text-color-medium);
+}
+.dark-mode .chat-footer .attach-button,
+.dark-mode .chat-footer .emoji-button {
+    color: var(--text-color-medium);
+}
+.dark-mode .chat-footer .attach-button:hover,
+.dark-mode .chat-footer .emoji-button:hover {
+    color: var(--primary-color);
+}
+
+/* Dropdown w dark mode */
+.dark-mode .dropdown #themeToggle,
+.dark-mode .dropdown #logoutButton {
+    background: none;
+    color: var(--text-color-dark);
+}
+.dark-mode .dropdown #themeToggle i,
+.dark-mode .dropdown #logoutButton i {
+    color: var(--text-color-medium);
+}
+.dark-mode .dropdown #themeToggle:hover,
+.dark-mode .dropdown #logoutButton:hover {
+    background: var(--bg-color-search-input);
+    color: var(--text-color-dark);
+}
+
+/* NOWE: Modale w trybie ciemnym */
+.dark-mode .modal-content {
+    background-color: var(--bg-color-modal-content);
+}
+
+.dark-mode .modal-content h2,
+.dark-mode .modal-section h3 {
+    color: var(--text-color-dark);
+}
+
+.dark-mode .close-button {
+    color: var(--text-color-medium);
+}
+.dark-mode .close-button:hover,
+.dark-mode .close-button:focus {
+    color: var(--text-color-light);
+}
+
+.dark-mode .modal-section input {
+    background-color: var(--bg-color-search-input);
+    border-color: var(--border-color-medium);
+    color: var(--text-color-dark);
+}
+.dark-mode .modal-section input::placeholder {
+    color: var(--text-color-medium);
+}
+
+.dark-mode .modal-section #sendFriendRequestButton {
+    background-color: var(--primary-color);
+    color: var(--text-color-light);
+}
+.dark-mode .modal-section #sendFriendRequestButton:hover {
+    background-color: var(--primary-color-dark);
+}
+
+.dark-mode .status-message {
+    color: var(--text-color-medium);
+}
+
+.dark-mode .friend-request-item {
+    border-color: var(--border-color-medium);
+}
+.dark-mode .friend-request-item .request-info {
+    color: var(--text-color-dark);
+}
+.dark-mode .friend-request-item .request-info .request-time {
+    color: var(--text-color-medium);
+}
+
+.dark-mode .friend-request-item .accept-button {
+    background-color: var(--color-success);
+    color: white;
+}
+.dark-mode .friend-request-item .accept-button:hover {
+    background-color: var(--secondary-color-dark);
+}
+
+.dark-mode .friend-request-item .reject-button {
+    background-color: var(--color-error);
+    color: white;
+}
+.dark-mode .friend-request-item .reject-button:hover {
+    background-color: #d32f2f;
+}
+
+
+/* Media Queries dla responsywności */
+@media (max-width: 1024px) {
+    .container {
+        margin: 0.5rem;
+        border-radius: 12px;
+        box-shadow: var(--shadow-medium);
+    }
+    .sidebar-wrapper, .chat-area-wrapper, .right-sidebar-wrapper {
+        border-radius: 0 !important;
+    }
+    .main-nav-icons {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+    }
+
+    .sidebar-wrapper {
+        min-width: 250px;
+        width: 30%;
+        max-width: 300px;
+    }
+
+    .right-sidebar-wrapper {
+        min-width: 220px;
+        width: 25%;
+        max-width: 350px;
+        display: flex !important;
+    }
+}
+
+@media (max-width: 768px) {
+    body {
+        overflow: hidden;
+    }
+
+    .main-header {
+        padding: 0.8rem 1rem;
+    }
+    .app-title {
+        font-size: 1.2rem;
+    }
+    .user-menu button {
+        font-size: 1.1rem;
+    }
+
+    .container {
+        flex-direction: column;
+        margin: 0;
+        border-radius: 0;
+        box-shadow: none;
+        height: 100%; /* Zmieniono z auto na 100% */
+        min-height: auto; /* Zmieniono z 100vh na auto, aby nie kolidowało z paskiem adresu */
+        position: relative;
+    }
+
+    /* Sidebar Wrapper - widoczny domyślnie na mobile, zajmuje 100% szerokości i wysokości */
+    .sidebar-wrapper {
+        min-width: unset;
+        max-width: unset !important;
+        width: 100%;
+        flex-direction: column;
+        height: 100%;
+        border-right: none;
+        display: flex;
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 200;
+    }
+
+    /* Klasa do ukrywania sidebar-wrapper na mobile, gdy czat jest aktywny */
+    .sidebar-wrapper.hidden-on-mobile {
+        display: none;
+    }
+
+    .main-nav-icons {
+        flex-direction: row;
+        padding: 0.5rem;
+        gap: 1rem;
+        border-right: none;
+        border-bottom: 1px solid var(--primary-color-light);
+        width: 100%;
+        justify-content: space-around;
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+        height: auto;
+        flex-shrink: 0;
+    }
+    .main-nav-icons .add-new-button {
+        margin-top: 0;
+    }
+
+    /* Aktywni użytkownicy na mobile - widoczni, gdy sidebar-wrapper jest widoczny */
+    .online-users-mobile {
+        display: flex;
+        flex-direction: row;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 0.8rem 1rem;
+        border-bottom: 1px solid var(--border-color-light);
+        background: var(--bg-color-sidebar);
+        flex-shrink: 0;
+        gap: 0.8rem;
+        scroll-snap-type: x mandatory;
+    }
+
+    /* Style dla pojedynczego użytkownika w mobilnej liście online */
+    .online-users-mobile .online-user-item-mobile {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.3rem;
+        flex-shrink: 0;
+        min-width: 60px;
+        text-align: center;
+        cursor: pointer;
+    }
+    .online-users-mobile .online-user-item-mobile .avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid var(--color-online);
+        flex-shrink: 0;
+    }
+    .online-users-mobile .online-user-item-mobile .username {
+        font-size: 0.75rem;
+        color: var(--text-color-dark);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+    }
+
+    #sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color-light);
+        padding-top: 0.5rem;
+        flex-grow: 1;
+        min-height: 0;
+    }
+
+    /* Chat Area Wrapper - ukryty domyślnie, staje się widoczny i pełnoekranowy po aktywacji czatu */
+    .chat-area-wrapper {
+        flex-grow: 1;
+        width: 100%;
+        height: 100%; /* Zapewnia, że wrapper zajmuje całą dostępną wysokość */
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 210;
+        display: none;
+        flex-direction: column;
+    }
+
+    /* Klasa do pokazywania chat-area-wrapper na mobile */
+    .chat-area-wrapper.active-on-mobile {
+        display: flex;
+    }
+
+    .logo-screen {
+        display: none !important;
+    }
+
+    .chat-area {
+        height: 100%; /* Czat zajmuje całą dostępną wysokość w swoim flex-container */
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Kluczowe zmiany dla .chat-main-view, aby poprawnie zarządzać przestrzenią */
+    .chat-main-view {
+        display: flex;
+        flex-direction: column;
+        flex: 1; /* Pozwoli mu zająć dostępną przestrzeń */
+        height: 100%; /* Ważne, aby zawartość w nim poprawnie się układała */
+    }
+
+    .chat-header .back-button {
+        display: block;
+    }
+
+    .chat-header {
+        padding: 0.6rem 0.8rem;
+        gap: 0.6rem;
+    }
+
+    .chat-header-actions {
+        gap: 0.5rem;
+    }
+
+    .chat-header-actions button {
+        padding: 0.3rem;
+    }
+
+    .right-sidebar-wrapper {
+        display: none !important;
+    }
+
+    .app-title {
+        font-size: 1.3rem;
+    }
+    .user-menu button {
+        font-size: 1.3rem;
+        padding: 0.3rem;
+    }
+    .search-bar input {
+        padding: 0.6rem 1rem 0.6rem 2.5rem;
+        font-size: 0.85rem;
+    }
+    .contact {
+        padding: 0.6rem;
+    }
+    .contact-name {
+        font-size: 0.95rem;
+    }
+    .last-message {
+        font-size: 0.8rem;
+    }
+    .chat-footer {
+        padding: 0.6rem 0.8rem;
+        flex-shrink: 0; /* Zapobiega kurczeniu się stopki */
+    }
+    .chat-footer button {
+        font-size: 1.3rem;
+        padding: 0.3rem;
+    }
+    .chat-footer input {
+        padding: 0.6rem 0.8rem;
+        font-size: 0.9rem;
+        margin: 0 5px;
+    }
+
+    .chat-settings-dropdown {
+        width: auto !important; /* Dopasuj szerokość do zawartości */
+        max-width: min(400px, 90vw) !important; /* Ograniczenie szerokości na mobile */
+        top: 100%; /* Pokaż pod nagłówkiem */
+        right: 0;
+        left: auto; /* Domyślnie po prawej */
+        z-index: 220; /* Wyżej niż czat */
+    }
+}
+
+/* GLOBALNA REGUŁA: Ukryj na desktopie, domyślnie */
+.online-users-mobile {
+    display: none;
+}
+
+body.auth-body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: var(--bg-color-light);
+    font-family: 'Segoe UI', sans-serif;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+/* Kontener główny formularza (Login/Rejestracja) */
+.auth-container {
+    background: var(--bg-color-container);
+    padding: 2.5rem;
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    width: 100%;
+    max-width: 400px;
+    margin: 20px;
+}
+
+/* Nagłówki h2 w kontenerach autoryzacji */
+.auth-container h2 {
+    font-size: 1.8rem;
+    color: var(--primary-color);
+    margin-bottom: 1.5rem;
+}
+
+/* Formularz autoryzacji (Login/Rejestracja) */
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Pola input w formularzach autoryzacji */
+.auth-form input {
+    padding: 0.8rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color-medium);
+    background: var(--bg-color-input);
+    font-size: 0.95rem;
+    color: var(--text-color-dark);
+    outline: none;
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+.auth-form input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(106, 90, 205, 0.2);
+}
+.auth-form input::placeholder {
+    color: var(--text-color-medium);
+}
+
+/* Wrapper dla pola hasła (dla ikonki oka) */
+.password-wrapper {
+    position: relative;
+}
+
+/* Styl ikonki oka w polu hasła */
+.password-wrapper .eye {
+    position: absolute;
+    right: 0px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: var(--text-color-medium);
+    font-size: 1.1rem;
+    transition: color 0.2s;
+}
+.password-wrapper .eye:hover {
+    color: var(--text-color-dark);
+}
+
+/* Przycisk logowania/rejestracji */
+.login-btn {
+    padding: 0.8rem;
+    background: var(--primary-color);
+    border: none;
+    border-radius: 8px;
+    color: var(--text-color-light);
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s ease-in-out;
+}
+.login-btn:hover {
+    background: var(--primary-color-dark);
+}
+
+/* Link do przełączania między logowaniem a rejestracją */
+.switch-link {
+    margin-top: 1.5rem;
+    font-size: 0.9rem;
+    color: var(--text-color-dark);
+}
+.switch-link a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: bold;
+    transition: color 0.2s;
+}
+.switch-link a:hover {
+    color: var(--primary-color-dark);
+}

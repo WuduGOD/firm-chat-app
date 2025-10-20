@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Komunikator</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="./src/style.css" />
+</head>
+<body>
+
+  <header class="main-header" id="mainHeader"> <h1 class="app-title">🐒 Komunikator</h1>
+  
+      <!-- PRZYCISK DO WLACZANIA DZIEKOW - PRZYWRÓCONY -->
+    <button id="enableSoundButton" class="hidden enable-sound-button">
+        <i class="fas fa-volume-up"></i> Włącz dźwięki
+    </button>
+	
+    <div class="user-menu">
+      <!-- NOWY PRZYCISK: Dodaj znajomego -->
+      <button id="addFriendButton" class="icon-button" title="Dodaj znajomego">
+          <i class="fas fa-user-plus"></i>
+      </button>
+      <!-- NOWY PRZYCISK: Powiadomienia o zaproszeniach -->
+      <button id="notificationButton" class="icon-button" title="Powiadomienia">
+          <i class="fas fa-bell"></i>
+          <span id="notificationCount" class="notification-count hidden">0</span>
+      </button>
+      <button id="menuButton" aria-haspopup="true" aria-expanded="false">
+        <i class="fas fa-bars"></i>
+      </button>
+      <div id="dropdownMenu" class="dropdown hidden">
+        <button id="themeToggle" title="Tryb dzień/noc">
+          <i class="fas fa-moon"></i> Tryb ciemny
+        </button>
+        <button id="logoutButton">Wyloguj się</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <aside class="sidebar-wrapper">
+      <div class="main-nav-icons">
+        <button class="nav-icon active" data-tooltip="Wszystkie" title="Wszystkie"><i class="fas fa-list-ul"></i></button>
+        <button class="nav-icon" data-tooltip="Rozmowy" title="Rozmowy"><i class="fas fa-comments"></i></button>
+        <button class="nav-icon" data-tooltip="Grupy" title="Grupy"><i class="fas fa-users"></i></button>
+        <button class="nav-icon add-new-button" data-tooltip="Dodaj nowy kontakt/grupę"><i class="fas fa-plus"></i></button>
+      </div>
+
+      <div class="online-users-mobile" id="onlineUsersMobile">
+        <!-- Aktywni użytkownicy będą ładowani tutaj dynamicznie na mobile -->
+      </div>
+      
+      <div id="sidebar" class="conversations-list">
+        <h2>Konwersacje</h2>
+        <div class="search-bar">
+            <input type="text" id="sidebarSearchInput" placeholder="Szukaj..." />
+            <i class="fas fa-search search-icon"></i>
+        </div>
+
+        <ul id="contactsList">
+          <!-- Konwersacje będą ładowane tutaj dynamicznie -->
+        </ul>
+      </div>
+    </aside>
+
+    <div class="chat-area-wrapper">
+      <section class="logo-screen" id="logoScreen">
+        <h2>Witaj w Komunikatorze!</h2>
+        <p>Wybierz konwersację z listy po lewej, aby rozpocząć czat.</p>
+      </section>
+
+      <section class="chat-area" id="chatArea">
+        <header class="chat-header">
+          <button id="backButton" class="back-button"><i class="fas fa-arrow-left"></i></button>
+          <div class="chat-user-info">
+            <h3 id="chatUserName"></h3>
+            <span id="userStatus" class="status"></span>
+          </div>
+          <div class="chat-header-actions right-aligned">
+            <button id="chatSettingsButton" class="icon-button" title="Ustawienia czatu">
+              <i class="fas fa-cog"></i>
+            </button>
+            <div id="chatSettingsDropdown" class="dropdown chat-settings-dropdown hidden">
+              <div class="dropdown-section">
+                <span>Kolor czatu:</span>
+                <div class="color-options">
+                  <span class="color-box default-color active" data-color="default" title="Domyślny"></span>
+                  <span class="color-box blue-color" data-color="blue" title="Niebieski"></span>
+                  <span class="color-box green-color" data-color="green" title="Zielony"></span>
+                  <span class="color-box red-color" data-color="red" title="Czerwony"></span>
+                </div>
+              </div>
+              <div class="dropdown-section">
+                <span>Tło czatu:</span>
+                <div class="bg-options">
+                  <span class="bg-box default-bg active" data-bg="default" title="Domyślne"></span>
+                  <span class="bg-box dark-bg" data-bg="dark-bg" title="Ciemne"></span>
+                  <span class="bg-box pattern-bg" data-bg="pattern-bg" title="Wzór"></span>
+                </div>
+              </div>
+              <div class="dropdown-section">
+                <label for="nicknameInput">Twój pseudonim:</label>
+                <input type="text" id="nicknameInput" placeholder="Wpisz pseudonim" />
+                <button id="setNicknameButton">Ustaw</button>
+              </div>
+              <div class="dropdown-section">
+                <label for="messageSearchInput">Szukaj w wiadomościach:</label>
+                <input type="text" id="messageSearchInput" placeholder="Wpisz szukaną frazę" />
+                <button id="searchMessagesButton">Szukaj</button>
+            </div>
+          </div>
+          <div id="typingStatus" class="typing-status hidden"></div>
+        </header>
+
+        <div id="messageContainer" class="messages"> </div>
+
+        <div class="typing-indicator hidden" id="typingIndicator">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+
+        <div class="chat-footer">
+          <button class="attach-button" title="Dołącz plik"><i class="fas fa-paperclip"></i></button>
+          <input id="messageInput" type="text" placeholder="Wpisz wiadomość..." disabled />
+          <button class="emoji-button" title="Dodaj emoji"><i class="fas fa-smile"></i></button>
+          <button id="sendButton" disabled>Wyślij</button>
+        </div>
+      </section>
+    </div>
+
+    <aside class="right-sidebar-wrapper">
+        <div class="right-sidebar" id="rightSidebar">
+            <h4>Aktywni użytkownicy</h4>
+            <ul class="active-users-list" id="activeUsersList">
+                </ul>
+            <div id="noActiveUsersText" class="no-active-users-message" style="display: none; text-align: center; color: var(--text-color-medium); font-size: 0.9em; margin-top: 10px;">Brak aktywnych użytkowników.</div>
+        </div>
+    </aside>
+  </div>
+
+  <!-- Niestandardowy komunikat (zastępuje alert) -->
+  <div id="customMessageBox" class="custom-message-box hidden"></div>
+
+  <!-- NOWY MODAL: Dodaj znajomego / Przyjmij zaproszenie -->
+  <div id="friendRequestModal" class="modal hidden">
+    <div class="modal-content">
+      <span class="close-button" id="closeFriendRequestModal">&times;</span>
+      <h2>Zaproszenia do znajomych</h2>
+      <div class="modal-section" id="sendFriendRequestSection">
+        <h3>Wyślij zaproszenie</h3>
+        <input type="email" id="friendEmailInput" placeholder="Adres e-mail znajomego" />
+        <button id="sendFriendRequestButton">Wyślij zaproszenie</button>
+        <p id="sendRequestStatus" class="status-message"></p>
+      </div>
+      <div class="modal-section" id="pendingRequestsSection">
+        <h3>Oczekujące zaproszenia</h3>
+        <ul id="pendingFriendRequestsList" class="friend-requests-list">
+          <!-- Zaproszenia będą ładowane tutaj dynamicznie -->
+        </ul>
+        <p id="noPendingRequestsText" class="status-message hidden">Brak oczekujących zaproszeń.</p>
+      </div>
+    </div>
+  </div>
+    
+<div id="createGroupModalNew" class="app-modal app-modal-hidden">
+    <div class="app-modal-content">
+        <span class="app-modal-close" id="closeCreateGroupModalNew">&times;</span>
+        <h2>Stwórz nową grupę</h2>
+        <div class="app-modal-section">
+            <label for="groupNameInputNew">Nazwa grupy:</label>
+            <input type="text" id="groupNameInputNew" placeholder="Wpisz nazwę grupy" />
+        </div>
+        <div class="app-modal-section">
+            <h3>Dodaj znajomych do grupy</h3>
+            <ul id="friendsListNew" class="friends-list-new">
+                </ul>
+        </div>
+        <div class="app-modal-footer">
+            <button id="createGroupButtonNew">Stwórz grupę</button>
+        </div>
+    </div>
+</div>
+
+  <script type="module" src="./src/chat.js"></script>
+</body>
+</html>

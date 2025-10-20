@@ -1,0 +1,10 @@
+# Node.js
+node_modules/
+.env
+
+# Systemowe
+.DS_Store
+Thumbs.db
+
+# VSCode
+.vscode/
