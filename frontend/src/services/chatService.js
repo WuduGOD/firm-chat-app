@@ -182,10 +182,14 @@ export async function handleConversationClick(user, clickedConvoItemElement) {
 
         resetChatView();
 		
+		const isGroup = user.type === 'group';
+		const chatName = isGroup ? user.name : (getUserLabelById(user.id) || user.email);
+
 		const newChatUser = {
 			id: user.id,
-			username: getUserLabelById(user.id) || user.email,
-			email: user.email,
+			username: chatName,
+			email: isGroup ? null : user.email, // Ustawiamy email na null dla grup
+			type: user.type 
 		};
 
         setCurrentChatUser(newChatUser);
