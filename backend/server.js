@@ -216,27 +216,31 @@ wss.on('connection', (ws) => {
                 }
                 console.timeEnd(`getLastMessagesForUserRooms_total_time_${userData.userId}`); // End total timer
             }
-            else if (data.type === 'status') { // Ten typ wiadomości służy do aktualizacji globalnego statusu
-                const userId = data.user;
-                const isOnline = data.online;
-                const lastSeenTimestamp = data.last_seen; // Odbierz last_seen z klienta
+			else if (data.type === 'status') {
+				const userId = data.user;
+				const isOnline = data.online;
 
-                // Upewniamy się, że userData jest zawsze aktualne dla tego połączenia
-                if (!userData.userId) { // Jeśli userId nie było ustawione, ustaw je
-                    userData.userId = userId;
-                    clients.set(ws, userData);
-                     // DODANO: Dodaj połączenie WS do mapy userIdToSockets dla nowo ustawionego userId
-                    if (!userIdToSockets.has(userData.userId)) {
-                        userIdToSockets.set(userData.userId, new Set());
-                    }
-                    userIdToSockets.get(userData.userId).add(ws);
-                    console.log(`User ${userData.userId} (from status message) now has ${userIdToSockets.get(userData.userId).size} active connections.`);
-                }
-                
-                await updateProfileStatus(userId, isOnline);
-                console.log(`User ${userId} status updated to ${isOnline}. (from 'status' message)`);
+				if (!userData.userId) {
+					userData.userId = userId;
+					clients.set(ws, userData);
+					if (!userIdToSockets.has(userData.userId)) {
+						userIdToSockets.set(userData.userId, new Set());
+					}
+					userIdToSockets.get(userData.userId).add(ws);
+				}
+    
+				await updateProfileStatus(userId, isOnline);
+				console.log(`User ${userId} status updated to ${isOnline}. (from 'status' message)`);
 
-            }
+				// Natychmiast rozgłoś nowy status do wszystkich
+				const statusUpdateMsg = {
+					type: 'status',
+					user: userId,
+					online: isOnline,
+					last_seen: isOnline ? null : new Date().toISOString()
+				};
+				broadcastToAll(JSON.stringify(statusUpdateMsg));
+			}
             else {
                 console.warn('Unhandled message type or missing userData.userId:', data);
             }
@@ -262,9 +266,21 @@ wss.on('connection', (ws) => {
             }
             
             // Tylko jeśli użytkownik nie ma innych aktywnych połączeń, ustawiamy go na offline
-            if (!userIdToSockets.has(userData.userId) || userIdToSockets.get(userData.userId).size === 0) {
-                await updateProfileStatus(userData.userId, false); // Zaktualizuj bazę danych na offline
-                console.log(`User ${userData.userId} disconnected. Database status updated to offline.`);
+			if (!userIdToSockets.has(userData.userId) || userIdToSockets.get(userData.userId).size === 0) {
+				await updateProfileStatus(userData.userId, false);
+				console.log(`User ${userData.userId} disconnected. Database status updated to offline.`);
+
+				const lastSeen = new Date().toISOString();
+
+				// Natychmiast rozgłoś status offline do wszystkich pozostałych
+				const statusUpdateMsg = {
+					type: 'status',
+					user: userData.userId,
+					online: false,
+					last_seen: lastSeen
+				};
+				broadcastToAll(JSON.stringify(statusUpdateMsg));
+			}
                 // Pobierz last_seen_at z bazy danych dla użytkownika, który właśnie stał się offline
                 const client = await pool.connect();
                 try {
@@ -620,4 +636,15 @@ async function getLastMessages(roomId, limit = 50) {
         console.error('DB Error: Failed to get message history:', err);
         return [];
     }
+}
+
+function broadcastToAll(msg) {
+    let sentCount = 0;
+    for (const client of wss.clients) {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(msg);
+            sentCount++;
+        }
+    }
+    console.log(`Broadcasted message to all ${sentCount} clients.`);
 }
