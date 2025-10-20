@@ -280,17 +280,7 @@ wss.on('connection', (ws) => {
 					last_seen: lastSeen
 				};
 				broadcastToAll(JSON.stringify(statusUpdateMsg));
-			}
-                // Pobierz last_seen_at z bazy danych dla użytkownika, który właśnie stał się offline
-                const client = await pool.connect();
-                try {
-                    const res = await client.query('SELECT last_seen_at FROM public.profiles WHERE id = $1', [userData.userId]);
-                    const lastSeen = res.rows.length > 0 ? res.rows[0].last_seen_at : null;
-                } catch (err) {
-                    console.error('DB Error on close: Failed to get last_seen_at for broadcast:', err);
-                } finally {
-                    client.release();
-                }
+
             } else {
                 console.log(`User ${userData.userId} disconnected one session, but still has ${userIdToSockets.get(userData.userId).size} active connections.`);
             }
