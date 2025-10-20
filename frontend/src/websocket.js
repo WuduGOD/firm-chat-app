@@ -30,11 +30,7 @@ export function initWebSocket() {
                 // Dołącz do globalnego kanału i wyślij status online
                 socket.send(JSON.stringify({ type: 'join', room: 'global' }));
                 socket.send(JSON.stringify({ type: 'status', user: currentUser.id, online: true }));
-<<<<<<< HEAD
-
-=======
                 
->>>>>>> 8116ef1e32e8234c693d1d1151b38d4fc8630c5f
                 // Jeśli byliśmy w jakimś pokoju, dołącz do niego ponownie
                 if (currentRoom && currentRoom !== 'global') {
                     socket.send(JSON.stringify({ type: 'join', room: currentRoom }));
@@ -53,10 +49,6 @@ export function initWebSocket() {
                 // Centralny router dla wiadomości z serwera
                 switch (data.type) {
                     case 'message':
-<<<<<<< HEAD
-                        addMessageToChat(data);
-=======
->>>>>>> 8116ef1e32e8234c693d1d1151b38d4fc8630c5f
 						if (String(data.username) !== String(currentUser.id)) {
 							addMessageToChat(data);
 						}
@@ -96,11 +88,7 @@ export function initWebSocket() {
 				// Używamy funkcji-settera do zmiany wartości
 				const newAttemptCount = reconnectAttempts + 1;
 				setReconnectAttempts(newAttemptCount);
-<<<<<<< HEAD
-
-=======
         
->>>>>>> 8116ef1e32e8234c693d1d1151b38d4fc8630c5f
 				setTimeout(() => initWebSocket(), Math.min(1000 * newAttemptCount, 10000));
 			}
 		};
@@ -109,9 +97,5 @@ export function initWebSocket() {
             console.error('[WebSocket] Błąd:', error);
             reject(error);
         };
-<<<<<<< HEAD
-    });
-=======
     });
 }
->>>>>>> 8116ef1e32e8234c693d1d1151b38d4fc8630c5f
