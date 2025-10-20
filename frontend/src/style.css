@@ -439,6 +439,7 @@ body {
     height: 7px;
     border-radius: 50%;
 	margin-right: 6px;
+	transform: translateY(-1px);
 }
 #userStatus.online::before {
     background-color: var(--color-online);
