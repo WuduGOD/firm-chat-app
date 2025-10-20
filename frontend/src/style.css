@@ -431,7 +431,6 @@ body {
     color: var(--text-color-medium);
     display: flex;
     align-items: center;
-    gap: 5px;
 }
 #userStatus::before {
     content: '';
@@ -439,6 +438,7 @@ body {
     width: 7px;
     height: 7px;
     border-radius: 50%;
+	margin-right: 6px;
 }
 #userStatus.online::before {
     background-color: var(--color-online);
