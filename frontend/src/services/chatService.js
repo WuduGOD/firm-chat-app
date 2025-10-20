@@ -6,143 +6,82 @@ import { getUserLabelById } from '../profiles.js';
 import { formatTimeAgo, showCustomMessage, playNotificationSound, updateDocumentTitle } from '../ui/helpers.js';
 import { loadContacts, updateConversationPreview, renderActiveUsersList } from './friendsService.js';
 import { onlineUsers, currentChatUser, allFriends, currentUser, unreadConversationsInfo, currentActiveConvoItem, setCurrentActiveConvoItem, setCurrentChatUser, setCurrentRoom, socket, currentRoom, notificationPermissionGranted, typingTimeout } from '../chat.js';
-import { messageContainer, activeUsersListEl, contactsListEl, chatAreaWrapper, userStatusSpan, typingStatusHeader, typingIndicatorMessages } from '../ui/elements.js';
 
 /**
- * Resets the chat view to its initial state (clears messages, disables input)
- * Does NOT control visibility of logoScreen or chatArea. Those are handled by calling functions.
+ * Resets the chat view to its initial state.
  */
 export function resetChatView() {
-    console.log("[resetChatView] Resetting chat view (clearing content, not visibility)...");
     if (elements.messageContainer) {
-        elements.messageContainer.innerHTML = ""; // Clear messages
-        // Remove all theme classes for messages container 
-        elements.messageContainer.classList.remove('blue-theme', 'green-theme', 'red-theme', 'dark-bg', 'pattern-bg');
-    } else {
-        console.warn("[resetChatView] messageContainer not found during reset.");
+        elements.messageContainer.innerHTML = "";
+        elements.messageContainer.className = 'messages';
     }
-
     if (elements.messageInput) {
-        elements.messageInput.disabled = true; // Disable input
-        elements.messageInput.value = ""; // Clear input value
-    } else {
-        console.warn("[resetChatView] messageInput not found during reset.");
+        elements.messageInput.disabled = true;
+        elements.messageInput.value = "";
     }
     if (elements.sendButton) {
-        elements.sendButton.disabled = true; // Disable send button
-    } else {
-        console.warn("[resetChatView] sendButton not found during reset.");
+        elements.sendButton.disabled = true;
     }
     if (elements.chatUserName) {
-        elements.chatUserName.textContent = ""; // Clear chat user name
-    } else {
-        console.warn("[resetChatView] chatUserName not found during reset.");
+        elements.chatUserName.textContent = "";
     }
     if (elements.userStatusSpan) {
-        elements.userStatusSpan.textContent = ""; // Clear user status
-        elements.userStatusSpan.classList.remove('online', 'offline'); // Remove status classes
-    } else {
-        console.warn("[resetChatView] userStatusSpan not found during reset.");
+        elements.userStatusSpan.textContent = "";
+        elements.userStatusSpan.className = 'status';
     }
-    if (elements.typingStatusHeader) { // Status w nagłówku
-        elements.typingStatusHeader.classList.add('hidden'); // Hide typing indicator
-        elements.typingStatusHeader.textContent = ''; // Clear text
-    } else {
-        console.warn("[resetChatView] typingStatusHeader not found during reset.");
+    if (elements.typingStatusHeader) {
+        elements.typingStatusHeader.classList.add('hidden');
+        elements.typingStatusHeader.textContent = '';
     }
-    if (elements.typingIndicatorMessages) { // Animowane kropki w wiadomościach
-        elements.typingIndicatorMessages.classList.add('hidden'); // Hide typing indicator
-    } else {
-        console.warn("[resetChatView] typingIndicatorMessages not found during reset.");
+    if (elements.typingIndicatorMessages) {
+        elements.typingIndicatorMessages.classList.add('hidden');
     }
 
-    setCurrentChatUser(null); // Reset current chat user
-    setCurrentRoom(null); // Reset current room
-    console.log("[resetChatView] currentChatUser and currentRoom reset to null.");
+    setCurrentChatUser(null);
+    setCurrentRoom(null);
 
-    // Remove active state from conversation item if any
     if (currentActiveConvoItem) {
-        currentActiveConvoItem.classList.remove('active'); // Deactivate active conversation item
+        currentActiveConvoItem.classList.remove('active');
         setCurrentActiveConvoItem(null);
-        console.log("[resetChatView] currentActiveConvoItem deactivated.");
     }
-
     if (elements.chatSettingsDropdown) {
-        elements.chatSettingsDropdown.classList.add('hidden'); // Hide chat settings dropdown
-        console.log("[resetChatView] chatSettingsDropdown hidden.");
-    } else {
-        console.warn("[resetChatView] chatSettingsDropdown not found during reset.");
+        elements.chatSettingsDropdown.classList.add('hidden');
     }
 }
 
-/**
- * Generates a unique chat room name based on two user IDs, sorted alphabetically.
- * @param {string} user1Id - ID of the first user.
- * @param {string} user2Id - ID of the second user.
- * @returns {string} The chat room name.
- */
 export function getRoomName(user1Id, user2Id) {
     return [String(user1Id), String(user2Id)].sort().join('_');
 }
 
-/**
- * Fetches the entire message history for a given room.
- * @param {string} roomId - The ID of the room.
- * @returns {Promise<Array<Object>>} An array of message objects, sorted oldest to newest.
- */
 export async function fetchMessageHistory(roomId) {
-    console.log(`[fetchMessageHistory] Fetching history for room: ${roomId}`);
     try {
-        // Assume a maximum limit for history to prevent excessive data transfer
-        const limit = 50;
         const { data, error } = await supabase
             .from('messages')
             .select('content, sender_id, created_at, room_id')
             .eq('room_id', roomId)
-            .order('created_at', { ascending: true }) // Ascending for history display
-            .limit(limit);
-
-        if (error) {
-            console.error('[fetchMessageHistory] Error fetching message history:', error.message, error.details, error.hint);
-            return [];
-        }
-
-        if (data) {
-            console.log(`[fetchMessageHistory] Fetched ${data.length} messages for room ${roomId}.`);
-            // Map database columns to frontend expected properties
-            return data.map(msg => ({
-                text: msg.content,
-                username: msg.sender_id,
-                inserted_at: msg.created_at,
-                room: msg.room_id
-            }));
-        }
-        return [];
+            .order('created_at', { ascending: true })
+            .limit(50);
+        if (error) throw error;
+        return data.map(msg => ({
+            text: msg.content,
+            username: msg.sender_id,
+            inserted_at: msg.created_at,
+            room: msg.room_id
+        }));
     } catch (e) {
-        console.error("Caught error in fetchMessageHistory:", e);
+        console.error("Błąd w fetchMessageHistory:", e);
         return [];
     }
 }
 
-/**
- * Sorts conversations by the timestamp of their last message (most recent first).
- * @param {Array<Object>} conversations - Array of conversation objects.
- * @returns {Array<Object>} Sorted array of conversations.
- */
 export function sortConversations(conversations) {
     return [...conversations].sort((a, b) => {
         const timeA = a.lastMessage ? new Date(a.lastMessage.inserted_at) : new Date(0);
         const timeB = b.lastMessage ? new Date(b.lastMessage.inserted_at) : new Date(0);
-        return timeB.getTime() - timeA.getTime();
+        return timeB - timeA;
     });
 }
 
-/**
- * Handles a click event on a conversation item.
- * Sets up the chat view for the selected user and joins the chat room.
- * @param {Object} user - The user object of the selected contact.
- * @param {HTMLElement} clickedConvoItemElement - The clicked list item element.
- */
 export async function handleConversationClick(convoData, clickedConvoItemElement, convoType = 'private') {
     try {
         if (currentActiveConvoItem) {
@@ -162,9 +101,6 @@ export async function handleConversationClick(convoData, clickedConvoItemElement
 
         if (elements.logoScreen) elements.logoScreen.classList.add('hidden');
         if (elements.chatArea) elements.chatArea.classList.add('active');
-        if (elements.backButton && window.matchMedia('(max-width: 768px)').matches) {
-            elements.backButton.style.display = 'block';
-        }
 
         resetChatView();
 
@@ -176,28 +112,26 @@ export async function handleConversationClick(convoData, clickedConvoItemElement
             newRoom = getRoomName(String(currentUser.id), String(user.id));
             chatName = getUserLabelById(user.id) || user.email;
             setCurrentChatUser({ id: user.id, username: chatName, email: user.email });
-        } else { // Dla grupy
+        } else {
             const group = convoData;
             newRoom = group.id;
             chatName = group.name;
-            // Dla grup, currentChatUser może być obiektem grupy
             setCurrentChatUser({ id: group.id, username: chatName, isGroup: true });
         }
 
         setCurrentRoom(newRoom);
 
         if (elements.chatUserName) elements.chatUserName.textContent = chatName;
-        // Tutaj można dodać logikę statusu online dla rozmów 1-1
+
         if (convoType === 'private' && elements.userStatusSpan) {
             const userStatus = onlineUsers.get(String(convoData.id));
-            const isUserOnline = userStatus ? userStatus.isOnline : false;
+            const isUserOnline = !!(userStatus && userStatus.isOnline);
             elements.userStatusSpan.classList.toggle('online', isUserOnline);
             elements.userStatusSpan.classList.toggle('offline', !isUserOnline);
             elements.userStatusSpan.textContent = isUserOnline ? 'Online' : 'Offline';
         } else if (elements.userStatusSpan) {
-            // Ukryj status dla grup
             elements.userStatusSpan.textContent = '';
-            elements.userStatusSpan.classList.remove('online', 'offline');
+            elements.userStatusSpan.className = 'status';
         }
 
         if (elements.messageInput) elements.messageInput.disabled = false;
@@ -209,7 +143,7 @@ export async function handleConversationClick(convoData, clickedConvoItemElement
 
         const history = await fetchMessageHistory(currentRoom);
         if (elements.messageContainer) {
-            elements.messageContainer.innerHTML = ''; // Wyczyść przed dodaniem historii
+            elements.messageContainer.innerHTML = '';
             history.forEach(msg => {
                 const div = document.createElement('div');
                 div.classList.add('message', String(msg.username) === String(currentUser.id) ? 'sent' : 'received');
@@ -217,7 +151,7 @@ export async function handleConversationClick(convoData, clickedConvoItemElement
                 div.innerHTML = `<p>${msg.text}</p><span class="timestamp">${timeString}</span>`;
                 elements.messageContainer.appendChild(div);
             });
-            elements.messageContainer.scrollTop = elements.messageContainer.scrollHeight; // Przewiń na dół
+            elements.messageContainer.scrollTop = elements.messageContainer.scrollHeight;
         }
 
     } catch (e) {
@@ -226,18 +160,9 @@ export async function handleConversationClick(convoData, clickedConvoItemElement
     }
 }
 
-/**
- * Adds a message to the chat view and updates the conversation preview in the list.
- * Includes logic for displaying browser notifications.
- * @param {Object} msg - The message object.
- */
 export async function addMessageToChat(msg) {
-    console.log(`[addMessageToChat] Przetwarzanie wiadomości dla pokoju: ${msg.room}`);
     try {
-        // Zawsze aktualizuj podgląd konwersacji na liście
         updateConversationPreview(msg.room, msg);
-
-        // Dodaj wiadomość do okna czatu, tylko jeśli jest ono aktywne
         if (msg.room === currentRoom) {
             const div = document.createElement('div');
             div.classList.add('message', String(msg.username) === String(currentUser.id) ? 'sent' : 'received');
@@ -253,84 +178,15 @@ export async function addMessageToChat(msg) {
     }
 }
 
-/**
- * Updates the online/offline status indicator for a specific user across the UI.
- * @param {string} userId - The ID of the user whose status is being updated.
- * @param {boolean} isOnline - True if the user is online, false otherwise.
- * @param {string | null} lastSeenTimestamp - Optional: The timestamp when the user was last seen.
- */
 export function updateUserStatusIndicator(userId, isOnline, lastSeenTimestamp = null) {
     try {
-        // Krok 1: Zaktualizuj globalną mapę statusów
-        onlineUsers.set(String(userId), { 
-            isOnline, 
-            lastSeen: isOnline ? null : lastSeenTimestamp || new Date().toISOString() 
-        });
-
-        // Krok 2: Zaktualizuj status w nagłówku aktywnego czatu
-        if (currentChatUser && String(currentChatUser.id) === String(userId) && userStatusSpan) {
+        onlineUsers.set(String(userId), { isOnline, lastSeen: isOnline ? null : lastSeenTimestamp || new Date().toISOString() });
+        if (currentChatUser && String(currentChatUser.id) === String(userId) && elements.userStatusSpan) {
             elements.userStatusSpan.classList.toggle('online', isOnline);
             elements.userStatusSpan.classList.toggle('offline', !isOnline);
-            if (isOnline) {
-                userStatusSpan.textContent = 'Online';
-            } else {
-                const lastSeenInfo = onlineUsers.get(String(userId));
-                let lastSeenText = 'Offline';
-                if (lastSeenInfo && lastSeenInfo.lastSeen) {
-                    lastSeenText = `Offline (ostatnio widziany ${formatTimeAgo(new Date(lastSeenInfo.lastSeen))})`;
-                }
-                elements.userStatusSpan.textContent = lastSeenText;
-            }
+            elements.userStatusSpan.textContent = isOnline ? 'Online' : `Offline (ostatnio: ${formatTimeAgo(new Date(lastSeenTimestamp))})`;
         }
-
-        // Krok 3: Zaktualizuj listy aktywnych użytkowników (desktop i mobile)
-        const isFriend = allFriends.some(friend => String(friend.id) === String(userId));
-        const shouldBeOnActiveList = isOnline && isFriend && String(userId) !== String(currentUser.id);
-
-        [elements.activeUsersListEl, elements.onlineUsersMobile].forEach(list => {
-            if (!list) return;
-            const userItem = list.querySelector(`[data-user-id="${userId}"]`);
-            if (shouldBeOnActiveList && !userItem) {
-                // Dodaj użytkownika do listy aktywnych
-				const item = document.createElement(list === elements.activeUsersListEl ? 'li' : 'div');
-                const isDesktopList = list === elements.activeUsersListEl;
-                
-                item.className = isDesktopList ? 'active-user-item' : 'online-user-item-mobile';
-                item.dataset.userId = userId;
-
-                const avatarSrc = `https://i.pravatar.cc/150?img=${userId.charCodeAt(0) % 70 + 1}`;
-                const userName = getUserLabelById(userId) || 'Nieznany';
-
-                if (isDesktopList) {
-                    item.innerHTML = `
-                        <img src="${avatarSrc}" alt="Avatar" class="avatar">
-                        <span class="username">${userName}</span>
-                        <span class="status-dot online"></span>
-                    `;
-                } else {
-                    item.innerHTML = `
-                        <img src="${avatarSrc}" alt="Avatar" class="avatar">
-                        <span class="username">${userName}</span>
-                    `;
-                }
-                
-                // Dodaj listener do otwierania czatu
-                item.addEventListener('click', () => {
-                    const userProfile = allFriends.find(p => String(p.id) === String(userId));
-                    if (userProfile) {
-                        const mockConvoItem = document.createElement('li'); // Symulujemy element, by przekazać go do funkcji
-                        mockConvoItem.dataset.roomId = getRoomName(String(currentUser.id), String(userProfile.id));
-                        handleConversationClick(userProfile, mockConvoItem);
-                    }
-                });
-
-                list.appendChild(item);
-            } else if (!shouldBeOnActiveList && userItem) {
-                userItem.remove(); // Usuń użytkownika z listy aktywnych
-            }
-        });
-
-        // Krok 4: Zaktualizuj kropkę statusu na głównej liście kontaktów
+        renderActiveUsersList();
         const contactItem = elements.contactsListEl.querySelector(`.contact[data-convo-id="${userId}"]`);
         if (contactItem) {
             const statusDot = contactItem.querySelector('.status-dot');
@@ -339,24 +195,15 @@ export function updateUserStatusIndicator(userId, isOnline, lastSeenTimestamp = 
                 statusDot.classList.toggle('offline', !isOnline);
             }
         }
-		renderActiveUsersList();
     } catch (e) {
         console.error("Błąd w updateUserStatusIndicator:", e);
     }
 }
 
-/**
- * Displays the typing indicator for a specific user.
- * Hides it after a short delay.
- * @param {string} usernameId - The ID of the user who is typing.
- */
 export function showTypingIndicator(usernameId) {
     try {
-        // Pokaż wskaźnik tylko, jeśli dotyczy on aktywnej rozmowy
         if (currentChatUser && String(usernameId) === String(currentChatUser.id)) {
             const userName = getUserLabelById(usernameId);
-
-            // Pokaż wskaźnik w nagłówku i w obszarze wiadomości
             if (elements.typingStatusHeader) {
                 elements.typingStatusHeader.classList.remove('hidden');
                 elements.typingStatusHeader.textContent = `${userName} pisze...`;
@@ -364,12 +211,10 @@ export function showTypingIndicator(usernameId) {
             if (elements.typingIndicatorMessages) {
                 elements.typingIndicatorMessages.classList.remove('hidden');
             }
-
-            // Ustaw timer, który ukryje wskaźnik po 3 sekundach braku aktywności
             clearTimeout(typingTimeout);
             typingTimeout = setTimeout(() => {
-                if (typingStatusHeader) typingStatusHeader.classList.add('hidden');
-                if (typingIndicatorMessages) typingIndicatorMessages.classList.add('hidden');
+                if (elements.typingStatusHeader) elements.typingStatusHeader.classList.add('hidden');
+                if (elements.typingIndicatorMessages) elements.typingIndicatorMessages.classList.add('hidden');
             }, 3000);
         }
     } catch (e) {
@@ -377,124 +222,62 @@ export function showTypingIndicator(usernameId) {
     }
 }
 
-/**
- * Updates the unread message count for a given room in Supabase.
- * @param {string} roomId - The ID of the chat room.
- * @param {string} senderId - The ID of the message sender.
- */
 export async function updateUnreadMessageCountInSupabase(roomId, senderId) {
     if (!supabase || !currentUser) return;
-    
     try {
-        const { error } = await supabase
-            .from('unread_messages')
-            .upsert({
-                user_id: currentUser.id,
-                room_id: roomId,
-                // Increment the current count from our local state map
-                count: (unreadConversationsInfo.get(roomId)?.unreadCount || 0) + 1,
-                last_sender_id: senderId,
-                updated_at: new Date().toISOString()
-            }, {
-                onConflict: 'user_id, room_id'
-            });
-
-        if (error) {
-            console.error("[Supabase] Błąd podczas aktualizacji licznika nieprzeczytanych:", error.message);
-        } else {
-            console.log(`[Supabase] Zaktualizowano licznik nieprzeczytanych dla pokoju ${roomId}.`);
-        }
-        
-        // Refresh local state from the database after the update
+        const { error } = await supabase.from('unread_messages').upsert({
+            user_id: currentUser.id,
+            room_id: roomId,
+            count: (unreadConversationsInfo.get(roomId)?.unreadCount || 0) + 1,
+            last_sender_id: senderId,
+            updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id, room_id' });
+        if (error) throw error;
         await loadUnreadMessagesFromSupabase();
-
     } catch (e) {
-        console.error("[Supabase] Błąd krytyczny podczas aktualizacji licznika:", e);
+        console.error("Błąd w updateUnreadMessageCountInSupabase:", e);
     }
 }
 
-/**
- * Clears the unread message count for a given room in Supabase.
- * @param {string} roomId - The ID of the chat room to clear.
- */
 export async function clearUnreadMessageCountInSupabase(roomId) {
     if (!supabase || !currentUser) return;
-    
     try {
-        const { error } = await supabase
-            .from('unread_messages')
-            .update({
-                count: 0,
-                last_sender_id: null,
-                updated_at: new Date().toISOString()
-            })
-            .eq('user_id', currentUser.id)
-            .eq('room_id', roomId);
-
-        if (error) {
-            console.error("[Supabase] Błąd podczas zerowania licznika nieprzeczytanych:", error.message);
-        } else {
-            console.log(`[Supabase] Wyzerowano licznik nieprzeczytanych dla pokoju ${roomId}.`);
-        }
-        
-        // Refresh local state from the database after the update
+        const { error } = await supabase.from('unread_messages').update({
+            count: 0,
+            last_sender_id: null,
+            updated_at: new Date().toISOString()
+        }).eq('user_id', currentUser.id).eq('room_id', roomId);
+        if (error) throw error;
         await loadUnreadMessagesFromSupabase();
-
     } catch (e) {
-        console.error("[Supabase] Błąd krytyczny podczas zerowania licznika:", e);
+        console.error("Błąd w clearUnreadMessageCountInSupabase:", e);
     }
 }
 
-/**
- * Loads all unread messages for the current user from Supabase
- * and updates the local state and UI.
- */
 export async function loadUnreadMessagesFromSupabase() {
     if (!supabase || !currentUser) return;
-
     try {
-        const { data, error } = await supabase
-            .from('unread_messages')
-            .select('room_id, count, last_sender_id')
-            .eq('user_id', currentUser.id);
-
-        if (error) {
-            console.error("[Supabase] Błąd podczas ładowania nieprzeczytanych wiadomości:", error.message);
-            return;
-        }
-
-        // Wyczyść lokalny stan przed aktualizacją
+        const { data, error } = await supabase.from('unread_messages').select('room_id, count, last_sender_id').eq('user_id', currentUser.id);
+        if (error) throw error;
         unreadConversationsInfo.clear();
-        
         data.forEach(record => {
-            // Zaktualizuj lokalną mapę
             if (record.count > 0) {
                 unreadConversationsInfo.set(record.room_id, {
                     unreadCount: record.count,
                     lastSenderId: record.last_sender_id
                 });
             }
-
-            // Zaktualizuj licznik w UI na liście kontaktów
-            const convoItem = contactsListEl.querySelector(`.contact[data-room-id="${record.room_id}"]`);
+            const convoItem = elements.contactsListEl.querySelector(`.contact[data-room-id="${record.room_id}"]`);
             if (convoItem) {
                 const unreadCountEl = convoItem.querySelector('.unread-count');
                 if (unreadCountEl) {
-                    if (record.count > 0) {
-                        unreadCountEl.textContent = record.count;
-                        unreadCountEl.classList.remove('hidden');
-                    } else {
-                        unreadCountEl.textContent = '';
-                        unreadCountEl.classList.add('hidden');
-                    }
+                    unreadCountEl.textContent = record.count > 0 ? record.count : '';
+                    unreadCountEl.classList.toggle('hidden', record.count === 0);
                 }
             }
         });
-        
-        // Zaktualizuj tytuł zakładki przeglądarki
         updateDocumentTitle();
-
     } catch (e) {
-        console.error("[Supabase] Błąd krytyczny podczas ładowania nieprzeczytanych wiadomości:", e);
+        console.error("Błąd w loadUnreadMessagesFromSupabase:", e);
     }
 }
