@@ -193,7 +193,6 @@ export async function handleConversationClick(user, clickedConvoItemElement) {
 		};
 
         setCurrentChatUser(newChatUser);
-        const isGroup = user.type === 'group';
 		const newRoom = isGroup ? user.id : getRoomName(String(currentUser.id), String(newChatUser.id));
         setCurrentRoom(newRoom);
         console.log(`[handleConversationClick] Inicjacja sesji. Użytkownik: ${currentChatUser.username}, Pokój: ${currentRoom}`);
