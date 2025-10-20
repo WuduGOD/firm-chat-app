@@ -19,7 +19,7 @@ export function initWebSocket() {
     }
 
     const newSocket = new WebSocket(wsUrl);
-	setSocket(newSocket);
+    setSocket(newSocket);
     console.log(`[WebSocket] Próba połączenia z: ${wsUrl}`);
 
     return new Promise((resolve, reject) => {
@@ -30,7 +30,7 @@ export function initWebSocket() {
                 // Dołącz do globalnego kanału i wyślij status online
                 socket.send(JSON.stringify({ type: 'join', room: 'global' }));
                 socket.send(JSON.stringify({ type: 'status', user: currentUser.id, online: true }));
-                
+
                 // Jeśli byliśmy w jakimś pokoju, dołącz do niego ponownie
                 if (currentRoom && currentRoom !== 'global') {
                     socket.send(JSON.stringify({ type: 'join', room: currentRoom }));
@@ -49,9 +49,9 @@ export function initWebSocket() {
                 // Centralny router dla wiadomości z serwera
                 switch (data.type) {
                     case 'message':
-						if (String(data.username) !== String(currentUser.id)) {
-							addMessageToChat(data);
-						}
+                        if (String(data.username) !== String(currentUser.id)) {
+                            addMessageToChat(data);
+                        }
                         break;
                     case 'typing':
                         showTypingIndicator(data.username);
@@ -71,9 +71,9 @@ export function initWebSocket() {
                            loadFriendsAndRequests();
                         }
                         break;
-					case 'last_messages_for_user_rooms':
-						// Ta wiadomość jest obsługiwana w innym miejscu, więc tutaj ją ignorujemy.
-						break;
+                    case 'last_messages_for_user_rooms':
+                        // Ta wiadomość jest obsługiwana w innym miejscu, więc tutaj ją ignorujemy.
+                        break;
                     // Inne typy wiadomości są obsługiwane w innych miejscach (np. przez Promise)
                     default:
                         console.warn("[WS] Nieznany typ wiadomości:", data.type);
@@ -83,15 +83,14 @@ export function initWebSocket() {
             }
         };
 
-		newSocket.onclose = (event) => {
-			if (event.code !== 1000) {
-				// Używamy funkcji-settera do zmiany wartości
-				const newAttemptCount = reconnectAttempts + 1;
-				setReconnectAttempts(newAttemptCount);
-        
-				setTimeout(() => initWebSocket(), Math.min(1000 * newAttemptCount, 10000));
-			}
-		};
+        newSocket.onclose = (event) => {
+            if (event.code !== 1000) {
+                // Używamy funkcji-settera do zmiany wartości
+                const newAttemptCount = reconnectAttempts + 1;
+                setReconnectAttempts(newAttemptCount);
+                setTimeout(() => initWebSocket(), Math.min(1000 * newAttemptCount, 10000));
+            }
+        };
 
         newSocket.onerror = (error) => {
             console.error('[WebSocket] Błąd:', error);
