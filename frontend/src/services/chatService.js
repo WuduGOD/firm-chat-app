@@ -504,10 +504,8 @@ export async function clearUnreadMessageCountInSupabase(roomId) {
             console.log(`[Supabase] Wyzerowano licznik nieprzeczytanych dla pokoju ${roomId}.`);
         }
         
-		if (unreadConversationsInfo.has(roomId)) {
-            unreadConversationsInfo.delete(roomId);
-            updateDocumentTitle();
-        }
+        // Refresh local state from the database after the update
+        await loadUnreadMessagesFromSupabase();
 
     } catch (e) {
         console.error("[Supabase] Błąd krytyczny podczas zerowania licznika:", e);
