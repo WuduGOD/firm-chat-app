@@ -91,27 +91,25 @@ export function getRoomName(user1Id, user2Id) {
  * @param {string} roomId - The ID of the room.
  * @returns {Promise<Array<Object>>} An array of message objects, sorted oldest to newest.
  */
-export async function fetchMessageHistory(roomId) {
-    console.log(`[fetchMessageHistory] Fetching history for room: ${roomId}`);
+export async function fetchMessageHistory(roomId, limit = 50, offset = 0) {
+    console.log(`[fetchMessageHistory] Fetching history for room: ${roomId}, Limit: ${limit}, Offset: ${offset}`);
     try {
-        // Assume a maximum limit for history to prevent excessive data transfer
-        const limit = 50;
         const { data, error } = await supabase
             .from('messages')
             .select('content, sender_id, created_at, room_id')
             .eq('room_id', roomId)
-            .order('created_at', { ascending: true }) // Ascending for history display
-            .limit(limit);
+            .order('created_at', { ascending: false }) // Sortuj od najnowszych do najstarszych, aby poprawnie zastosować offset
+            .range(offset, offset + limit - 1);
 
         if (error) {
-            console.error('[fetchMessageHistory] Error fetching message history:', error.message, error.details, error.hint);
+            console.error('[fetchMessageHistory] Error fetching message history:', error.message);
             return [];
         }
 
         if (data) {
-            console.log(`[fetchMessageHistory] Fetched ${data.length} messages for room ${roomId}.`);
-            // Map database columns to frontend expected properties
-            return data.map(msg => ({
+            console.log(`[fetchMessageHistory] Fetched ${data.length} messages.`);
+            // Odwróć kolejność, aby wyświetlać od najstarszych do najnowszych na czacie
+            return data.reverse().map(msg => ({
                 text: msg.content,
                 username: msg.sender_id,
                 inserted_at: msg.created_at,
@@ -147,39 +145,42 @@ export function sortConversations(conversations) {
 export async function handleConversationClick(user, clickedConvoItemElement) {
     console.log('[handleConversationClick] Conversation item clicked, user:', user);
 
+    // -- Zmienne do obsługi paginacji --
+    let isLoadingOlderMessages = false;
+    let currentMessageOffset = 0;
+    const MESSAGES_PER_PAGE = 50;
+    // ------------------------------------
+
+    // Usuń poprzedni listener, jeśli istniał, aby uniknąć duplikatów
+    if (elements.messageContainer && elements.messageContainer.scrollListener) {
+        elements.messageContainer.removeEventListener('scroll', elements.messageContainer.scrollListener);
+    }
+
     try {
-        // Deaktywuj poprzednio aktywny element
         if (currentActiveConvoItem) {
             currentActiveConvoItem.classList.remove('active');
         }
         clickedConvoItemElement.classList.add('active');
         setCurrentActiveConvoItem(clickedConvoItemElement);
 
-        // Opuść poprzedni pokój WebSocket, jeśli istniał
         if (socket && socket.readyState === WebSocket.OPEN && currentRoom && currentRoom !== 'global') {
             socket.send(JSON.stringify({ type: 'leave', room: currentRoom }));
             console.log(`[handleConversationClick] Wysłano LEAVE dla pokoju: ${currentRoom}`);
         }
 		
 		if (window.matchMedia('(max-width: 768px)').matches) {
-            if (elements.sidebarWrapper) {
-                elements.sidebarWrapper.classList.add('hidden-on-mobile');
-            }
-            if (elements.chatAreaWrapper) {
-                elements.chatAreaWrapper.classList.add('active-on-mobile');
-            }
+            if (elements.sidebarWrapper) elements.sidebarWrapper.classList.add('hidden-on-mobile');
+            if (elements.chatAreaWrapper) elements.chatAreaWrapper.classList.add('active-on-mobile');
         }
 
-        // Natychmiast pokaż obszar czatu, aby uniknąć migotania
         if (elements.logoScreen) elements.logoScreen.classList.add('hidden');
         if (elements.chatArea) elements.chatArea.classList.add('active');
 
-        // Pokaż przycisk "wstecz" na mobile
         if (backButton && window.matchMedia('(max-width: 768px)').matches) {
             backButton.style.display = 'block';
         }
 
-        resetChatView(); // Zresetuj widok czatu (wyczyść treść)
+        resetChatView();
 		
 		const newChatUser = {
 			id: user.id,
@@ -187,66 +188,76 @@ export async function handleConversationClick(user, clickedConvoItemElement) {
 			email: user.email,
 		};
 
-        // Ustaw bieżącego rozmówcę i pokój
-        setCurrentChatUser({
-            id: user.id,
-            username: getUserLabelById(user.id) || user.email,
-            email: user.email,
-		});
+        setCurrentChatUser(newChatUser);
         const newRoom = getRoomName(String(currentUser.id), String(newChatUser.id));
         setCurrentRoom(newRoom);
         console.log(`[handleConversationClick] Inicjacja sesji. Użytkownik: ${currentChatUser.username}, Pokój: ${currentRoom}`);
 
-        // Wyczyść licznik nieprzeczytanych wiadomości w bazie
         await clearUnreadMessageCountInSupabase(newRoom);
 
-        // Zaktualizuj nagłówek czatu (nazwa, status online)
         if (elements.chatUserName && elements.messageInput && elements.sendButton && elements.userStatusSpan) {
             elements.chatUserName.textContent = newChatUser.username;
             const userStatus = onlineUsers.get(String(user.id));
             const isUserOnline = userStatus ? userStatus.isOnline : false;
             elements.userStatusSpan.classList.toggle('online', isUserOnline);
             elements.userStatusSpan.classList.toggle('offline', !isUserOnline);
-            if (isUserOnline) {
-                elements.userStatusSpan.textContent = 'Online';
-            } else {
-                let lastSeenText = 'Offline';
-                if (userStatus && userStatus.lastSeen) {
-                    lastSeenText = `Offline (ostatnio widziany ${formatTimeAgo(new Date(userStatus.lastSeen))})`;
-                }
-                userStatusSpan.textContent = lastSeenText;
-            }
+            elements.userStatusSpan.textContent = isUserOnline ? 'Online' : `Offline (ostatnio widziany ${formatTimeAgo(new Date((userStatus && userStatus.lastSeen) || Date.now()))})`;
             elements.messageInput.disabled = false;
             elements.sendButton.disabled = false;
             elements.messageInput.focus();
         }
 
-        // Zresetuj licznik nieprzeczytanych wiadomości w UI
         const unreadCount = clickedConvoItemElement.querySelector('.unread-count');
         if (unreadCount) {
             unreadCount.textContent = '';
             unreadCount.classList.add('hidden');
         }
 
-        // Dołącz do nowego pokoju na serwerze WebSocket
 		if (socket && socket.readyState === WebSocket.OPEN) {
 			socket.send(JSON.stringify({ type: 'join', name: currentUser.id, room: currentRoom }));
 			console.log(`[handleConversationClick] Wysłano JOIN dla pokoju: ${currentRoom}`);
 		}
 
-        // Załaduj i wyświetl historię wiadomości
-        const history = await fetchMessageHistory(currentRoom);
-        if (elements.messageContainer) {
-            elements.messageContainer.innerHTML = ''; // Wyczyść przed dodaniem historii
-            history.forEach(msg => {
-                const div = document.createElement('div');
-                div.classList.add('message', String(msg.username) === String(currentUser.id) ? 'sent' : 'received');
-                const timeString = new Date(msg.inserted_at).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
-                div.innerHTML = `<p>${msg.text}</p><span class="timestamp">${timeString}</span>`;
-                elements.messageContainer.appendChild(div);
-            });
-            elements.messageContainer.scrollTop = messageContainer.scrollHeight; // Przewiń na dół
-        }
+        // --- NOWA LOGIKA ŁADOWANIA WIADOMOŚCI ---
+        elements.messageContainer.innerHTML = ''; // Wyczyść przed dodaniem historii
+        const history = await fetchMessageHistory(currentRoom, MESSAGES_PER_PAGE, 0);
+        currentMessageOffset = history.length;
+
+        history.forEach(msg => {
+            const div = document.createElement('div');
+            div.classList.add('message', String(msg.username) === String(currentUser.id) ? 'sent' : 'received');
+            const timeString = new Date(msg.inserted_at).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+            div.innerHTML = `<p>${msg.text}</p><span class="timestamp">${timeString}</span>`;
+            elements.messageContainer.appendChild(div);
+        });
+        elements.messageContainer.scrollTop = messageContainer.scrollHeight;
+
+        // --- DODANIE SCROLL LISTENER'A ---
+        const scrollListener = async () => {
+            if (elements.messageContainer.scrollTop === 0 && !isLoadingOlderMessages) {
+                isLoadingOlderMessages = true;
+                const oldScrollHeight = elements.messageContainer.scrollHeight;
+
+                const olderMessages = await fetchMessageHistory(currentRoom, MESSAGES_PER_PAGE, currentMessageOffset);
+                if (olderMessages.length > 0) {
+                    currentMessageOffset += olderMessages.length;
+                    olderMessages.forEach(msg => {
+                        const div = document.createElement('div');
+                        div.classList.add('message', String(msg.username) === String(currentUser.id) ? 'sent' : 'received');
+                        const timeString = new Date(msg.inserted_at).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+                        div.innerHTML = `<p>${msg.text}</p><span class="timestamp">${timeString}</span>`;
+                        elements.messageContainer.prepend(div);
+                    });
+                    // Zachowaj pozycję scrolla, aby widok nie "skakał"
+                    elements.messageContainer.scrollTop = elements.messageContainer.scrollHeight - oldScrollHeight;
+                }
+                isLoadingOlderMessages = false;
+            }
+        };
+
+        elements.messageContainer.addEventListener('scroll', scrollListener);
+        elements.messageContainer.scrollListener = scrollListener; // Zapisz referencję do listenera
+
     } catch (e) {
         console.error("Błąd w handleConversationClick:", e);
         showCustomMessage("Wystąpił błąd podczas ładowania konwersacji.", "error");
