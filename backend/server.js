@@ -60,8 +60,26 @@ const clients = new Map();
 const userIdToSockets = new Map(); 
 
 wss.on('connection', (ws) => {
-    // Inicjalizujemy dane użytkownika dla nowego połączenia
-    // Domyślnie użytkownik nie jest w żadnym konkretnym pokoju czatu na początku (null lub 'global')
+    // --- POCZĄTEK NOWEGO KODU ---
+    // Wyślij aktualną listę wszystkich użytkowników do nowo połączonego klienta
+    (async () => {
+        try {
+            const allUsersStatuses = await getOnlineStatusesFromDb();
+            const formattedUsers = allUsersStatuses.map(user => ({
+                id: user.id,
+                username: user.username, 
+                online: user.is_online,
+                last_seen: user.last_seen_at 
+            }));
+            ws.send(JSON.stringify({
+                type: 'active_users',
+                users: formattedUsers
+            }));
+            console.log(`Sent initial active users list to a new client. Count: ${formattedUsers.length}`);
+        } catch (err) {
+            console.error('Error sending initial active users list:', err);
+        }
+    })();
     let userData = { userId: null, currentRoom: null }; 
     clients.set(ws, userData); // Dodajemy nowe połączenie do mapy klientów
 
