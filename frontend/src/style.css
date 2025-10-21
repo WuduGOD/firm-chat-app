@@ -1047,6 +1047,10 @@ body {
     height: auto;
     border-radius: 0;
     transition: color 0.2s;
+	outline-style: none !important;
+    outline-color: transparent !important;
+    outline-width: 0 !important;
+    box-shadow: none !important;
 }
 
 .chat-footer .attach-button:hover,
