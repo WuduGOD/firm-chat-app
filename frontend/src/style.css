@@ -466,6 +466,7 @@ body {
     border-top-left-radius: 0;
     flex-shrink: 0;
     height: 100%;
+	min-width: 0;
 }
 
 .logo-screen {
