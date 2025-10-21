@@ -389,20 +389,32 @@ function setupEventListeners() {
     });
 
     // --- UZUPEŁNIONA LOGIKA PRZYCISKU "WSTECZ" ---
-    elements.backButton.addEventListener('click', () => {
-        // Zawsze resetujemy widok czatu
+	elements.backButton.addEventListener('click', () => {
+        // Zawsze resetujemy widok czatu (czyści zawartość)
         chatService.resetChatView();
 
         // Logika specyficzna dla widoku mobilnego
         if (window.matchMedia('(max-width: 768px)').matches) {
             if (elements.sidebarWrapper) {
-                // Pokaż listę konwersacji
                 elements.sidebarWrapper.classList.remove('hidden-on-mobile');
             }
             if (elements.chatAreaWrapper) {
-                // Ukryj obszar czatu
                 elements.chatAreaWrapper.classList.remove('active-on-mobile');
             }
+            // Ukryj przycisk wstecz po powrocie do listy na mobile
+             if (elements.backButton) {
+                 elements.backButton.style.display = 'none';
+             }
+        } else {
+            // --- NOWA LOGIKA DLA DESKTOPU ---
+            // Ukryj obszar czatu i pokaż ekran powitalny
+            if (elements.chatArea) {
+                elements.chatArea.classList.remove('active'); // Ukryj czat
+            }
+            if (elements.logoScreen) {
+                elements.logoScreen.classList.remove('hidden'); // Pokaż logo
+            }
+            // --- KONIEC NOWEJ LOGIKI ---
         }
     });
     // --- KONIEC UZUPEŁNIONEJ LOGIKI ---
