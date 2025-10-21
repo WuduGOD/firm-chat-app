@@ -826,17 +826,15 @@ body {
 }
 
 .message {
-    max-width: 65%;
+    max-width: 100%; /* Dymek może zająć całą szerokość .message-content-wrapper */
     padding: 0.8rem 1rem;
     border-radius: var(--border-radius-message);
     background: var(--bg-color-message-received);
-    position: relative;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    width: fit-content;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    width: fit-content; /* Zachowaj dopasowanie szerokości do treści */
     min-width: 60px;
     color: var(--text-color-dark);
-    margin-bottom: 0.7rem;
-	margin-left: 45px;
+    position: relative; /* Potrzebne jeśli timestamp jest pozycjonowany absolutnie */
 }
 
 .message-avatar {
@@ -844,23 +842,44 @@ body {
     height: 35px;
     border-radius: 50%;
     object-fit: cover;
-    position: absolute; /* Pozycjonowanie względem rodzica (.message) */
-    bottom: 0; /* Wyrównaj do dołu dymka */
-    left: -45px; /* Umieść na lewo od dymka (uwzględniając margines) */
+    flex-shrink: 0;
+    margin-bottom: 5px; /* Możesz dostosować, aby wyrównać z dymkiem */
 }
 
 .sender-name {
     font-weight: bold;
-    font-size: 0.85em;
-    color: var(--primary-color); /* Możesz dostosować kolor */
-    margin-bottom: 3px;
-    display: block;
+    font-size: 0.8em; /* Zmniejszamy trochę */
+    color: var(--text-color-medium); /* Szary kolor */
+    margin-bottom: 4px; /* Odstęp od dymka */
+    margin-left: 5px; /* Lekkie wcięcie */
+}
+
+.message-wrapper {
+    display: flex;
+    align-items: flex-end; /* Wyrównaj awatar i treść do dołu */
+    gap: 0.7rem;
+    margin-bottom: 0.8rem;
+    max-width: 75%; /* Ogranicz szerokość całej wiadomości */
+}
+.message-wrapper.sent {
+    margin-left: auto; /* Przesuń w prawo */
+    flex-direction: row-reverse; /* Odwróć kolejność */
+}
+.message-wrapper.received {
+    margin-right: auto; /* Trzymaj po lewej */
+}
+
+.message-content-wrapper {
+    display: flex;
+    flex-direction: column; /* Ułóż nazwę nad dymkiem */
+    align-items: flex-start; /* Domyślne wyrównanie (dla received) */
+}
+.message-wrapper.sent .message-content-wrapper {
+    align-items: flex-end; /* Wyrównaj dymek do prawej dla wysłanych */
 }
 
 /* Nadpisanie dla wiadomości wysłanych */
 .message.sent {
-    margin-left: auto; /* Przesuwa dymek w prawo */
-    margin-right: 45px; /* Robi miejsce na awatar po prawej */
     background: var(--primary-color);
     color: var(--text-color-light);
 }
@@ -870,11 +889,6 @@ body {
 }
 .message.sent .timestamp { /* Poprawka koloru timestampa dla wysłanych */
      color: rgba(255, 255, 255, 0.8);
-}
-.message.sent .message-avatar {
-    display: none;
-	left: auto; /* Usuń pozycjonowanie lewe */
-    right: -45px; /* Umieść na prawo od dymka */
 }
 
 .message:last-child {

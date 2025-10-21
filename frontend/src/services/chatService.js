@@ -145,136 +145,182 @@ export function sortConversations(conversations) {
 export async function handleConversationClick(user, clickedConvoItemElement) {
     console.log('[handleConversationClick] Conversation item clicked, user:', user);
 
-    // -- Zmienne do obsługi paginacji --
+    // --- Zmienne do obsługi paginacji ---
     let isLoadingOlderMessages = false;
     let currentMessageOffset = 0;
     const MESSAGES_PER_PAGE = 50;
     // ------------------------------------
 
-    // Usuń poprzedni listener, jeśli istniał, aby uniknąć duplikatów
+    // Usuń poprzedni listener scrolla, jeśli istniał
     if (elements.messageContainer && elements.messageContainer.scrollListener) {
         elements.messageContainer.removeEventListener('scroll', elements.messageContainer.scrollListener);
+        elements.messageContainer.scrollListener = null; // Usuń referencję
     }
 
     try {
+        // --- Zarządzanie aktywnym elementem listy ---
         if (currentActiveConvoItem) {
             currentActiveConvoItem.classList.remove('active');
         }
         clickedConvoItemElement.classList.add('active');
         setCurrentActiveConvoItem(clickedConvoItemElement);
 
+        // --- Opuszczanie poprzedniego pokoju WebSocket ---
         if (socket && socket.readyState === WebSocket.OPEN && currentRoom && currentRoom !== 'global') {
             socket.send(JSON.stringify({ type: 'leave', room: currentRoom }));
             console.log(`[handleConversationClick] Wysłano LEAVE dla pokoju: ${currentRoom}`);
         }
-		
+
+        // --- Przełączanie widoków (Mobile) ---
 		if (window.matchMedia('(max-width: 768px)').matches) {
             if (elements.sidebarWrapper) elements.sidebarWrapper.classList.add('hidden-on-mobile');
             if (elements.chatAreaWrapper) elements.chatAreaWrapper.classList.add('active-on-mobile');
         }
 
+        // --- Pokazywanie obszaru czatu ---
         if (elements.logoScreen) elements.logoScreen.classList.add('hidden');
         if (elements.chatArea) elements.chatArea.classList.add('active');
 
-        if (backButton && window.matchMedia('(max-width: 768px)').matches) {
-            backButton.style.display = 'block';
+        // --- Pokazywanie przycisku "wstecz" (Mobile) ---
+        if (elements.backButton && window.matchMedia('(max-width: 768px)').matches) {
+            elements.backButton.style.display = 'block';
         }
 
+        // --- Resetowanie widoku czatu ---
         resetChatView();
-		
+
+        // --- Ustawianie bieżącego rozmówcy/grupy i pokoju ---
 		const isGroup = user.type === 'group';
 		const chatName = isGroup ? user.name : (getUserLabelById(user.id) || user.email);
 
-		const newChatUser = {
+		const newChatUser = { // Zmienna newChatUser przechowuje teraz info o grupie lub użytkowniku
 			id: user.id,
 			username: chatName,
-			email: isGroup ? null : user.email, // Ustawiamy email na null dla grup
-			type: user.type 
+			email: isGroup ? null : user.email,
+			type: user.type
 		};
+        setCurrentChatUser(newChatUser); // Ustawiamy globalnie
 
-        setCurrentChatUser(newChatUser);
 		const newRoom = isGroup ? user.id : getRoomName(String(currentUser.id), String(newChatUser.id));
         setCurrentRoom(newRoom);
-        console.log(`[handleConversationClick] Inicjacja sesji. Użytkownik: ${currentChatUser.username}, Pokój: ${currentRoom}`);
+        console.log(`[handleConversationClick] Inicjacja sesji. Rozmówca/Grupa: ${chatName}, Pokój: ${newRoom}`);
 
+        // --- Zerowanie licznika nieprzeczytanych ---
         await clearUnreadMessageCountInSupabase(newRoom);
 
+        // --- Aktualizacja UI nagłówka czatu ---
         if (elements.chatUserName && elements.messageInput && elements.sendButton && elements.userStatusSpan) {
-            elements.chatUserName.textContent = newChatUser.username;
-		if (isGroup) {
-			elements.userStatusSpan.style.display = 'none';
-		} else {
-			elements.userStatusSpan.style.display = 'block';
-			const userStatus = onlineUsers.get(String(user.id));
-			const isUserOnline = userStatus ? userStatus.isOnline : false;
-			elements.userStatusSpan.classList.toggle('online', isUserOnline);
-			elements.userStatusSpan.classList.toggle('offline', !isUserOnline);
-			elements.userStatusSpan.textContent = isUserOnline ? 'Online' : `Offline (ostatnio widziany ${formatTimeAgo(new Date((userStatus && userStatus.lastSeen) || Date.now()))})`;
-		}
+            elements.chatUserName.textContent = chatName; // Użyj poprawnej nazwy
+
+            // Pokaż/ukryj status online w zależności od typu czatu
+            if (isGroup) {
+                elements.userStatusSpan.style.display = 'none'; // Ukryj status dla grup
+            } else {
+                elements.userStatusSpan.style.display = 'block'; // Pokaż dla użytkowników
+                const userStatus = onlineUsers.get(String(user.id));
+                const isUserOnline = userStatus ? userStatus.isOnline : false;
+                elements.userStatusSpan.classList.toggle('online', isUserOnline);
+                elements.userStatusSpan.classList.toggle('offline', !isUserOnline);
+                elements.userStatusSpan.textContent = isUserOnline ? 'Online' : `Offline (ostatnio widziany ${formatTimeAgo(new Date((userStatus && userStatus.lastSeen) || Date.now()))})`;
+            }
+
+            // Włącz pola do pisania wiadomości
             elements.messageInput.disabled = false;
             elements.sendButton.disabled = false;
             elements.messageInput.focus();
         }
 
+        // --- Ukryj licznik nieprzeczytanych na liście konwersacji ---
         const unreadCount = clickedConvoItemElement.querySelector('.unread-count');
         if (unreadCount) {
             unreadCount.textContent = '';
             unreadCount.classList.add('hidden');
         }
 
+        // --- Dołącz do pokoju WebSocket ---
 		if (socket && socket.readyState === WebSocket.OPEN) {
 			socket.send(JSON.stringify({ type: 'join', name: currentUser.id, room: currentRoom }));
 			console.log(`[handleConversationClick] Wysłano JOIN dla pokoju: ${currentRoom}`);
 		}
 
-        // --- NOWA LOGIKA ŁADOWANIA WIADOMOŚCI ---
-        elements.messageContainer.innerHTML = ''; // Wyczyść przed dodaniem historii
-        const history = await fetchMessageHistory(currentRoom, MESSAGES_PER_PAGE, 0);
-        currentMessageOffset = history.length;
+        // --- ŁADOWANIE HISTORII WIADOMOŚCI ---
+        const messageContainer = elements.messageContainer;
+        if (messageContainer) {
+            messageContainer.innerHTML = ''; // Wyczyść kontener przed dodaniem historii
+            const history = await fetchMessageHistory(currentRoom, MESSAGES_PER_PAGE, 0);
+            currentMessageOffset = history.length; // Ustaw początkowy offset
 
-        history.forEach(msg => {
-            const div = document.createElement('div');
-            div.classList.add('message', String(msg.username) === String(currentUser.id) ? 'sent' : 'received');
-			const isGroup = currentChatUser && currentChatUser.type === 'group';
-			const avatarSrc = `https://i.pravatar.cc/150?img=${msg.username.charCodeAt(0) % 70 + 1}`;
-			const timeString = new Date(msg.inserted_at).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
-			const senderName = isGroup ? (getUserLabelById(msg.username) || 'Nieznany') : ''; // Pokaż nazwę tylko w grupie
+            // Renderuj załadowaną historię
+            history.forEach(msg => {
+                const isSent = String(msg.username) === String(currentUser.id);
 
-			div.innerHTML = `
-				<img src="${avatarSrc}" alt="Avatar" class="message-avatar">
-					${isGroup && String(msg.username) !== String(currentUser.id) ? `<strong class="sender-name">${senderName}</strong><br>` : ''}
-					<p>${msg.text}</p>
-					<span class="timestamp">${timeString}</span>
-			`;
-            elements.messageContainer.appendChild(div);
-        });
-        elements.messageContainer.scrollTop = messageContainer.scrollHeight;
+                const messageWrapper = document.createElement('div');
+                messageWrapper.classList.add('message-wrapper', isSent ? 'sent' : 'received');
 
-        // --- DODANIE SCROLL LISTENER'A ---
-        const scrollListener = async () => {
-            if (elements.messageContainer.scrollTop === 0 && !isLoadingOlderMessages) {
-                isLoadingOlderMessages = true;
-                const oldScrollHeight = elements.messageContainer.scrollHeight;
+                const avatarSrc = `https://i.pravatar.cc/150?img=${msg.username.charCodeAt(0) % 70 + 1}`;
+                const timeString = new Date(msg.inserted_at).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+                const senderName = isGroup ? (getUserLabelById(msg.username) || 'Nieznany') : '';
 
-                const olderMessages = await fetchMessageHistory(currentRoom, MESSAGES_PER_PAGE, currentMessageOffset);
-                if (olderMessages.length > 0) {
-                    currentMessageOffset += olderMessages.length;
-                    olderMessages.forEach(msg => {
-                        const div = document.createElement('div');
-                        div.classList.add('message', String(msg.username) === String(currentUser.id) ? 'sent' : 'received');
-                        const timeString = new Date(msg.inserted_at).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
-                        div.innerHTML = `<p>${msg.text}</p><span class="timestamp">${timeString}</span>`;
-                        elements.messageContainer.prepend(div);
-                    });
-                    // Zachowaj pozycję scrolla, aby widok nie "skakał"
-                    elements.messageContainer.scrollTop = elements.messageContainer.scrollHeight - oldScrollHeight;
+                // Użyj poprawnej struktury HTML
+                messageWrapper.innerHTML = `
+                    <img src="${avatarSrc}" alt="Avatar" class="message-avatar">
+                    <div class="message-content-wrapper">
+                         ${isGroup && !isSent ? `<strong class="sender-name">${senderName}</strong>` : ''}
+                        <div class="message"> {/* Ten div to sam dymek */}
+                            <p>${msg.text}</p>
+                            <span class="timestamp">${timeString}</span>
+                        </div>
+                    </div>
+                `;
+                messageContainer.appendChild(messageWrapper);
+            });
+            // Przewiń na dół po załadowaniu początkowej historii
+            messageContainer.scrollTop = messageContainer.scrollHeight;
+
+            // --- DODANIE SCROLL LISTENER'A DLA PAGINACJI ---
+            const scrollListener = async () => {
+                if (messageContainer.scrollTop === 0 && !isLoadingOlderMessages) {
+                    isLoadingOlderMessages = true;
+                    const oldScrollHeight = messageContainer.scrollHeight;
+
+                    // Pobierz starsze wiadomości
+                    const olderMessages = await fetchMessageHistory(currentRoom, MESSAGES_PER_PAGE, currentMessageOffset);
+                    if (olderMessages.length > 0) {
+                        currentMessageOffset += olderMessages.length; // Zwiększ offset
+                        // Renderuj starsze wiadomości na początku listy
+                        olderMessages.forEach(msg => {
+                             const isSent = String(msg.username) === String(currentUser.id);
+
+                            const messageWrapper = document.createElement('div');
+                            messageWrapper.classList.add('message-wrapper', isSent ? 'sent' : 'received');
+
+                            const avatarSrc = `https://i.pravatar.cc/150?img=${msg.username.charCodeAt(0) % 70 + 1}`;
+                            const timeString = new Date(msg.inserted_at).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+                            const senderName = isGroup ? (getUserLabelById(msg.username) || 'Nieznany') : '';
+
+                            messageWrapper.innerHTML = `
+                                <img src="${avatarSrc}" alt="Avatar" class="message-avatar">
+                                <div class="message-content-wrapper">
+                                     ${isGroup && !isSent ? `<strong class="sender-name">${senderName}</strong>` : ''}
+                                    <div class="message">
+                                        <p>${msg.text}</p>
+                                        <span class="timestamp">${timeString}</span>
+                                    </div>
+                                </div>
+                            `;
+                            // Dodaj na początek kontenera
+                            messageContainer.prepend(messageWrapper);
+                        });
+                        // Zachowaj pozycję scrolla, aby widok nie "skakał"
+                        messageContainer.scrollTop = messageContainer.scrollHeight - oldScrollHeight;
+                    }
+                    isLoadingOlderMessages = false;
                 }
-                isLoadingOlderMessages = false;
-            }
-        };
+            };
 
-        elements.messageContainer.addEventListener('scroll', scrollListener);
-        elements.messageContainer.scrollListener = scrollListener; // Zapisz referencję do listenera
+            messageContainer.addEventListener('scroll', scrollListener);
+            messageContainer.scrollListener = scrollListener; // Zapisz referencję do listenera
+        } // koniec if (messageContainer)
 
     } catch (e) {
         console.error("Błąd w handleConversationClick:", e);
@@ -288,74 +334,85 @@ export async function handleConversationClick(user, clickedConvoItemElement) {
  * @param {Object} msg - The message object.
  */
 export async function addMessageToChat(msg) {
-	const isGroup = currentChatUser && currentChatUser.type === 'group';
+    // Sprawdź, czy obecna rozmowa to grupa (robimy to na początku)
+    const isGroup = currentChatUser && currentChatUser.type === 'group';
     console.log(`[addMessageToChat] Przetwarzanie wiadomości dla pokoju: ${msg.room}`);
+
     try {
+        // --- Aktualizacja podglądu konwersacji ---
         let convoItem = elements.contactsListEl.querySelector(`.contact[data-room-id="${msg.room}"]`);
         if (!convoItem) {
-            await loadContacts();
+            await loadContacts(); // Załaduj ponownie, jeśli elementu nie ma
             convoItem = elements.contactsListEl.querySelector(`.contact[data-room-id="${msg.room}"]`);
             if (!convoItem) {
                 console.error(`Błąd krytyczny: Konwersacja dla pokoju ${msg.room} nie istnieje.`);
-                return;
+                return; // Zakończ, jeśli konwersacja nadal nie istnieje
             }
         }
-        updateConversationPreview(msg.room, msg);
+        updateConversationPreview(msg.room, msg); // Zaktualizuj tekst i czas ostatniej wiadomości
 
+        // --- Obsługa licznika nieprzeczytanych wiadomości ---
         const isMessageFromOtherUser = String(msg.username) !== String(currentUser.id);
         const isForInactiveChat = msg.room !== currentRoom;
 
         if (isMessageFromOtherUser && isForInactiveChat) {
             await updateUnreadMessageCountInSupabase(msg.room, msg.username);
-        } else {
+        } else if (msg.room === currentRoom) {
+            // Jeśli wiadomość jest dla aktywnego czatu, wyzeruj licznik (nawet jeśli to nasza wiadomość)
             await clearUnreadMessageCountInSupabase(msg.room);
         }
 
-        // --- BLOK DIAGNOSTYCZNY POWIADOMIEŃ ---
+        // --- Obsługa powiadomień przeglądarkowych ---
         const shouldNotify = notificationPermissionGranted && isMessageFromOtherUser && (document.hidden || isForInactiveChat);
-
-        console.log('%c--- DIAGNOSTYKA POWIADOMIENIA ---', 'color: purple; font-weight: bold;');
-        console.log('Czy mam pozwolenie? (notificationPermissionGranted):', notificationPermissionGranted);
-        console.log('Czy wiadomość od kogoś innego? (isMessageFromOtherUser):', isMessageFromOtherUser);
-        console.log('Czy karta jest ukryta? (document.hidden):', document.hidden);
-        console.log('Czy to inny czat? (isForInactiveChat):', isForInactiveChat);
-        console.log('Czy powinienem pokazać powiadomienie? (shouldNotify):', shouldNotify);
-
+        // ... (kod diagnostyki powiadomień - bez zmian) ...
         if (shouldNotify) {
             console.log('%c--- Warunki spełnione, TWORZĘ POWIADOMIENIE ---', 'color: green;');
             const senderLabel = getUserLabelById(msg.username) || 'Ktoś';
             new Notification(`Nowa wiadomość od ${senderLabel}`, {
                 body: msg.text,
-                icon: 'https://placehold.co/48x48/000000/FFFFFF?text=💬',
-                silent: true
-            }).onclick = () => window.focus();
-            playNotificationSound();
+                icon: 'https://placehold.co/48x48/000000/FFFFFF?text=💬', // Możesz zmienić ikonę
+                silent: true // Zwykle powiadomienia czatu są ciche
+            }).onclick = () => window.focus(); // Skup okno po kliknięciu
+            playNotificationSound(); // Odtwórz dźwięk
         } else {
-            console.log('%c--- Warunki NIESPEŁNIONE, nie pokazuję powiadomienia. ---', 'color: gray;');
+             console.log('%c--- Warunki NIESPEŁNIONE, nie pokazuję powiadomienia. ---', 'color: gray;');
         }
-        // --- KONIEC BLOKU DIAGNOSTYCZNEGO ---
 
+        // --- Renderowanie wiadomości w aktywnym czacie ---
         if (msg.room === currentRoom) {
-            const div = document.createElement('div');
-            div.classList.add('message', String(msg.username) === String(currentUser.id) ? 'sent' : 'received');
-			const isGroup = currentChatUser && currentChatUser.type === 'group';
-			const avatarSrc = `https://i.pravatar.cc/150?img=${msg.username.charCodeAt(0) % 70 + 1}`;
-			const timeString = new Date(msg.inserted_at).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
-			const senderName = isGroup ? (getUserLabelById(msg.username) || 'Nieznany') : ''; // Pokaż nazwę tylko w grupie
+            const messageContainer = elements.messageContainer;
+            if (messageContainer) {
+                const isSent = String(msg.username) === String(currentUser.id);
 
-			div.innerHTML = `
-				<img src="${avatarSrc}" alt="Avatar" class="message-avatar">
-					${isGroup && String(msg.username) !== String(currentUser.id) ? `<strong class="sender-name">${senderName}</strong><br>` : ''}
-					<p>${msg.text}</p>
-					<span class="timestamp">${timeString}</span>
-			`;
-            if (elements.messageContainer) {
-                elements.messageContainer.appendChild(div);
-                elements.messageContainer.scrollTop = elements.messageContainer.scrollHeight;
+                // Utwórz główny wrapper dla jednej wiadomości
+                const messageWrapper = document.createElement('div');
+                messageWrapper.classList.add('message-wrapper', isSent ? 'sent' : 'received');
+
+                const avatarSrc = `https://i.pravatar.cc/150?img=${msg.username.charCodeAt(0) % 70 + 1}`;
+                const timeString = new Date(msg.inserted_at).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+                const senderName = isGroup ? (getUserLabelById(msg.username) || 'Nieznany') : '';
+
+                // Zbuduj HTML wiadomości z nową strukturą
+                messageWrapper.innerHTML = `
+                    <img src="${avatarSrc}" alt="Avatar" class="message-avatar">
+                    <div class="message-content-wrapper">
+                        ${isGroup && !isSent ? `<strong class="sender-name">${senderName}</strong>` : ''}
+                        <div class="message"> {/* Ten div to teraz sam dymek */}
+                            <p>${msg.text}</p>
+                            <span class="timestamp">${timeString}</span>
+                        </div>
+                    </div>
+                `;
+
+                messageContainer.appendChild(messageWrapper);
+                // Przewiń na dół, aby zobaczyć najnowszą wiadomość
+                messageContainer.scrollTop = messageContainer.scrollHeight;
             }
         }
     } catch (e) {
         console.error("Błąd w addMessageToChat:", e);
+        // Opcjonalnie: Pokaż użytkownikowi komunikat o błędzie
+        // showCustomMessage("Wystąpił błąd podczas dodawania wiadomości.", "error");
     }
 }
 
