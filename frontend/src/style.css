@@ -826,12 +826,16 @@ body {
 }
 
 .message {
-    display: flex; /* Użyjemy flexboxa do ułożenia awatara i treści */
-    align-items: flex-end; /* Wyrównaj awatar do dołu dymka */
-    gap: 0.7rem; /* Odstęp między awatarem a dymkiem */
-    max-width: 75%; /* Zwiększamy trochę maksymalną szerokość */
-    margin-bottom: 0.8rem;
+    max-width: 65%;
+    padding: 0.8rem 1rem;
+    border-radius: var(--border-radius-message);
+    background: var(--bg-color-message-received);
+    position: relative;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     width: fit-content;
+    min-width: 60px;
+    color: var(--text-color-dark);
+    margin-bottom: 0.7rem;
 }
 .message-content {
     padding: 0.7rem 1rem;
