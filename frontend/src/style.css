@@ -520,7 +520,7 @@ body {
 
 /* ZMODYFIKOWANE: Przycisk wstecz */
 .back-button {
-    display: none;
+    display: block;
     background: none;
     border: none;
     font-size: 1.3rem;
