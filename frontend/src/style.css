@@ -836,15 +836,7 @@ body {
     min-width: 60px;
     color: var(--text-color-dark);
     margin-bottom: 0.7rem;
-}
-.message-content {
-    padding: 0.7rem 1rem;
-    border-radius: var(--border-radius-message);
-    background: var(--bg-color-message-received);
-    position: relative;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    color: var(--text-color-dark);
-    /* Usunięte: min-width, width: fit-content - teraz rodzic .message to kontroluje */
+	margin-left: 45px;
 }
 
 .message-avatar {
@@ -852,8 +844,9 @@ body {
     height: 35px;
     border-radius: 50%;
     object-fit: cover;
-    flex-shrink: 0;
-    margin-bottom: 5px; /* Lekkie uniesienie, by pasowało do dymka */
+    position: absolute; /* Pozycjonowanie względem rodzica (.message) */
+    bottom: 0; /* Wyrównaj do dołu dymka */
+    left: -45px; /* Umieść na lewo od dymka (uwzględniając margines) */
 }
 
 .sender-name {
@@ -866,8 +859,10 @@ body {
 
 /* Nadpisanie dla wiadomości wysłanych */
 .message.sent {
-    margin-left: auto;
-    flex-direction: row-reverse; /* Odwróć kolejność (dymek, potem awatar) */
+    margin-left: auto; /* Przesuwa dymek w prawo */
+    margin-right: 45px; /* Robi miejsce na awatar po prawej */
+    background: var(--primary-color);
+    color: var(--text-color-light);
 }
 .message.sent .message-content {
     background: var(--primary-color);
@@ -878,6 +873,8 @@ body {
 }
 .message.sent .message-avatar {
     display: none;
+	left: auto; /* Usuń pozycjonowanie lewe */
+    right: -45px; /* Umieść na prawo od dymka */
 }
 
 .message:last-child {

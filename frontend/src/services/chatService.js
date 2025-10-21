@@ -235,17 +235,16 @@ export async function handleConversationClick(user, clickedConvoItemElement) {
         history.forEach(msg => {
             const div = document.createElement('div');
             div.classList.add('message', String(msg.username) === String(currentUser.id) ? 'sent' : 'received');
+			const isGroup = currentChatUser && currentChatUser.type === 'group';
 			const avatarSrc = `https://i.pravatar.cc/150?img=${msg.username.charCodeAt(0) % 70 + 1}`;
 			const timeString = new Date(msg.inserted_at).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
 			const senderName = isGroup ? (getUserLabelById(msg.username) || 'Nieznany') : ''; // Pokaż nazwę tylko w grupie
 
 			div.innerHTML = `
 				<img src="${avatarSrc}" alt="Avatar" class="message-avatar">
-				<div class="message-content">
 					${isGroup && String(msg.username) !== String(currentUser.id) ? `<strong class="sender-name">${senderName}</strong><br>` : ''}
 					<p>${msg.text}</p>
 					<span class="timestamp">${timeString}</span>
-				</div>
 			`;
             elements.messageContainer.appendChild(div);
         });
@@ -339,17 +338,16 @@ export async function addMessageToChat(msg) {
         if (msg.room === currentRoom) {
             const div = document.createElement('div');
             div.classList.add('message', String(msg.username) === String(currentUser.id) ? 'sent' : 'received');
+			const isGroup = currentChatUser && currentChatUser.type === 'group';
 			const avatarSrc = `https://i.pravatar.cc/150?img=${msg.username.charCodeAt(0) % 70 + 1}`;
 			const timeString = new Date(msg.inserted_at).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
 			const senderName = isGroup ? (getUserLabelById(msg.username) || 'Nieznany') : ''; // Pokaż nazwę tylko w grupie
 
 			div.innerHTML = `
 				<img src="${avatarSrc}" alt="Avatar" class="message-avatar">
-				<div class="message-content">
 					${isGroup && String(msg.username) !== String(currentUser.id) ? `<strong class="sender-name">${senderName}</strong><br>` : ''}
 					<p>${msg.text}</p>
 					<span class="timestamp">${timeString}</span>
-				</div>
 			`;
             if (elements.messageContainer) {
                 elements.messageContainer.appendChild(div);
