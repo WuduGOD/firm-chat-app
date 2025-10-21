@@ -815,17 +815,6 @@ body {
     background: #ef4444;
 }
 
-/* Stylowanie ogonków wiadomości w zależności od motywu */
-.messages.blue-theme .message.sent::before {
-    border-color: transparent transparent transparent #3b82f6;
-}
-.messages.green-theme .message.sent::before {
-    border-color: transparent transparent transparent #10b981;
-}
-.messages.red-theme .message.sent::before {
-    border-color: transparent transparent transparent #ef4444;
-}
-
 /* Stylowanie tła czatu */
 .messages.dark-bg {
     background-color: #333;
@@ -852,6 +841,15 @@ body {
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     color: var(--text-color-dark);
     /* Usunięte: min-width, width: fit-content - teraz rodzic .message to kontroluje */
+}
+
+.message-avatar {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    margin-bottom: 5px; /* Lekkie uniesienie, by pasowało do dymka */
 }
 
 .sender-name {
@@ -1840,15 +1838,9 @@ body.dark-mode .nav-icon::after {
     background: var(--bg-color-sidebar);
     border-color: var(--border-color-medium);
 }
-.dark-mode .link-preview-message::before {
-    border-color: transparent var(--bg-color-sidebar) transparent transparent;
-}
 .dark-mode .link-preview-message.sent {
     background: var(--bg-color-search-input);
     border-color: var(--border-color-medium);
-}
-.dark-mode .link-preview-message.sent::before {
-    border-color: transparent transparent transparent var(--bg-color-search-input);
 }
 .dark-mode .link-preview-icon {
     background: var(--bg-color-search-input);
