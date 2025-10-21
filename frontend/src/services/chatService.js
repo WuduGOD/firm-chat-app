@@ -397,7 +397,7 @@ export async function addMessageToChat(msg) {
                     <img src="${avatarSrc}" alt="Avatar" class="message-avatar">
                     <div class="message-content-wrapper">
                         ${isGroup && !isSent ? `<strong class="sender-name">${senderName}</strong>` : ''}
-                        <div class="message"> {/* Ten div to teraz sam dymek */}
+                        <div class="message">
                             <p>${msg.text}</p>
                             <span class="timestamp">${timeString}</span>
                         </div>

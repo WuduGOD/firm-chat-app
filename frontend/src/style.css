@@ -869,7 +869,7 @@ body {
     align-items: flex-end; /* Wyrównaj awatar i treść do dołu */
     gap: 0.7rem;
     margin-bottom: 0.8rem;
-    max-width: 75%; /* Ogranicz szerokość całej wiadomości */
+    max-width: 60%; /* Ogranicz szerokość całej wiadomości */
 }
 .message-wrapper.sent {
     margin-left: auto; /* Przesuń w prawo */
