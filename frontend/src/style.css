@@ -837,6 +837,14 @@ body {
     position: relative; /* Potrzebne jeśli timestamp jest pozycjonowany absolutnie */
 }
 
+.message p {
+    word-wrap: break-word; /* Starsza właściwość dla kompatybilności */
+    overflow-wrap: break-word; /* Standardowa właściwość */
+    white-space: normal; /* Upewnij się, że tekst może się zawijać */
+    /* Możesz też dodać hyphens: auto; dla dzielenia wyrazów, ale wymaga to ustawienia lang="pl" w HTML */
+    /* hyphens: auto; */
+}
+
 .message-avatar {
     width: 35px;
     height: 35px;
