@@ -1047,10 +1047,7 @@ body {
     height: auto;
     border-radius: 0;
     transition: color 0.2s;
-	outline-style: none !important;
-    outline-color: transparent !important;
-    outline-width: 0 !important;
-    box-shadow: none !important;
+	
 }
 
 .chat-footer .attach-button:hover,
@@ -1059,12 +1056,13 @@ body {
 	outline: none !important;
 }
 
+.chat-footer .emoji-button:hover,
 .chat-footer .emoji-button:focus,
-.chat-footer .emoji-button:active {
-    outline-style: none !important;     /* Mówi "nie używaj żadnego stylu obwódki" */
-    outline-color: transparent !important; /* Mówi "kolor obwódki ma być przezroczysty" */
-    outline-width: 0 !important;        /* Mówi "szerokość obwódki ma być zerowa" */
-    box-shadow: none !important;        /* Usuwa potencjalny cień zamiast obwódki */
+.chat-footer .emoji-button:active,
+.chat-footer .emoji-button:focus-visible {
+    outline: none !important; /* Najważniejsza reguła - usuń obwódkę */
+    box-shadow: none !important; /* Usuń też potencjalny cień */
+    border-color: transparent !important; /* Na wszelki wypadek, jeśli to obramowanie */
 }
 
 /* PRAWY SIDEBAR (AKTYWNI UŻYTKOWNICY) */
