@@ -837,17 +837,47 @@ body {
 }
 
 .message {
-    max-width: 65%;
-    padding: 0.8rem 1rem;
+    display: flex; /* Użyjemy flexboxa do ułożenia awatara i treści */
+    align-items: flex-end; /* Wyrównaj awatar do dołu dymka */
+    gap: 0.7rem; /* Odstęp między awatarem a dymkiem */
+    max-width: 75%; /* Zwiększamy trochę maksymalną szerokość */
+    margin-bottom: 0.8rem;
+    width: fit-content;
+}
+.message-content {
+    padding: 0.7rem 1rem;
     border-radius: var(--border-radius-message);
     background: var(--bg-color-message-received);
     position: relative;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    width: fit-content;
-    min-width: 60px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     color: var(--text-color-dark);
-    margin-bottom: 0.7rem;
+    /* Usunięte: min-width, width: fit-content - teraz rodzic .message to kontroluje */
 }
+
+.sender-name {
+    font-weight: bold;
+    font-size: 0.85em;
+    color: var(--primary-color); /* Możesz dostosować kolor */
+    margin-bottom: 3px;
+    display: block;
+}
+
+/* Nadpisanie dla wiadomości wysłanych */
+.message.sent {
+    margin-left: auto;
+    flex-direction: row-reverse; /* Odwróć kolejność (dymek, potem awatar) */
+}
+.message.sent .message-content {
+    background: var(--primary-color);
+    color: var(--text-color-light);
+}
+.message.sent .timestamp { /* Poprawka koloru timestampa dla wysłanych */
+     color: rgba(255, 255, 255, 0.8);
+}
+.message.sent .message-avatar {
+    display: none;
+}
+
 .message:last-child {
     margin-bottom: 0;
 }
@@ -861,28 +891,6 @@ body {
     margin-right: auto;
     background-color: var(--bg-color-message-received);
     color: var(--text-color-dark);
-}
-
-/* Ogonek wiadomości - uniwersalny styl dla obu trybów */
-.message::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    border: 8px solid transparent;
-    width: 0;
-    height: 0;
-}
-
-.message.sent::before {
-    right: -8px;
-    border-left-color: var(--primary-color);
-    border-top-right-radius: 0;
-}
-
-.message.received::before {
-    left: -8px;
-    border-right-color: var(--bg-color-message-received);
-    border-top-left-radius: 0;
 }
 
 .timestamp {
@@ -1793,14 +1801,11 @@ body.dark-mode .nav-icon::after {
     background-color: var(--bg-color-message-received);
     color: var(--text-color-light);
 }
+.dark-mode .sender-name {
+    color: var(--primary-color-light); /* Kolor w trybie ciemnym */
+}
 .dark-mode .message.sent {
     background-color: var(--primary-color);
-}
-.dark-mode .message::before {
-    border-color: transparent var(--bg-color-message-received) transparent transparent;
-}
-.dark-mode .message.sent::before {
-    border-color: transparent transparent transparent var(--primary-color);
 }
 .dark-mode .timestamp {
     color: var(--text-color-medium);
