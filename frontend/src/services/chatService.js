@@ -266,7 +266,7 @@ export async function handleConversationClick(user, clickedConvoItemElement) {
                     <img src="${avatarSrc}" alt="Avatar" class="message-avatar">
                     <div class="message-content-wrapper">
                          ${isGroup && !isSent ? `<strong class="sender-name">${senderName}</strong>` : ''}
-                        <div class="message"> {/* Ten div to sam dymek */}
+                        <div class="message">
                             <p>${msg.text}</p>
                             <span class="timestamp">${timeString}</span>
                         </div>
