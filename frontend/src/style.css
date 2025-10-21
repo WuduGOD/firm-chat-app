@@ -838,10 +838,10 @@ body {
 }
 
 .message p {
-    word-wrap: break-word; /* Starsza właściwość dla kompatybilności */
-    overflow-wrap: break-word; /* Standardowa właściwość */
-    white-space: normal; /* Upewnij się, że tekst może się zawijać */
-    /* Możesz też dodać hyphens: auto; dla dzielenia wyrazów, ale wymaga to ustawienia lang="pl" w HTML */
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    min-width: 0; /* <-- DODAJ TĘ LINIĘ */
     /* hyphens: auto; */
 }
 
@@ -884,6 +884,7 @@ body {
     display: flex;
     flex-direction: column; /* Ułóż nazwę nad dymkiem */
     align-items: flex-start; /* Domyślne wyrównanie (dla received) */
+	max-width: 100%;
 }
 .message-wrapper.sent .message-content-wrapper {
     align-items: flex-end; /* Wyrównaj dymek do prawej dla wysłanych */
