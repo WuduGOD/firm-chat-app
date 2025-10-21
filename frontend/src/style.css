@@ -865,6 +865,9 @@ body {
     margin-left: auto; /* Przesuń w prawo */
     flex-direction: row-reverse; /* Odwróć kolejność */
 }
+.message-wrapper.sent .message-avatar {
+    display: none; /* Ukryj awatar dla wiadomości wysłanych */
+}
 .message-wrapper.received {
     margin-right: auto; /* Trzymaj po lewej */
 }
