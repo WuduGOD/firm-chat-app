@@ -839,15 +839,9 @@ body {
     min-width: 60px;
     color: var(--text-color-dark);
     position: relative; /* Potrzebne jeśli timestamp jest pozycjonowany absolutnie */
-}
-
-.message p {
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    white-space: normal;
-    min-width: 0; /* <-- DODAJ TĘ LINIĘ */
-	word-break: break-all;
-    /* hyphens: auto; */
+	overflow-wrap: break-word; /* Standardowe łamanie */
+    word-break: break-all;     /* Agresywne łamanie */
+    overflow: hidden;          /* Obetnij, jeśli coś nadal wystaje */
 }
 
 .message-avatar {
