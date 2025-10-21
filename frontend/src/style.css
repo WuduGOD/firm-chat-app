@@ -1060,9 +1060,11 @@ body {
 .chat-footer .emoji-button:focus,
 .chat-footer .emoji-button:active,
 .chat-footer .emoji-button:focus-visible {
-    outline: none !important; /* Najważniejsza reguła - usuń obwódkę */
-    box-shadow: none !important; /* Usuń też potencjalny cień */
-    border-color: transparent !important; /* Na wszelki wypadek, jeśli to obramowanie */
+    outline-style: solid !important; /* Ustaw styl, żeby kolor zadziałał */
+    outline-color: transparent !important; /* KLUCZOWA ZMIANA: Niewidoczny kolor */
+    outline-width: 1px !important; /* Ustaw minimalną grubość */
+    box-shadow: none !important;
+    border-color: transparent !important;
 }
 
 /* PRAWY SIDEBAR (AKTYWNI UŻYTKOWNICY) */
