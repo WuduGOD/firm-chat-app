@@ -1,49 +1,51 @@
 import { supabase, profilesCache } from './supabaseClient.js'
 
 export async function loadAllProfiles() {
-  const { data: profiles, error } = await supabase.from('profiles').select('id,email,username')
-  if (error) {
-    console.error('Błąd ładowania profili:', error)
-    return []; // Zwracaj pustą tablicę w przypadku błędu
-  }
-  profilesCache.clear()
-  profiles.forEach(({ id, email, username }) => {
-    profilesCache.set(id, { email, username })
-  })
-  return profiles; // Zwracaj profile, jeśli wszystko poszło dobrze
-}
+  // ZMIANA: Dodaj 'user_metadata' do select
+  const { data: profiles, error } = await supabase
+      .from('profiles')
+      .select('id, email, username, user_metadata'); // <-- ZMIANA TUTAJ
 
-export function getUserLabelById(id) {
-  const profile = profilesCache.get(id)
-  if (!profile) return id
-  return profile.username || profile.email || id
+  if (error) {
+    console.error('Błąd ładowania profili:', error);
+    return [];
+  }
+  profilesCache.clear();
+  profiles.forEach(({ id, email, username, user_metadata }) => {
+    // ZMIANA: Dodaj avatar_url do cache, pobierając go z metadanych
+    profilesCache.set(id, {
+        email,
+        username,
+        avatar_url: user_metadata?.avatar_url || null // <-- ZMIANA TUTAJ
+    });
+  });
+  console.log("Profile cache updated with avatar URLs:", profilesCache); // Log do sprawdzenia
+  return profiles;
 }
 
 /**
- * Generuje publiczny URL do awatara użytkownika w Supabase Storage.
+ * Pobiera publiczny URL do awatara użytkownika z cache lub zwraca placeholder.
  * @param {string} userId - ID użytkownika.
- * @returns {string} Publiczny URL do awatara.
+ * @returns {string} Publiczny URL do awatara lub placeholder.
  */
 export function getAvatarUrl(userId) {
     if (!userId) {
-        // Zwróć domyślny awatar, jeśli ID jest nieprawidłowe
-        return 'https://placehold.co/48x48/cccccc/FFFFFF?text=?';
+        return 'https://placehold.co/48x48/cccccc/FFFFFF?text=?'; // Placeholder
     }
-    // Konstruuj URL do pliku w Supabase Storage
-    // Zakładamy, że pliki mają nazwę userID.png lub userID.jpg
-    // Supabase sam obsłuży odpowiedni Content-Type
-    // Dodajemy timestamp, aby uniknąć problemów z cache przeglądarki
-    const { data } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(`avatars/${userId}`, {
-             // Opcjonalnie: transformacja obrazu po stronie Supabase
-             /* transform: {
-                 width: 48,
-                 height: 48,
-                 resize: 'cover' // lub 'contain'
-             } */
-         });
 
-    // Zwracamy URL z dodanym timestampem, aby wymusić odświeżenie
-    return `${data.publicUrl}?t=${new Date().getTime()}`;
+    const profile = profilesCache.get(userId);
+    const cachedUrl = profile?.avatar_url;
+
+    if (cachedUrl) {
+        // Zwróć zapisany URL z dodanym timestampem, aby odświeżyć cache przeglądarki
+        // Upewnij się, że URL nie ma już timestampa
+        const urlWithoutTimestamp = cachedUrl.split('?t=')[0];
+        return `${urlWithoutTimestamp}?t=${new Date().getTime()}`;
+    } else {
+        // Jeśli URL nie jest zapisany, użyj domyślnego avatara Pravatar jako fallback
+        // LUB możesz zwrócić bardziej generyczny placeholder:
+        // return 'https://placehold.co/48x48/cccccc/FFFFFF?text=?';
+        console.warn(`Nie znaleziono avatar_url w cache dla użytkownika ${userId}. Używam Pravatar.`);
+        return `https://i.pravatar.cc/150?img=${userId.charCodeAt(0) % 70 + 1}`;
+    }
 }

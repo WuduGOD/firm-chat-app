@@ -563,9 +563,41 @@ async function initializeApp() {
                         contentType: file.type
                     });
 
-                if (error) {
-                    throw error;
+				if (error) {
+                    throw error; // Rzuć błąd, jeśli wgranie się nie powiodło
                 }
+
+                // --- POCZĄTEK NOWEGO KODU ---
+                // Pobierz publiczny URL właśnie wgranego pliku
+                const { data: publicUrlData } = supabase.storage
+                    .from('avatars')
+                    .getPublicUrl(filePath);
+
+                if (!publicUrlData || !publicUrlData.publicUrl) {
+                     throw new Error('Nie udało się uzyskać publicznego URL dla awatara.');
+                }
+
+                const publicUrl = publicUrlData.publicUrl;
+
+                // Zapisz publiczny URL w metadanych użytkownika w Supabase Auth
+                const { data: updateData, error: updateError } = await supabase.auth.updateUser({
+                    data: { avatar_url: publicUrl } // Zapisujemy URL w user_metadata
+                });
+
+                if (updateError) {
+                    throw updateError; // Rzuć błąd, jeśli aktualizacja metadanych się nie powiodła
+                }
+
+                // Zaktualizuj również lokalny cache profili
+                const cachedProfile = profilesCache.get(currentUser.id);
+                if (cachedProfile) {
+                    cachedProfile.avatar_url = publicUrl;
+                    profilesCache.set(currentUser.id, cachedProfile);
+                    console.log(`Zaktualizowano avatar_url w cache dla ${currentUser.id}`);
+                } else {
+                     // Jeśli profilu nie ma w cache, załaduj go ponownie (choć to rzadki przypadek)
+                     await loadAllProfiles();
+                 }
 
                 helpers.showCustomMessage('Awatar został zaktualizowany!', 'success');
                 avatarUploadInput.value = ''; // Wyczyść input po sukcesie
