@@ -449,14 +449,14 @@ function setupEventListeners() {
         }
     });
 	
-	if (lightboxCloseButton) {
-    lightboxCloseButton.addEventListener('click', closeLightbox);
+	if (elements.lightboxCloseButton) {
+    elements.lightboxCloseButton.addEventListener('click', closeLightbox);
 	}
-	if (imageLightbox) {
+	if (elements.imageLightbox) {
 		// Zamknij lightbox po kliknięciu na tło (overlay)
-		imageLightbox.addEventListener('click', (event) => {
+		elements.imageLightbox.addEventListener('click', (event) => {
 			// Zamknij tylko jeśli kliknięto bezpośrednio na tło, a nie na obrazek
-			if (event.target === imageLightbox) {
+			if (event.target === elements.imageLightbox) {
 				closeLightbox();
 			}
 		});
