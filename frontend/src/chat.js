@@ -370,6 +370,24 @@ export function setupChatSettingsDropdown() {
     }
 }
 
+export function openLightbox(imageUrl) {
+    if (elements.imageLightbox && elements.lightboxImage) {
+        elements.lightboxImage.src = imageUrl;
+        elements.imageLightbox.classList.remove('hidden');
+    } else {
+         console.error("Nie znaleziono elementów lightboxa w openLightbox (chat.js)");
+    }
+}
+
+export function closeLightbox() {
+    if (elements.imageLightbox) {
+        elements.imageLightbox.classList.add('hidden');
+         // if (elements.lightboxImage) elements.lightboxImage.src = ""; // Opcjonalnie
+    } else {
+         console.error("Nie znaleziono elementu imageLightbox w closeLightbox (chat.js)");
+    }
+}
+
 /**
  * Podpina główne event listenery interfejsu.
  */
