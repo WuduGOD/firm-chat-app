@@ -9,7 +9,7 @@ import * as friendsService from './services/friendsService.js';
 
 // Importy z tego samego folderu
 import * as websocket from './websocket.js';
-import { supabase } from './supabaseClient.js';
+import { supabase, profilesCache } from './supabaseClient.js';
 import { loadAllProfiles, getUserLabelById, getAvatarUrl } from './profiles.js';
 
 // --- Zmienne stanu aplikacji i czatu ---
