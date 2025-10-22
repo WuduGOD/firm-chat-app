@@ -479,6 +479,31 @@ function setupEventListeners() {
 			}
 		});
 	}
+	
+	// --- NOWY LISTENER DLA KLIKNIĘĆ W WIADOMOŚCI (Delegowanie) ---
+	if (elements.messageContainer) {
+		elements.messageContainer.addEventListener('click', (event) => {
+			// Sprawdź, czy kliknięto bezpośrednio na obrazek LUB na link obrazka
+			const clickedImage = event.target.closest('.chat-image'); // Szukaj obrazka
+			const clickedImageLink = event.target.closest('a > .chat-image') ? event.target.closest('a') : null; // Szukaj linku Z obrazkiem w środku
+
+			if (clickedImage) {
+				event.preventDefault(); // Zatrzymaj domyślne działanie tylko dla obrazków
+				const imageUrl = clickedImage.dataset.lightboxSrc || clickedImage.src;
+				if (imageUrl) {
+					openLightbox(imageUrl);
+				}
+			} else if (clickedImageLink) {
+				event.preventDefault(); // Zatrzymaj domyślne działanie linku obrazka
+				const imageUrl = clickedImageLink.href;
+				if (imageUrl) {
+					openLightbox(imageUrl);
+				}
+			}
+        // Jeśli kliknięto na cokolwiek innego (np. link PDF, tekst, tło),
+        // listener nic nie zrobi, pozwalając na domyślne działanie.
+		});
+	}
 
     console.log('[Init] Główne event listenery UI zostały podpięte.');
 }
