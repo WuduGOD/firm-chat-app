@@ -4,7 +4,7 @@ import { supabase } from '../supabaseClient.js';
 import * as elements from '../ui/elements.js';
 import * as chatState from '../chat.js';
 import { getUserLabelById, getAvatarUrl } from '../profiles.js';
-import { formatTimeAgo, showCustomMessage, playNotificationSound, updateDocumentTitle, openLightbox } from '../ui/helpers.js';
+import { formatTimeAgo, showCustomMessage, playNotificationSound, updateDocumentTitle, openLightbox, closeLightbox } from '../ui/helpers.js';
 import { loadContacts, updateConversationPreview, renderActiveUsersList } from './friendsService.js';
 import { onlineUsers, currentChatUser, allFriends, currentUser, unreadConversationsInfo, currentActiveConvoItem, setCurrentActiveConvoItem, setCurrentChatUser, setCurrentRoom, socket, currentRoom, notificationPermissionGranted } from '../chat.js';
 import { messageContainer, activeUsersListEl, contactsListEl, chatAreaWrapper, userStatusSpan, typingStatusHeader, typingIndicatorMessages } from '../ui/elements.js';

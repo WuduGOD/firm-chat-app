@@ -263,7 +263,7 @@ export function updateDocumentTitle() {
     document.title = newTitle;
 }
 
-function openLightbox(imageUrl) {
+export function openLightbox(imageUrl) {
     if (imageLightbox && lightboxImage) {
         lightboxImage.src = imageUrl; // Ustaw źródło obrazka
         imageLightbox.classList.remove('hidden'); // Pokaż lightbox
@@ -273,7 +273,7 @@ function openLightbox(imageUrl) {
     }
 }
 
-function closeLightbox() {
+export function closeLightbox() {
     if (imageLightbox) {
         imageLightbox.classList.add('hidden'); // Ukryj lightbox
         // Opcjonalnie: Wyczyść src, aby nie ładować w tle
