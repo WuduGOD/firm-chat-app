@@ -363,7 +363,6 @@ export async function handleConversationClick(user, clickedConvoItemElement) {
  */
 export async function addMessageToChat(msg) {
     // Sprawdź, czy obecna rozmowa to grupa (robimy to na początku)
-    const isGroup = currentChatUser && currentChatUser.type === 'group';
     console.log(`[addMessageToChat] Przetwarzanie wiadomości dla pokoju: ${msg.room}`);
 
     try {
@@ -408,6 +407,7 @@ export async function addMessageToChat(msg) {
 
         // --- Renderowanie wiadomości w aktywnym czacie ---
         if (msg.room === currentRoom) {
+			const isGroup = currentChatUser && currentChatUser.type === 'group';
             const messageContainer = elements.messageContainer;
             if (messageContainer) {
                 const isSent = String(msg.username) === String(currentUser.id);
@@ -415,6 +415,7 @@ export async function addMessageToChat(msg) {
                 // Utwórz główny wrapper dla jednej wiadomości
                 const messageWrapper = document.createElement('div');
                 messageWrapper.classList.add('message-wrapper', isSent ? 'sent' : 'received');
+				messageWrapper.dataset.userId = msg.username;
 
                 const avatarSrc = getAvatarUrl(msg.username);
                 const timeString = new Date(msg.inserted_at).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
