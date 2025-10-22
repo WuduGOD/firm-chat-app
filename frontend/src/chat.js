@@ -10,7 +10,7 @@ import * as friendsService from './services/friendsService.js';
 // Importy z tego samego folderu
 import * as websocket from './websocket.js';
 import { supabase } from './supabaseClient.js';
-import { loadAllProfiles, getUserLabelById } from './profiles.js';
+import { loadAllProfiles, getUserLabelById, getAvatarUrl } from './profiles.js';
 
 // --- Zmienne stanu aplikacji i czatu ---
 export let allFriends = [];
@@ -519,6 +519,106 @@ async function initializeApp() {
             }
         )
         .subscribe();
+		
+	const changeAvatarButton = document.getElementById('changeAvatarButton');
+    const avatarUploadInput = document.getElementById('avatarUploadInput');
+
+    if (changeAvatarButton && avatarUploadInput) {
+        changeAvatarButton.addEventListener('click', () => {
+            avatarUploadInput.click(); // Aktywuj ukryty input pliku
+        });
+
+        avatarUploadInput.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (!file || !currentUser) return;
+
+            // Sprawdź rozmiar pliku (np. max 2MB)
+            const maxSize = 2 * 1024 * 1024; // 2MB
+            if (file.size > maxSize) {
+                helpers.showCustomMessage('Plik jest za duży. Maksymalny rozmiar to 2MB.', 'error');
+                avatarUploadInput.value = ''; // Wyczyść input
+                return;
+            }
+
+            // Sprawdź typ pliku
+            if (!['image/png', 'image/jpeg'].includes(file.type)) {
+                 helpers.showCustomMessage('Nieprawidłowy format pliku. Dozwolone są tylko PNG i JPG.', 'error');
+                 avatarUploadInput.value = ''; // Wyczyść input
+                 return;
+            }
+
+            const fileExt = file.name.split('.').pop();
+            const filePath = `avatars/${currentUser.id}.${fileExt}`; // np. avatars/user_id_123.png
+
+            helpers.showCustomMessage('Przesyłanie awatara...', 'info');
+
+            try {
+                // Wyślij (lub zaktualizuj) plik do Supabase Storage
+                // Używamy upsert: true, aby nadpisać istniejący awatar
+                const { data, error } = await supabase.storage
+                    .from('avatars') // Nazwa Twojego bucketu na awatary
+                    .upload(filePath, file, {
+                        cacheControl: '3600', // Cache przez 1 godzinę
+                        upsert: true, // Nadpisz, jeśli istnieje
+                        contentType: file.type
+                    });
+
+                if (error) {
+                    throw error;
+                }
+
+                helpers.showCustomMessage('Awatar został zaktualizowany!', 'success');
+                avatarUploadInput.value = ''; // Wyczyść input po sukcesie
+
+			const newAvatarUrl = getAvatarUrl(currentUser.id); // Pobierz nowy URL z timestampem
+
+                // Funkcja pomocnicza do aktualizacji konkretnego awatara
+                const updateAvatarImage = (imgElement, userId) => {
+                    if (imgElement && String(userId) === String(currentUser.id)) {
+                       // Sprawdź czy URL się faktycznie zmienił (dzięki timestampowi powinien)
+                       if (imgElement.src !== newAvatarUrl) {
+                           imgElement.src = newAvatarUrl;
+                           console.log('Zaktualizowano awatar dla:', imgElement);
+                       }
+                    }
+                };
+
+                // Zaktualizuj awatary na liście konwersacji
+                document.querySelectorAll('#contactsList .contact .avatar').forEach(img => {
+                    const convoId = img.closest('.contact')?.dataset.convoId;
+                    if (convoId) updateAvatarImage(img, convoId);
+                });
+
+                // Zaktualizuj awatary w aktywnym czacie (wiadomości)
+                document.querySelectorAll('#messageContainer .message-wrapper .message-avatar').forEach(img => {
+                    // Tutaj potrzebujemy ID użytkownika z wiadomości - musisz je zapisać w atrybucie data-* podczas renderowania
+                    // Załóżmy, że dodasz data-user-id do .message-wrapper
+                    const wrapper = img.closest('.message-wrapper');
+                    const senderId = wrapper?.dataset.userId; // MUSISZ DODAĆ TEN ATRYBUT W addMessageToChat i handleConversationClick
+                     if (senderId) updateAvatarImage(img, senderId);
+                });
+
+                 // Zaktualizuj awatary na liście aktywnych użytkowników (desktop)
+                document.querySelectorAll('#activeUsersList .active-user-item .avatar').forEach(img => {
+                    const userId = img.closest('.active-user-item')?.dataset.userId;
+                    if (userId) updateAvatarImage(img, userId);
+                });
+
+                // Zaktualizuj awatary na liście aktywnych użytkowników (mobile)
+                document.querySelectorAll('#onlineUsersMobile .online-user-item-mobile .avatar').forEach(img => {
+                    const userId = img.closest('.online-user-item-mobile')?.dataset.userId;
+                    if (userId) updateAvatarImage(img, userId);
+                });
+
+            } catch (error) {
+                console.error('Błąd podczas przesyłania awatara:', error);
+                helpers.showCustomMessage(`Błąd przesyłania: ${error.message}`, 'error');
+                avatarUploadInput.value = ''; // Wyczyść input w razie błędu
+            }
+        });
+    } else {
+        console.warn('Nie znaleziono przycisków do zmiany awatara.');
+    }
 
     console.log("✅ Aplikacja Komunikator została pomyślnie zainicjalizowana!");
 }

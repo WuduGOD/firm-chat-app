@@ -5,7 +5,7 @@ import { setAllFriends, onlineUsers, currentUser, allFriends, socket } from '../
 import { notificationBadge, contactsListEl, friendEmailInput, sendRequestStatus, pendingFriendRequestsList, noPendingRequestsText, pendingRequestsSection, activeUsersListEl, noActiveUsersText, onlineUsersMobile, friendRequestModal } from '../ui/elements.js';
 import { showCustomMessage } from '../ui/helpers.js';
 import { loadUnreadMessagesFromSupabase, getRoomName, sortConversations, handleConversationClick } from './chatService.js';
-import { loadAllProfiles, getUserLabelById } from '../profiles.js';
+import { loadAllProfiles, getUserLabelById, getAvatarUrl } from '../profiles.js';
 
 /**
  * Loads and renders the list of contacts (friends).
@@ -93,9 +93,9 @@ export async function loadContacts() {
             convoItem.dataset.roomId = convo.roomId;
             convoItem.dataset.convoId = convo.id;
 
-            const avatarSrc = convo.type === 'private'
-                ? `https://i.pravatar.cc/150?img=${convo.id.charCodeAt(0) % 70 + 1}`
-                : `https://placehold.co/48x48/6a5acd/FFFFFF?text=${convo.name.substring(0, 2).toUpperCase()}`;
+			const avatarSrc = convo.type === 'private'
+				? getAvatarUrl(convo.id) // Użyj nowej funkcji dla użytkowników
+				: `https://placehold.co/48x48/6a5acd/FFFFFF?text=${convo.name.substring(0, 2).toUpperCase()}`;
             
             const senderName = convo.lastMessage ? (String(convo.lastMessage.username) === String(currentUser.id) ? "Ja" : (getUserLabelById(convo.lastMessage.username) || '...')) : "";
             const previewText = convo.lastMessage ? `${senderName}: ${convo.lastMessage.text}` : "Brak wiadomości";
@@ -162,7 +162,7 @@ export function renderActiveUsersList() {
         onlineFriends.forEach(user => {
             const userId = user.id;
             const userName = getUserLabelById(userId) || 'Nieznany';
-            const avatarSrc = `https://i.pravatar.cc/150?img=${userId.charCodeAt(0) % 70 + 1}`;
+            const avatarSrc = getAvatarUrl(userId);
 
             const createItem = (isDesktop) => {
                 const item = document.createElement(isDesktop ? 'li' : 'div');

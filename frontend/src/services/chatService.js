@@ -3,7 +3,7 @@
 import { supabase } from '../supabaseClient.js';
 import * as elements from '../ui/elements.js';
 import * as chatState from '../chat.js';
-import { getUserLabelById } from '../profiles.js';
+import { getUserLabelById, getAvatarUrl } from '../profiles.js';
 import { formatTimeAgo, showCustomMessage, playNotificationSound, updateDocumentTitle } from '../ui/helpers.js';
 import { loadContacts, updateConversationPreview, renderActiveUsersList } from './friendsService.js';
 import { onlineUsers, currentChatUser, allFriends, currentUser, unreadConversationsInfo, currentActiveConvoItem, setCurrentActiveConvoItem, setCurrentChatUser, setCurrentRoom, socket, currentRoom, notificationPermissionGranted } from '../chat.js';
@@ -256,8 +256,9 @@ export async function handleConversationClick(user, clickedConvoItemElement) {
 
                 const messageWrapper = document.createElement('div');
                 messageWrapper.classList.add('message-wrapper', isSent ? 'sent' : 'received');
+				messageWrapper.dataset.userId = msg.username;
 
-                const avatarSrc = `https://i.pravatar.cc/150?img=${msg.username.charCodeAt(0) % 70 + 1}`;
+                const avatarSrc = getAvatarUrl(msg.username);
                 const timeString = new Date(msg.inserted_at).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
                 const senderName = isGroup ? (getUserLabelById(msg.username) || 'Nieznany') : '';
 
@@ -293,8 +294,9 @@ export async function handleConversationClick(user, clickedConvoItemElement) {
 
                             const messageWrapper = document.createElement('div');
                             messageWrapper.classList.add('message-wrapper', isSent ? 'sent' : 'received');
+							messageWrapper.dataset.userId = msg.username;
 
-                            const avatarSrc = `https://i.pravatar.cc/150?img=${msg.username.charCodeAt(0) % 70 + 1}`;
+                            const avatarSrc = getAvatarUrl(msg.username);
                             const timeString = new Date(msg.inserted_at).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
                             const senderName = isGroup ? (getUserLabelById(msg.username) || 'Nieznany') : '';
 
@@ -388,7 +390,7 @@ export async function addMessageToChat(msg) {
                 const messageWrapper = document.createElement('div');
                 messageWrapper.classList.add('message-wrapper', isSent ? 'sent' : 'received');
 
-                const avatarSrc = `https://i.pravatar.cc/150?img=${msg.username.charCodeAt(0) % 70 + 1}`;
+                const avatarSrc = getAvatarUrl(msg.username);
                 const timeString = new Date(msg.inserted_at).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
                 const senderName = isGroup ? (getUserLabelById(msg.username) || 'Nieznany') : '';
 
