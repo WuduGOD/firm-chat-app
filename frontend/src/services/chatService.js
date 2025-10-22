@@ -298,15 +298,17 @@ export async function handleConversationClick(user, clickedConvoItemElement) {
                     </div>
                 `;
                 messageContainer.appendChild(messageWrapper);
-				const imageElement = messageWrapper.querySelector('.chat-image');
-				if (imageElement) {
-					imageElement.addEventListener('click', (e) => {
-						e.preventDefault();
-						const imageUrl = e.target.dataset.lightboxSrc;
-						if (imageUrl) {
-							openLightbox(imageUrl);
-						}
-					});
+				if (messageContentHtml.includes('chat-image')) { // Sprawdź, czy wiadomość zawiera obrazek
+					const imageElement = messageWrapper.querySelector('.chat-image');
+					if (imageElement) {
+						imageElement.addEventListener('click', (e) => {
+							e.preventDefault();
+							const imageUrl = e.target.dataset.lightboxSrc || e.target.src;
+							if (imageUrl) {
+								openLightbox(imageUrl);
+							}
+						});
+					}
 				}
             });
             // Przewiń na dół po załadowaniu początkowej historii
@@ -467,15 +469,17 @@ export async function addMessageToChat(msg) {
 				messageWrapper.dataset.userId = msg.username; // Zachowaj ID użytkownika
 
 				messageContainer.appendChild(messageWrapper);
-				const imageElement = messageWrapper.querySelector('.chat-image');
-				if (imageElement) {
-					imageElement.addEventListener('click', (e) => {
-						e.preventDefault(); // Zatrzymaj ewentualne domyślne zachowanie
-						const imageUrl = e.target.dataset.lightboxSrc;
-						if (imageUrl) {
-							openLightbox(imageUrl);
-						}
-					});
+				if (messageContentHtml.includes('chat-image')) { // Sprawdź, czy wiadomość zawiera obrazek
+					const imageElement = messageWrapper.querySelector('.chat-image');
+					if (imageElement) {
+						imageElement.addEventListener('click', (e) => {
+							e.preventDefault(); // Zatrzymaj domyślne zachowanie (np. jeśli obrazek jest w linku)
+							const imageUrl = e.target.dataset.lightboxSrc || e.target.src; // Pobierz URL z data-* lub src
+							if (imageUrl) {
+								openLightbox(imageUrl);
+							}
+						});
+					}
 				}
 				messageContainer.scrollTop = messageContainer.scrollHeight;
             }
