@@ -483,26 +483,32 @@ function setupEventListeners() {
 	// --- NOWY LISTENER DLA KLIKNIĘĆ W WIADOMOŚCI (Delegowanie) ---
 	if (elements.messageContainer) {
 		elements.messageContainer.addEventListener('click', (event) => {
-			// Sprawdź, czy kliknięto bezpośrednio na obrazek LUB na link obrazka
-			const clickedImage = event.target.closest('.chat-image'); // Szukaj obrazka
-			const clickedImageLink = event.target.closest('a > .chat-image') ? event.target.closest('a') : null; // Szukaj linku Z obrazkiem w środku
+            // --- NOWA LOGIKA SPRAWDZANIA ---
+            // 1. Sprawdź, czy kliknięto na link załącznika LUB element wewnątrz niego
+            const clickedAttachmentLink = event.target.closest('.chat-attachment');
+            if (clickedAttachmentLink) {
+                // Jeśli kliknięto na załącznik (np. PDF),
+                // NIE RÓB NIC - pozwól przeglądarce otworzyć link normalnie.
+                console.log('Kliknięto na załącznik, pozwalam na domyślne działanie.');
+                return; // Zakończ działanie listenera
+            }
 
-			if (clickedImage) {
-				event.preventDefault(); // Zatrzymaj domyślne działanie tylko dla obrazków
-				const imageUrl = clickedImage.dataset.lightboxSrc || clickedImage.src;
-				if (imageUrl) {
-					openLightbox(imageUrl);
-				}
-			} else if (clickedImageLink) {
-				event.preventDefault(); // Zatrzymaj domyślne działanie linku obrazka
-				const imageUrl = clickedImageLink.href;
-				if (imageUrl) {
-					openLightbox(imageUrl);
-				}
-			}
-        // Jeśli kliknięto na cokolwiek innego (np. link PDF, tekst, tło),
-        // listener nic nie zrobi, pozwalając na domyślne działanie.
-		});
+            // 2. Jeśli NIE kliknięto na załącznik, sprawdź, czy kliknięto na obrazek
+            const clickedImage = event.target.closest('.chat-image');
+            if (clickedImage && event.target.tagName === 'IMG') { // Dodatkowe sprawdzenie tagName
+                 event.preventDefault(); // Zatrzymaj domyślne działanie tylko dla obrazków
+                 const imageUrl = clickedImage.dataset.lightboxSrc || clickedImage.src;
+                 if (imageUrl) {
+                    console.log('Kliknięto na obrazek, otwieram lightbox:', imageUrl);
+                    openLightbox(imageUrl);
+                 }
+                 return; // Zakończ działanie listenera
+            }
+
+            // 3. Jeśli nie kliknięto ani na załącznik, ani na obrazek, nic nie rób.
+            console.log('Kliknięto na inny element wiadomości.');
+            // --- KONIEC NOWEJ LOGIKI ---
+        });
 	}
 
     console.log('[Init] Główne event listenery UI zostały podpięte.');

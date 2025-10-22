@@ -1736,7 +1736,7 @@ body {
 
 /* Kontener na obrazek w lightboxie */
 .lightbox-content {
-  margin: auto;
+  margin: 50%;
   display: block;
   max-width: 90%;
   max-height: 85%;
