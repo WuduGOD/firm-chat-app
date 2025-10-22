@@ -294,7 +294,7 @@ export async function handleConversationClick(user, clickedConvoItemElement) {
                     <div class="message-content-wrapper">
                         ${isGroup && !isSent ? `<strong class="sender-name">${senderName}</strong>` : ''}
                         <div class="message">
-                            ${messageContentHtml} {/* Wstaw odpowiednią zawartość */}
+                            ${messageContentHtml}
                             <span class="timestamp">${timeString}</span>
                         </div>
                     </div>
@@ -457,7 +457,7 @@ export async function addMessageToChat(msg) {
 					<div class="message-content-wrapper">
 						${isGroup && !isSent ? `<strong class="sender-name">${senderName}</strong>` : ''}
 						<div class="message">
-							${messageContentHtml} {/* Wstaw odpowiednią zawartość */}
+							${messageContentHtml}
 							<span class="timestamp">${timeString}</span>
 						</div>
 					</div>
