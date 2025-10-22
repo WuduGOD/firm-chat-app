@@ -216,8 +216,9 @@ function setupCreateGroupModal() {
             allFriends.forEach(friend => {
                 const friendId = `friend-checkbox-${friend.id}`;
                 const li = document.createElement('li');
+				const avatarSrc = getAvatarUrl(friend.id);
                 li.innerHTML = `
-                    <img src="https://i.pravatar.cc/150?img=${friend.id.charCodeAt(0) % 70 + 1}" class="avatar">
+                    <img src="${avatarSrc}" class="avatar">
                     <span>${getUserLabelById(friend.id) || friend.email}</span>
                     <input type="checkbox" id="${friendId}" value="${friend.id}">
                 `;
@@ -645,12 +646,6 @@ async function initializeApp() {
                 // Zaktualizuj awatary na liście aktywnych użytkowników (mobile)
                 document.querySelectorAll('#onlineUsersMobile .online-user-item-mobile .avatar').forEach(img => {
                     const userId = img.closest('.online-user-item-mobile')?.dataset.userId;
-                    if (userId) updateAvatarImage(img, userId);
-                });
-				
-				document.querySelectorAll('#friendsListContainer li .avatar').forEach(img => {
-                    const checkbox = img.closest('li')?.querySelector('input[type="checkbox"]');
-                    const userId = checkbox?.value; // Pobierz ID z wartości checkboxa
                     if (userId) updateAvatarImage(img, userId);
                 });
 
