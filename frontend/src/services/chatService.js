@@ -263,20 +263,46 @@ export async function handleConversationClick(user, clickedConvoItemElement) {
                 const senderName = isGroup ? (getUserLabelById(msg.username) || 'Nieznany') : '';
 
                 // Użyj poprawnej struktury HTML
-                messageWrapper.innerHTML = `
-                    <img src="${avatarSrc}" alt="Avatar" class="message-avatar">
-                    <div class="message-content-wrapper">
-                         ${isGroup && !isSent ? `<strong class="sender-name">${senderName}</strong>` : ''}
-                        <div class="message">
-                            <p>${msg.text}</p>
-                            <span class="timestamp">${timeString}</span>
-                        </div>
-                    </div>
-                `;
-                messageContainer.appendChild(messageWrapper);
-            });
-            // Przewiń na dół po załadowaniu początkowej historii
-            messageContainer.scrollTop = messageContainer.scrollHeight;
+				let messageContentHtml = '';
+				try {
+					// Spróbuj sparsować 'text' jako JSON - jeśli się uda, to wiadomość z plikiem
+					const fileData = JSON.parse(msg.text);
+					if (fileData && fileData.type === 'file') {
+						if (fileData.isImage) {
+							// Wyświetl obrazek
+							messageContentHtml = `<img src="${fileData.url}" alt="${fileData.fileName || 'Obraz'}" class="chat-image">`;
+						} else {
+							// Wyświetl link do załącznika
+							messageContentHtml = `
+								<a href="${fileData.url}" target="_blank" rel="noopener noreferrer" class="chat-attachment">
+									<i class="fas fa-file-alt"></i> ${fileData.fileName || 'Załącznik'}
+								</a>`;
+						}
+					} else {
+						// Jeśli parsowanie się nie uda lub typ nie jest 'file', to zwykła wiadomość tekstowa
+						messageContentHtml = `<p>${msg.text}</p>`;
+					}
+				} catch (e) {
+					// Jeśli msg.text nie jest JSON-em, to jest to zwykła wiadomość tekstowa
+					messageContentHtml = `<p>${msg.text}</p>`;
+				}
+
+
+				// Zbuduj HTML wiadomości
+				messageWrapper.innerHTML = `
+					<img src="${avatarSrc}" alt="Avatar" class="message-avatar">
+					<div class="message-content-wrapper">
+						${isGroup && !isSent ? `<strong class="sender-name">${senderName}</strong>` : ''}
+						<div class="message">
+							${messageContentHtml} {/* Wstaw odpowiednią zawartość */}
+							<span class="timestamp">${timeString}</span>
+						</div>
+					</div>
+				`;
+				messageWrapper.dataset.userId = msg.username; // Zachowaj ID użytkownika
+
+				messageContainer.appendChild(messageWrapper);
+				messageContainer.scrollTop = messageContainer.scrollHeight;
 
             // --- DODANIE SCROLL LISTENER'A DLA PAGINACJI ---
             const scrollListener = async () => {
@@ -395,20 +421,46 @@ export async function addMessageToChat(msg) {
                 const senderName = isGroup ? (getUserLabelById(msg.username) || 'Nieznany') : '';
 
                 // Zbuduj HTML wiadomości z nową strukturą
-                messageWrapper.innerHTML = `
-                    <img src="${avatarSrc}" alt="Avatar" class="message-avatar">
-                    <div class="message-content-wrapper">
-                        ${isGroup && !isSent ? `<strong class="sender-name">${senderName}</strong>` : ''}
-                        <div class="message">
-                            <p>${msg.text}</p>
-                            <span class="timestamp">${timeString}</span>
-                        </div>
-                    </div>
-                `;
+				let messageContentHtml = '';
+				try {
+					// Spróbuj sparsować 'text' jako JSON - jeśli się uda, to wiadomość z plikiem
+					const fileData = JSON.parse(msg.text);
+					if (fileData && fileData.type === 'file') {
+						if (fileData.isImage) {
+							// Wyświetl obrazek
+							messageContentHtml = `<img src="${fileData.url}" alt="${fileData.fileName || 'Obraz'}" class="chat-image">`;
+						} else {
+							// Wyświetl link do załącznika
+							messageContentHtml = `
+								<a href="${fileData.url}" target="_blank" rel="noopener noreferrer" class="chat-attachment">
+									<i class="fas fa-file-alt"></i> ${fileData.fileName || 'Załącznik'}
+								</a>`;
+						}
+					} else {
+						// Jeśli parsowanie się nie uda lub typ nie jest 'file', to zwykła wiadomość tekstowa
+						messageContentHtml = `<p>${msg.text}</p>`;
+					}
+				} catch (e) {
+					// Jeśli msg.text nie jest JSON-em, to jest to zwykła wiadomość tekstowa
+					messageContentHtml = `<p>${msg.text}</p>`;
+				}
 
-                messageContainer.appendChild(messageWrapper);
-                // Przewiń na dół, aby zobaczyć najnowszą wiadomość
-                messageContainer.scrollTop = messageContainer.scrollHeight;
+
+				// Zbuduj HTML wiadomości
+				messageWrapper.innerHTML = `
+					<img src="${avatarSrc}" alt="Avatar" class="message-avatar">
+					<div class="message-content-wrapper">
+						${isGroup && !isSent ? `<strong class="sender-name">${senderName}</strong>` : ''}
+						<div class="message">
+							${messageContentHtml} {/* Wstaw odpowiednią zawartość */}
+							<span class="timestamp">${timeString}</span>
+						</div>
+					</div>
+				`;
+				messageWrapper.dataset.userId = msg.username; // Zachowaj ID użytkownika
+
+				messageContainer.appendChild(messageWrapper);
+				messageContainer.scrollTop = messageContainer.scrollHeight;
             }
         }
     } catch (e) {

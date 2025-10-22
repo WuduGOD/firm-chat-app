@@ -934,6 +934,35 @@ body {
     color: rgba(255, 255, 255, 0.8);
 }
 
+.chat-image {
+    max-width: 100%; /* Dopasuj do szerokości dymka */
+    max-height: 300px; /* Ogranicz wysokość, aby nie były za duże */
+    border-radius: 10px; /* Lekko zaokrąglone rogi */
+    display: block; /* Usuń ewentualne dodatkowe odstępy pod obrazkiem */
+    cursor: pointer; /* Można dodać otwieranie w nowej karcie po kliknięciu */
+}
+
+/* Styl dla linków do załączników */
+.chat-attachment {
+    display: inline-flex; /* Ułóż ikonkę i tekst obok siebie */
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.8rem;
+    background-color: rgba(0, 0, 0, 0.05); /* Lekkie tło */
+    border-radius: 6px;
+    text-decoration: none;
+    color: var(--text-color-dark);
+    transition: background-color 0.2s;
+    border: 1px solid var(--border-color-light);
+}
+.chat-attachment:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+    text-decoration: underline;
+}
+.chat-attachment i {
+    color: var(--text-color-medium);
+}
+
 /* Link Preview */
 .link-preview-message {
     background: var(--bg-color-sidebar);
@@ -1866,6 +1895,18 @@ body.dark-mode .nav-icon::after {
 }
 .dark-mode .messages.red-theme .message.sent::before {
     border-color: transparent transparent transparent #ef4444;
+}
+
+.dark-mode .chat-attachment {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-color-light);
+    border-color: var(--border-color-medium);
+}
+.dark-mode .chat-attachment:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+.dark-mode .chat-attachment i {
+    color: var(--text-color-medium);
 }
 
 /* Link Preview w dark mode */

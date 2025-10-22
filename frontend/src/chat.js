@@ -658,6 +658,101 @@ async function initializeApp() {
     } else {
         console.warn('Nie znaleziono przycisków do zmiany awatara.');
     }
+	
+	const attachButton = document.querySelector('.attach-button'); // Znajdź przycisk spinacza
+    const fileUploadInput = document.getElementById('fileUploadInput');
+
+    if (attachButton && fileUploadInput) {
+        attachButton.addEventListener('click', () => {
+            if (!currentRoom) {
+                helpers.showCustomMessage('Wybierz rozmowę, aby wysłać plik.', 'info');
+                return;
+            }
+            fileUploadInput.click(); // Otwórz okno wyboru pliku
+        });
+
+        fileUploadInput.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (!file || !currentUser || !currentRoom) {
+                fileUploadInput.value = ''; // Wyczyść na wszelki wypadek
+                return;
+            }
+
+            const maxSize = 10 * 1024 * 1024; // Maksymalny rozmiar pliku: 10MB (możesz zmienić)
+            if (file.size > maxSize) {
+                helpers.showCustomMessage(`Plik jest za duży. Maksymalny rozmiar to ${maxSize / 1024 / 1024}MB.`, 'error');
+                fileUploadInput.value = '';
+                return;
+            }
+
+            const isImage = file.type.startsWith('image/');
+            const bucketName = isImage ? 'chat_images' : 'chat_attachments';
+            const fileExt = file.name.split('.').pop();
+            // Tworzymy unikalną ścieżkę pliku
+            const filePath = `${currentRoom}/${currentUser.id}_${Date.now()}.${fileExt}`;
+
+            helpers.showCustomMessage('Przesyłanie pliku...', 'info');
+            attachButton.disabled = true; // Zablokuj przycisk na czas wysyłania
+
+            try {
+                // Wyślij plik do Supabase Storage
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from(bucketName)
+                    .upload(filePath, file, {
+                        cacheControl: '3600', // Cache przez 1 godzinę
+                        upsert: false, // Nie nadpisuj, jeśli jakimś cudem istnieje
+                        contentType: file.type
+                    });
+
+                if (uploadError) throw uploadError;
+
+                // Pobierz publiczny URL wgranego pliku
+                const { data: publicUrlData } = supabase.storage
+                    .from(bucketName)
+                    .getPublicUrl(filePath);
+
+                if (!publicUrlData || !publicUrlData.publicUrl) {
+                    throw new Error('Nie udało się uzyskać publicznego URL dla pliku.');
+                }
+                const publicUrl = publicUrlData.publicUrl;
+
+                // Przygotuj wiadomość WebSocket
+                const messagePayload = {
+                    type: 'file', // Nowy typ wiadomości
+                    url: publicUrl,
+                    fileName: file.name,
+                    fileType: file.type,
+                    isImage: isImage,
+                    // Dodajmy też 'text' jako pusty string dla spójności z backendem
+                    text: ''
+                };
+
+                // Wyślij wiadomość przez WebSocket
+                 const msgData = {
+                    type: 'message', // Nadal używamy typu 'message' dla WebSocket
+                    username: currentUser.id,
+                    text: JSON.stringify(messagePayload), // Zakoduj dane pliku w polu tekstowym
+                    room: currentRoom,
+                    inserted_at: new Date().toISOString()
+                 };
+                 socket.send(JSON.stringify(msgData));
+
+                // Natychmiast wyświetl wiadomość z plikiem (używając zakodowanych danych)
+                chatService.addMessageToChat(msgData);
+
+                helpers.showCustomMessage('Plik wysłany!', 'success');
+
+            } catch (error) {
+                console.error('Błąd podczas przesyłania pliku:', error);
+                helpers.showCustomMessage(`Błąd przesyłania: ${error.message}`, 'error');
+            } finally {
+                fileUploadInput.value = ''; // Zawsze czyść input
+                attachButton.disabled = false; // Odblokuj przycisk
+            }
+        });
+    } else {
+        console.warn('Nie znaleziono przycisku do załączników lub inputu pliku.');
+    }
 
     console.log("✅ Aplikacja Komunikator została pomyślnie zainicjalizowana!");
 }
