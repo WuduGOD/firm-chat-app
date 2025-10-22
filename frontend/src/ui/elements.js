@@ -15,6 +15,7 @@ export let rightSidebarWrapper, rightSidebar, activeUsersListEl, noActiveUsersTe
 export let enableSoundButton;
 export let createGroupModal, closeCreateGroupModal, groupNameInput, searchFriendsInput, friendsListContainer, createGroupButton;
 export let groupFriendSearchInput;
+export let imageLightbox, lightboxImage, lightboxCloseButton;
 
 /**
  * Pobiera wszystkie elementy DOM i przypisuje je do wyeksportowanych zmiennych.
@@ -95,6 +96,10 @@ export function initializeDOMElements() {
     groupNameInput = document.getElementById('groupNameInput');
     groupFriendSearchInput = document.getElementById('groupFriendSearchInput');
     friendsListContainer = document.getElementById('friendsListContainer');
+	
+	imageLightbox = document.getElementById('imageLightbox');
+	lightboxImage = document.getElementById('lightboxImage');
+	lightboxCloseButton = document.querySelector('.lightbox-close-button');
 
     console.log('[Init] Inicjalizacja elementów DOM zakończona.');
 }

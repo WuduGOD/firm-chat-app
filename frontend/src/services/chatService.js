@@ -4,7 +4,7 @@ import { supabase } from '../supabaseClient.js';
 import * as elements from '../ui/elements.js';
 import * as chatState from '../chat.js';
 import { getUserLabelById, getAvatarUrl } from '../profiles.js';
-import { formatTimeAgo, showCustomMessage, playNotificationSound, updateDocumentTitle } from '../ui/helpers.js';
+import { formatTimeAgo, showCustomMessage, playNotificationSound, updateDocumentTitle, openLightbox } from '../ui/helpers.js';
 import { loadContacts, updateConversationPreview, renderActiveUsersList } from './friendsService.js';
 import { onlineUsers, currentChatUser, allFriends, currentUser, unreadConversationsInfo, currentActiveConvoItem, setCurrentActiveConvoItem, setCurrentChatUser, setCurrentRoom, socket, currentRoom, notificationPermissionGranted } from '../chat.js';
 import { messageContainer, activeUsersListEl, contactsListEl, chatAreaWrapper, userStatusSpan, typingStatusHeader, typingIndicatorMessages } from '../ui/elements.js';
@@ -274,9 +274,7 @@ export async function handleConversationClick(user, clickedConvoItemElement) {
                              messageContentHtml = `<img src="${fileData.url}" alt="${fileData.fileName || 'Obraz'}" class="chat-image">`;
                          } else {
                              messageContentHtml = `
-                                 <a href="${fileData.url}" target="_blank" rel="noopener noreferrer" class="chat-attachment">
-                                     <i class="fas fa-file-alt"></i> ${fileData.fileName || 'Załącznik'}
-                                 </a>`;
+                                 <img src="${fileData.url}" alt="${fileData.fileName || 'Obraz'}" class="chat-image" data-lightbox-src="${fileData.url}">`;
                          }
                     } else {
                          // Jeśli parsowanie się nie uda lub typ nie jest 'file', to zwykła wiadomość tekstowa
@@ -300,6 +298,16 @@ export async function handleConversationClick(user, clickedConvoItemElement) {
                     </div>
                 `;
                 messageContainer.appendChild(messageWrapper);
+				const imageElement = messageWrapper.querySelector('.chat-image');
+				if (imageElement) {
+					imageElement.addEventListener('click', (e) => {
+						e.preventDefault();
+						const imageUrl = e.target.dataset.lightboxSrc;
+						if (imageUrl) {
+							openLightbox(imageUrl);
+						}
+					});
+				}
             });
             // Przewiń na dół po załadowaniu początkowej historii
             messageContainer.scrollTop = messageContainer.scrollHeight;
@@ -433,9 +441,7 @@ export async function addMessageToChat(msg) {
 						} else {
 							// Wyświetl link do załącznika
 							messageContentHtml = `
-								<a href="${fileData.url}" target="_blank" rel="noopener noreferrer" class="chat-attachment">
-									<i class="fas fa-file-alt"></i> ${fileData.fileName || 'Załącznik'}
-								</a>`;
+								<img src="${fileData.url}" alt="${fileData.fileName || 'Obraz'}" class="chat-image" data-lightbox-src="${fileData.url}">`;
 						}
 					} else {
 						// Jeśli parsowanie się nie uda lub typ nie jest 'file', to zwykła wiadomość tekstowa
@@ -461,6 +467,16 @@ export async function addMessageToChat(msg) {
 				messageWrapper.dataset.userId = msg.username; // Zachowaj ID użytkownika
 
 				messageContainer.appendChild(messageWrapper);
+				const imageElement = messageWrapper.querySelector('.chat-image');
+				if (imageElement) {
+					imageElement.addEventListener('click', (e) => {
+						e.preventDefault(); // Zatrzymaj ewentualne domyślne zachowanie
+						const imageUrl = e.target.dataset.lightboxSrc;
+						if (imageUrl) {
+							openLightbox(imageUrl);
+						}
+					});
+				}
 				messageContainer.scrollTop = messageContainer.scrollHeight;
             }
         }

@@ -1710,6 +1710,76 @@ body {
     background-color: var(--bg-color-search-input);
 }
 
+.lightbox {
+  position: fixed; /* Pozycjonowanie względem okna przeglądarki */
+  z-index: 10000; /* Musi być na samym wierzchu */
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto; /* Umożliwia przewijanie, jeśli obraz jest duży */
+  background-color: rgba(0, 0, 0, 0.85); /* Półprzezroczyste czarne tło */
+  display: flex; /* Użyjemy flex do centrowania */
+  justify-content: center;
+  align-items: center;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.3s ease, visibility 0.3s ease; /* Płynne pojawianie się/znikanie */
+}
+
+/* Ukrywanie lightboxa */
+.lightbox.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none; /* Ignoruj kliknięcia, gdy ukryty */
+}
+
+/* Kontener na obrazek w lightboxie */
+.lightbox-content {
+  margin: auto;
+  display: block;
+  max-width: 90%;
+  max-height: 85%;
+  object-fit: contain; /* Zachowaj proporcje obrazka */
+  animation: lightboxZoom 0.4s ease-out; /* Animacja powiększania */
+}
+
+/* Animacja powiększania */
+@keyframes lightboxZoom {
+  from {transform: scale(0.8);}
+  to {transform: scale(1);}
+}
+
+/* Przycisk zamykania (X) */
+.lightbox-close-button {
+  position: absolute;
+  top: 20px;
+  right: 35px;
+  color: #f1f1f1;
+  font-size: 40px;
+  font-weight: bold;
+  transition: 0.3s;
+  cursor: pointer;
+}
+
+.lightbox-close-button:hover,
+.lightbox-close-button:focus {
+  color: #bbb;
+  text-decoration: none;
+}
+
+/* Opcjonalnie: Podpis pod obrazkiem */
+#lightboxCaption {
+  margin: auto;
+  display: block;
+  width: 80%;
+  max-width: 700px;
+  text-align: center;
+  color: #ccc;
+  padding: 10px 0;
+  height: 50px; /* Stała wysokość na podpis */
+}
+
 
 
 /* Dark mode overrides */

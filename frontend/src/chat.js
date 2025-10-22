@@ -448,6 +448,19 @@ function setupEventListeners() {
             elements.friendRequestModal.classList.remove('visible');
         }
     });
+	
+	if (lightboxCloseButton) {
+    lightboxCloseButton.addEventListener('click', closeLightbox);
+	}
+	if (imageLightbox) {
+		// Zamknij lightbox po kliknięciu na tło (overlay)
+		imageLightbox.addEventListener('click', (event) => {
+			// Zamknij tylko jeśli kliknięto bezpośrednio na tło, a nie na obrazek
+			if (event.target === imageLightbox) {
+				closeLightbox();
+			}
+		});
+	}
 
     console.log('[Init] Główne event listenery UI zostały podpięte.');
 }
