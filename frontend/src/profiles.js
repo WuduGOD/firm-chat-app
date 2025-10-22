@@ -1,25 +1,25 @@
 import { supabase, profilesCache } from './supabaseClient.js'
 
 export async function loadAllProfiles() {
-  // ZMIANA: Dodaj 'user_metadata' do select
+  // ZMIANA: Pobierz 'avatar_url' zamiast 'user_metadata'
   const { data: profiles, error } = await supabase
       .from('profiles')
-      .select('id, email, username, user_metadata'); // <-- ZMIANA TUTAJ
+      .select('id, email, username, avatar_url'); // <-- ZMIANA TUTAJ
 
   if (error) {
     console.error('Błąd ładowania profili:', error);
     return [];
   }
   profilesCache.clear();
-  profiles.forEach(({ id, email, username, user_metadata }) => {
-    // ZMIANA: Dodaj avatar_url do cache, pobierając go z metadanych
+  profiles.forEach(({ id, email, username, avatar_url }) => { // <-- ZMIANA TUTAJ
+    // ZMIANA: Zapisz 'avatar_url' bezpośrednio
     profilesCache.set(id, {
         email,
         username,
-        avatar_url: user_metadata?.avatar_url || null // <-- ZMIANA TUTAJ
+        avatar_url: avatar_url || null // <-- ZMIANA TUTAJ
     });
   });
-  console.log("Profile cache updated with avatar URLs:", profilesCache); // Log do sprawdzenia
+  console.log("Profile cache updated with avatar URLs:", profilesCache);
   return profiles;
 }
 

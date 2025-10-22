@@ -569,33 +569,39 @@ async function initializeApp() {
 
                 // --- POCZĄTEK NOWEGO KODU ---
                 // Pobierz publiczny URL właśnie wgranego pliku
-                const { data: publicUrlData } = supabase.storage
+				const { data: publicUrlData } = supabase.storage
                     .from('avatars')
                     .getPublicUrl(filePath);
 
                 if (!publicUrlData || !publicUrlData.publicUrl) {
                      throw new Error('Nie udało się uzyskać publicznego URL dla awatara.');
                 }
-
                 const publicUrl = publicUrlData.publicUrl;
 
-                // Zapisz publiczny URL w metadanych użytkownika w Supabase Auth
-                const { data: updateData, error: updateError } = await supabase.auth.updateUser({
-                    data: { avatar_url: publicUrl } // Zapisujemy URL w user_metadata
+                // 1. Zapisz URL w metadanych Auth (dobra praktyka)
+                const { error: authUpdateError } = await supabase.auth.updateUser({
+                    data: { avatar_url: publicUrl }
                 });
+                if (authUpdateError) console.warn("Nie udało się zapisać avatar_url w Auth metadata:", authUpdateError); // Tylko ostrzeżenie
 
-                if (updateError) {
-                    throw updateError; // Rzuć błąd, jeśli aktualizacja metadanych się nie powiodła
+                // 2. ZAPISZ URL W TABELI PROFILES (KLUCZOWE)
+                const { error: profileUpdateError } = await supabase
+                    .from('profiles')
+                    .update({ avatar_url: publicUrl })
+                    .eq('id', currentUser.id); // Zaktualizuj tylko swój profil
+
+                if (profileUpdateError) {
+                    // Jeśli zapis do profili się nie powiedzie, to jest poważniejszy błąd
+                    throw profileUpdateError;
                 }
 
                 // Zaktualizuj również lokalny cache profili
-                const cachedProfile = profilesCache.get(currentUser.id);
+				const cachedProfile = profilesCache.get(currentUser.id);
                 if (cachedProfile) {
                     cachedProfile.avatar_url = publicUrl;
                     profilesCache.set(currentUser.id, cachedProfile);
                     console.log(`Zaktualizowano avatar_url w cache dla ${currentUser.id}`);
                 } else {
-                     // Jeśli profilu nie ma w cache, załaduj go ponownie (choć to rzadki przypadek)
                      await loadAllProfiles();
                  }
 
