@@ -647,6 +647,12 @@ async function initializeApp() {
                     const userId = img.closest('.online-user-item-mobile')?.dataset.userId;
                     if (userId) updateAvatarImage(img, userId);
                 });
+				
+				document.querySelectorAll('#friendsListContainer li .avatar').forEach(img => {
+                    const checkbox = img.closest('li')?.querySelector('input[type="checkbox"]');
+                    const userId = checkbox?.value; // Pobierz ID z wartości checkboxa
+                    if (userId) updateAvatarImage(img, userId);
+                });
 
             } catch (error) {
                 console.error('Błąd podczas przesyłania awatara:', error);
