@@ -301,11 +301,15 @@ export async function handleConversationClick(user, clickedConvoItemElement) {
 				const imageElement = messageWrapper.querySelector('.chat-image');
 				if (imageElement) {
 					imageElement.addEventListener('click', (e) => {
-						e.preventDefault();
-						const imageUrl = e.target.dataset.lightboxSrc || e.target.src;
-						if (imageUrl) {
-							openLightbox(imageUrl);
+						// SPRAWDŹ, CZY KLIKNIĘTO NA OBRAZEK (IMG)
+						if (e.target.tagName === 'IMG' && e.target.classList.contains('chat-image')) {
+							e.preventDefault(); // Zatrzymaj tylko dla obrazków
+							const imageUrl = e.target.dataset.lightboxSrc || e.target.src;
+							if (imageUrl) {
+								openLightbox(imageUrl);
+							}
 						}
+						// Jeśli kliknięto na coś innego (np. tło dymka), nic nie rób
 					});
 				}
             });
@@ -470,11 +474,15 @@ export async function addMessageToChat(msg) {
 				const imageElement = messageWrapper.querySelector('.chat-image');
 				if (imageElement) {
 					imageElement.addEventListener('click', (e) => {
-						e.preventDefault(); // Zatrzymaj domyślne zachowanie (np. jeśli obrazek jest w linku)
-						const imageUrl = e.target.dataset.lightboxSrc || e.target.src; // Pobierz URL z data-* lub src
-						if (imageUrl) {
-							openLightbox(imageUrl);
+						// SPRAWDŹ, CZY KLIKNIĘTO NA OBRAZEK (IMG)
+						if (e.target.tagName === 'IMG' && e.target.classList.contains('chat-image')) {
+							e.preventDefault(); // Zatrzymaj tylko dla obrazków
+							const imageUrl = e.target.dataset.lightboxSrc || e.target.src;
+							if (imageUrl) {
+								openLightbox(imageUrl);
+							}
 						}
+						// Jeśli kliknięto na coś innego (np. tło dymka), nic nie rób
 					});
 				}
 				messageContainer.scrollTop = messageContainer.scrollHeight;
