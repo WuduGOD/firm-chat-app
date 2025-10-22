@@ -299,14 +299,10 @@ export async function handleConversationClick(user, clickedConvoItemElement) {
                         </div>
                     </div>
                 `;
-
-                // Jeśli ładujesz starsze wiadomości (w scrollListener), użyj prepend
-                if (isLoadingOlderMessages) { // Sprawdź flagę ładowania starszych
-                     messageContainer.prepend(messageWrapper);
-                } else {
-                     messageContainer.appendChild(messageWrapper); // Domyślnie dodaj na końcu
-                }
-            }); // Koniec pętli history.forEach
+                messageContainer.appendChild(messageWrapper);
+            });
+            // Przewiń na dół po załadowaniu początkowej historii
+            messageContainer.scrollTop = messageContainer.scrollHeight;
 
             // --- DODANIE SCROLL LISTENER'A DLA PAGINACJI ---
             const scrollListener = async () => {
