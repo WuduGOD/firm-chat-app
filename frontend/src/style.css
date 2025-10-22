@@ -134,6 +134,7 @@ body {
 }
 /* Style dla przycisków w głównym dropdownie */
 .dropdown #themeToggle,
+.dropdown #changeAvatarButton,
 .dropdown #logoutButton {
     background: none;
     border: none;
@@ -150,17 +151,20 @@ body {
     gap: 0.5rem;
 }
 .dropdown #themeToggle i,
+.dropdown #changeAvatarButton i,
 .dropdown #logoutButton i {
     font-size: 1.1rem;
     color: var(--text-color-medium);
 }
 
 .dropdown #themeToggle:hover,
+.dropdown #changeAvatarButton:hover,
 .dropdown #logoutButton:hover {
     background: var(--bg-color-search-input);
     color: var(--text-color-dark);
 }
 .dropdown #themeToggle:hover i,
+.dropdown #changeAvatarButton:hover i,
 .dropdown #logoutButton:hover i {
     color: var(--primary-color);
 }
