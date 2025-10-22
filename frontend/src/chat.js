@@ -483,31 +483,44 @@ function setupEventListeners() {
 	// --- NOWY LISTENER DLA KLIKNIĘĆ W WIADOMOŚCI (Delegowanie) ---
 	if (elements.messageContainer) {
 		elements.messageContainer.addEventListener('click', (event) => {
-            // --- NOWA LOGIKA SPRAWDZANIA ---
-            // 1. Sprawdź, czy kliknięto na link załącznika LUB element wewnątrz niego
-            const clickedAttachmentLink = event.target.closest('.chat-attachment');
-            if (clickedAttachmentLink) {
-                // Jeśli kliknięto na załącznik (np. PDF),
-                // NIE RÓB NIC - pozwól przeglądarce otworzyć link normalnie.
-                console.log('Kliknięto na załącznik, pozwalam na domyślne działanie.');
-                return; // Zakończ działanie listenera
+            const target = event.target; // Element, który faktycznie został kliknięty
+
+            // 1. Sprawdź, czy kliknięto na obrazek LUB link zawierający obrazek
+            if (target.tagName === 'IMG' && target.classList.contains('chat-image')) {
+                // Kliknięto bezpośrednio na obrazek
+                event.preventDefault();
+                const imageUrl = target.dataset.lightboxSrc || target.src;
+                if (imageUrl) {
+                    console.log('Kliknięto na IMG, otwieram lightbox:', imageUrl);
+                    openLightbox(imageUrl);
+                }
+                return; // Zakończ
             }
 
-            // 2. Jeśli NIE kliknięto na załącznik, sprawdź, czy kliknięto na obrazek
-            const clickedImage = event.target.closest('.chat-image');
-            if (clickedImage && event.target.tagName === 'IMG') { // Dodatkowe sprawdzenie tagName
-                 event.preventDefault(); // Zatrzymaj domyślne działanie tylko dla obrazków
-                 const imageUrl = clickedImage.dataset.lightboxSrc || clickedImage.src;
+            const parentLink = target.closest('a'); // Znajdź najbliższy link nadrzędny
+
+            // 2. Sprawdź, czy kliknięto na link do załącznika (NIE obrazka)
+            if (parentLink && parentLink.classList.contains('chat-attachment')) {
+                 // Kliknięto na link załącznika lub ikonkę wewnątrz niego
+                 console.log('Kliknięto na załącznik, pozwalam na domyślne działanie.');
+                 // Nie robimy nic, pozwalamy przeglądarce otworzyć link
+                 return; // Zakończ
+            }
+
+            // 3. Jeśli to był link, ale NIE załącznik (może link do obrazka?)
+            if (parentLink && parentLink.querySelector('.chat-image')) {
+                 event.preventDefault(); // Zatrzymaj otwieranie linku
+                 const imageElement = parentLink.querySelector('.chat-image');
+                 const imageUrl = imageElement.dataset.lightboxSrc || imageElement.src;
                  if (imageUrl) {
-                    console.log('Kliknięto na obrazek, otwieram lightbox:', imageUrl);
+                    console.log('Kliknięto na link z obrazkiem, otwieram lightbox:', imageUrl);
                     openLightbox(imageUrl);
                  }
-                 return; // Zakończ działanie listenera
+                 return; // Zakończ
             }
 
-            // 3. Jeśli nie kliknięto ani na załącznik, ani na obrazek, nic nie rób.
+            // 4. Kliknięto na coś innego (tekst, tło itp.)
             console.log('Kliknięto na inny element wiadomości.');
-            // --- KONIEC NOWEJ LOGIKI ---
         });
 	}
 
