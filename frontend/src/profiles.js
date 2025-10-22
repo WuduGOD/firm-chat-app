@@ -23,6 +23,12 @@ export async function loadAllProfiles() {
   return profiles;
 }
 
+export function getUserLabelById(id) {
+  const profile = profilesCache.get(id)
+  if (!profile) return id
+  return profile.username || profile.email || id
+}
+
 /**
  * Pobiera publiczny URL do awatara użytkownika z cache lub zwraca placeholder.
  * @param {string} userId - ID użytkownika.
