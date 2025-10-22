@@ -303,7 +303,7 @@ export async function handleConversationClick(user, clickedConvoItemElement) {
 					imageElement.addEventListener('click', (e) => {
 						// SPRAWDŹ, CZY KLIKNIĘTO NA OBRAZEK (IMG)
 						if (e.target.tagName === 'IMG' && e.target.classList.contains('chat-image')) {
-							e.preventDefault(); // Zatrzymaj tylko dla obrazków
+							//e.preventDefault(); // Zatrzymaj tylko dla obrazków
 							const imageUrl = e.target.dataset.lightboxSrc || e.target.src;
 							if (imageUrl) {
 								openLightbox(imageUrl);
@@ -476,7 +476,7 @@ export async function addMessageToChat(msg) {
 					imageElement.addEventListener('click', (e) => {
 						// SPRAWDŹ, CZY KLIKNIĘTO NA OBRAZEK (IMG)
 						if (e.target.tagName === 'IMG' && e.target.classList.contains('chat-image')) {
-							e.preventDefault(); // Zatrzymaj tylko dla obrazków
+							//e.preventDefault(); // Zatrzymaj tylko dla obrazków
 							const imageUrl = e.target.dataset.lightboxSrc || e.target.src;
 							if (imageUrl) {
 								openLightbox(imageUrl);
